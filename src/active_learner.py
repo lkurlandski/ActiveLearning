@@ -95,7 +95,24 @@ def main(experiment_parameters):
     n_iterations = math.ceil(y_pool.shape[0] / batch_size) + 1
 
     # Select the stop set
-    stop_set_idx = choices([i for i in range(len(y_train))], k=stop_set_size)   
+    stop_set_idx = choices([i for i in range(len(y_train))], k=stop_set_size)
+    
+    # TODO: develop and elegant way of using pipelines. 
+        # Perhaps wrap every estimator in a Pipeline by default?
+        # Then apply an appropriate procedure of transformations specified by a new parameter.
+    
+    # Wrap a pipeline around the estimator!
+    #from sklearn.pipeline import Pipeline
+    #from transformers import BertTokenizer, BertModel
+    #tokenizer = BertTokenizer.from_pretrained("bert-base-uncased")
+    #bert_model = BertModel.from_pretrained("bert-base-uncased")
+    #bert_transformer = vectorizers.BertTransformer(tokenizer, bert_model)
+    #Pipeline(
+    #    [
+    #        ("vectorizer", bert_transformer),
+    #        ("estimator", estimator),
+    #    ]
+    #)    
 
     # Create the active learner
     learner = ActiveLearner(
