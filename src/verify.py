@@ -4,24 +4,24 @@
 from pathlib import Path
 from pprint import pprint
 
-from output_helper import OutputHelper
+import output_helper
 
 def verify_all_runs_successful(experiment_parameters):
     
-    output_helper = OutputHelper(**experiment_parameters)
+    oh = output_helper.OutputHelper(experiment_parameters)
 
     first_print_out_performed = False
     
     files_to_check = [
-        output_helper.kappa_file,
-        output_helper.processed_accuracy_file,
-        output_helper.processed_macro_avg_file,
-        output_helper.processed_weighted_avg_file,
-        output_helper.stopping_results_file,
-        output_helper.avg_processed_accuracy_file,
-        output_helper.avg_processed_macro_avg_file,
-        output_helper.avg_processed_weighted_avg_file,
-        output_helper.avg_stopping_results_file,
+        oh.kappa_file,
+        oh.processed_accuracy_file,
+        oh.processed_macro_avg_file,
+        oh.processed_weighted_avg_file,
+        oh.stopping_results_file,
+        oh.avg_processed_accuracy_file,
+        oh.avg_processed_macro_avg_file,
+        oh.avg_processed_weighted_avg_file,
+        oh.avg_stopping_results_file,
     ]
     for f in files_to_check:
         if not f.exists():
@@ -48,7 +48,7 @@ if __name__ == "__main__":
         "batch_size": 10,
         "estimator": "mlp",
         "dataset": "Avila",
-        "random_seed": 0
+        "random_state": 0
     }
     
     main(experiment_parameters)

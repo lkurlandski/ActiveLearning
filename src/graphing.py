@@ -8,7 +8,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 
-from output_helper import OutputHelper, contains_data
+import output_helper
 
 # Colors for stopping methods
 colors_stopping = ['lime', 'blue', 'megenta', 'midnightblue']
@@ -53,7 +53,7 @@ def plot_from_dataframe(df, x_column=None, y_columns=None):
 def recursively_create_simple_graphs(path):
     
     for p in path.iterdir():
-        if contains_data(p, ignore_raw=True):
+        if output_helper.contains_data(p, ignore_raw=True):
             # TODO: incorporate these relative paths into the OutputHelper and eventually replace
                 # this code with those paths from the OutputHelper
             stopping_file = p / "stopping" / "results.csv"
@@ -76,13 +76,14 @@ def recursively_create_simple_graphs(path):
                 fig, ax = plot_from_dataframe(df, x_column=None)
                 fig, ax = add_stopping_vlines(p, fig, ax, stopping_df)
                 fig.savefig(f.with_suffix('.png'), dpi=400)
+                plt.close()
         else:
             recursively_create_simple_graphs(p)
 
 def main(experiment_parameters):
     
-    output_helper = OutputHelper(**experiment_parameters)
-    recursively_create_simple_graphs(output_helper.dataset_path)
+    oh = output_helper.OutputHelper(experiment_parameters)
+    recursively_create_simple_graphs(oh.dataset_path)
 
 if __name__ == "__main__":
     
@@ -94,7 +95,7 @@ if __name__ == "__main__":
         "batch_size": 10,
         "estimator": "mlp",
         "dataset": "Avila",
-        "random_seed": 0
+        "random_state": 0
     }
     
     main(experiment_parameters)

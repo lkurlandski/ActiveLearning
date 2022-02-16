@@ -10,6 +10,7 @@ from sklearn.exceptions import ConvergenceWarning
 import active_learner
 import analysis
 import averager
+import graphing
 import stopping
 import verify
 
@@ -31,8 +32,12 @@ def main(config_file=None, experiment_parameters=None, flags=None):
             analysis.main(experiment_parameters)
         if "stopping" in flags or flags is None:
             stopping.main(experiment_parameters)
+            
+        # TODO: SLURM overhaul: these should only be run once per set of experiments
         if "averaging" in flags or flags is None:
             averager.main(experiment_parameters)
+        if "graphing" in flags or flags is None:
+            graphing.main(experiment_parameters)
         if "verify" in flags or flags is None:
             verify.main(experiment_parameters)
     
@@ -46,7 +51,7 @@ if __name__ == "__main__":
         "batch_size": 10, 
         "estimator": "mlp",
         "dataset": "Avila",
-        "random_seed": 0,
+        "random_state": 0,
     }
     
     main(experiment_parameters=experiment_parameters)

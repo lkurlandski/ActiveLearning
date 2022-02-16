@@ -17,18 +17,11 @@ from sklearn.metrics import cohen_kappa_score, classification_report
 from modAL.batch import uncertainty_batch_sampling
 from modAL.models import ActiveLearner
 
-# TODO: avoid the from x import y format for local code because it is confusing for determining 
-    # which functions are in the current file and which are not
-from estimators import get_estimator_from_code
-from input_helper import get_dataset
-from output_helper import OutputHelper
-from stat_helper import remove_ids_from_array
+import estimators
+import input_helper
+import output_helper
+import stat_helper
 import vectorizers
-
-# TODO: currently, this runs the experiments on the hpc nodes, but writes files locally.
-    # Develop a system (along with the output helper) that writes the experiment
-    # to the /local/scratch directory on the node, then copies them over to the local directory 
-    # when complete.
 
 def print_pool_update(
         unlabeled_pool_initial_size,
@@ -69,20 +62,21 @@ def main(experiment_parameters):
     stop_set_size = int(experiment_parameters["stop_set_size"])
     batch_size = int(experiment_parameters["batch_size"])
     initial_pool_size = int(experiment_parameters["initial_pool_size"])
-    estimator = get_estimator_from_code(experiment_parameters["estimator"])
-    random_seed = int(experiment_parameters["random_seed"])
+    # TODO: pipelines
+    estimator = estimators.get_estimator_from_code(experiment_parameters["estimator"])
+    random_state = int(experiment_parameters["random_state"])
 
-    # TODO: come up with a more efficient and elegant way to handle the data splits,
-        # especially when selecting and removing the very first pool
+    # TODO: the names of the various sets are a little confusing: train, test, pool, initial etc.
     # Get the dataset
     X_train, X_test, y_train, y_test, labels = \
-        get_dataset(experiment_parameters["dataset"], random_seed)
+        input_helper.get_dataset(experiment_parameters["dataset"], random_state)
     unlabeled_pool_initial_size = y_train.shape[0]
     
+    # TODO: SLURM overhaul
     # Setup output directory structure
-    output_helper = OutputHelper(**experiment_parameters)
-    output_helper.setup_output_path(remove_existing=True)
-    print(f"output_helper.output_path:{output_helper.output_path.as_posix()}\n")
+    oh = output_helper.OutputHelper(experiment_parameters)
+    oh.setup_output_path(remove_existing=True)
+    print(f"output_path:{oh.output_path.as_posix()}\n")
 
     # Get ids of one instance of each class
     idx = get_index_for_each_class(y_train, labels)
@@ -95,30 +89,13 @@ def main(experiment_parameters):
     # Remove first pool from the train set
     X_pool, y_pool = X_train.copy(), y_train.copy()
     X_initial, y_initial = X_pool[idx], y_pool[idx]
-    X_pool, y_pool = remove_ids_from_array(X_pool, idx), remove_ids_from_array(y_pool, idx)
+    X_pool, y_pool = stat_helper.remove_ids_from_array(X_pool, idx), stat_helper.remove_ids_from_array(y_pool, idx)
     
     # Number of AL iterations
     n_iterations = math.ceil(y_pool.shape[0] / batch_size) + 1
 
     # Select the stop set
-    stop_set_idx = choices([i for i in range(len(y_train))], k=stop_set_size)
-    
-    # TODO: develop and elegant way of using pipelines. 
-        # Perhaps wrap every estimator in a Pipeline by default?
-        # Then apply an appropriate procedure of transformations specified by a new parameter.
-    
-    # Wrap a pipeline around the estimator!
-    from sklearn.pipeline import Pipeline
-    from transformers import BertTokenizer, BertModel
-    tokenizer = BertTokenizer.from_pretrained("bert-base-uncased")
-    bert_model = BertModel.from_pretrained("bert-base-uncased")
-    bert_transformer = vectorizers.BertTransformer(tokenizer, bert_model)
-    Pipeline(
-        [
-            ("vectorizer", bert_transformer),
-            ("estimator", estimator),
-        ]
-    )    
+    stop_set_idx = choices([i for i in range(len(y_train))], k=stop_set_size)   
 
     # Create the active learner
     learner = ActiveLearner(
@@ -134,7 +111,7 @@ def main(experiment_parameters):
     # First evaluation of the learner
     predictions = learner.predict(X_test)
     report = classification_report(y_test, predictions, zero_division=1, output_dict=True)
-    with open(output_helper.report_path / f"1.json", 'w') as f:
+    with open(oh.report_test_path / f"1.json", 'w') as f:
         json.dump(report, f, sort_keys=True, indent=4, separators=(',', ': '))
 
     # Set up Stabilizing Predictions tracking
@@ -148,21 +125,33 @@ def main(experiment_parameters):
         query_labels = y_pool[query_idx]
         learner.teach(query_sample, query_labels)
         
+        # Print the progress of the learning procedure
         print_pool_update(unlabeled_pool_initial_size, learner.y_training, y_pool, i, n_iterations)
 
-        # Evaluate the learner on the test set and stop set
+        # Evaluate the learner on the test set
         predictions = learner.predict(X_test)
         report = classification_report(y_test, predictions, zero_division=1, output_dict=True)
-        with open(output_helper.report_path / f"{str(i)}.json", 'w') as f:
+        with open(oh.report_test_path / f"{str(i)}.json", 'w') as f:
+            json.dump(report, f, sort_keys=True, indent=4, separators=(',', ': '))
+
+        # Evaluate the learner on the train set
+        predictions = learner.predict(X_train)
+        report = classification_report(y_train, predictions, zero_division=1, output_dict=True)
+        with open(oh.report_train_path / f"{str(i)}.json", 'w') as f:
+            json.dump(report, f, sort_keys=True, indent=4, separators=(',', ': '))
+            
+        # Evaluate the learner on the stop set
+        stop_set_predictions = learner.predict(X_train[stop_set_idx])
+        report = classification_report(y_train[stop_set_idx], stop_set_predictions, zero_division=1, output_dict=True)
+        with open(oh.report_stopset_path / f"{str(i)}.json", 'w') as f:
             json.dump(report, f, sort_keys=True, indent=4, separators=(',', ': '))
         
-        # Track Stabilizing Predictions stopping methods
-        stop_set_predictions = learner.predict(X_train[stop_set_idx])
+        # Update the list of kappas for stabilizing predictions
         kappa = cohen_kappa_score(stop_set_predictions, previous_stop_set_predictions)
         kappas.append(kappa)
         previous_stop_set_predictions = stop_set_predictions
         
-    np.savetxt(output_helper.kappa_file, np.array(kappas), fmt='%f', delimiter=',')
+    np.savetxt(oh.kappa_file, np.array(kappas), fmt='%f', delimiter=',')
     
 if __name__ == "__main__":
     
@@ -176,7 +165,7 @@ if __name__ == "__main__":
         "batch_size": 100,
         "estimator": "svm-ova",   # ["mlp", "svm", "svm-ova", "rf"],
         "dataset": "20NewsGroups-raw",
-        "random_seed": 0,
+        "random_state": 0,
     }
     
     with warnings.catch_warnings():

@@ -1,8 +1,6 @@
 """Helpful statistical functions to assist in math and data wrangling.
 """
 
-import statistics
-
 import numpy as np
 import scipy
 

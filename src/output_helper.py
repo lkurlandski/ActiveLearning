@@ -25,30 +25,46 @@ class OutputHelper:
     
     # TODO: create class variable that describe the relative location of various paths/files,
         # e.g., stopping/results.csv relative to its parent directory
-    # TODO: remove the initial_pool_size parameter
-    # TODO: rename the random_seed parameter to random_state
+    # TODO: remove the initial_pool_size parameter (should simply be one element from distinct classes)
+    # TODO: come up with a more comprehensive naming scheme when we figure out exactly what data we 
+        # want to record
+        
+    required_experiment_parameters = {
+        "output_root",
+        "task",
+        "stop_set_size",
+        "initial_pool_size",
+        "batch_size",
+        "estimator",
+        "dataset",
+        "random_state"
+    }
     
-    def __init__(self, 
-            output_root, 
-            task, 
-            initial_pool_size, 
-            stop_set_size, 
-            batch_size, 
-            estimator, 
-            dataset,
-            random_seed
-        ):
+    def __init__(self, experiment_parameters):
         
-        self.output_root = Path(output_root)
+        if set(experiment_parameters.keys()) != self.required_experiment_parameters:
+            raise ValueError(f"Expected the following parameters:\n\t"
+                f"{sorted(self.required_experiment_parameters)}\nbut recieved the following:\n\t"
+                f"{sorted(experiment_parameters.keys())}"
+            )
+            
+        self.experiment_parameters = experiment_parameters
+        e = self.experiment_parameters
         
-        self.dataset_path = self.output_root / str(task) / str(initial_pool_size) / str(stop_set_size) / str(batch_size) / str(estimator) / str(dataset)
+        self.output_root = Path(e['output_root'])
+        
+        self.task_path = self.output_root / e['task']
+        self.estimator_path = self.task_path / str(e['stop_set_size']) / str(e['batch_size']) / e['estimator']
+        self.dataset_path = self.estimator_path / e['dataset']
         
         # Individual seed paths
         self.ind_seeds_path = self.dataset_path / "ind_seeds"
-        self.output_path = self.ind_seeds_path / str(random_seed)
+        self.output_path = self.ind_seeds_path / str(e['random_state'])
         
         self.raw_path = self.output_path / "raw"
-        self.report_path = self.raw_path / "reports"
+        self.report_test_path = self.raw_path / "reportsTest"
+        self.report_train_path = self.raw_path / "reportsTrain"
+        self.report_stopset_path = self.raw_path / "reportsStopset"
         self.kappa_file = self.raw_path / "kappas.txt"
         
         self.processed_path = self.output_path / "processed"
@@ -69,10 +85,10 @@ class OutputHelper:
         self.avg_processed_accuracy_file = self.avg_processed_average_path / "accuracy.csv"
         self.avg_processed_macro_avg_file = self.avg_processed_average_path / "macro_avg.csv"
         self.avg_processed_weighted_avg_file = self.avg_processed_average_path / "weighted_avg.csv"
-        
+
         self.avg_stopping_path = self.avg_seeds_path / "stopping"
         self.avg_stopping_results_file = self.avg_stopping_path / "results.csv"
-    
+
     def setup_output_path(self, remove_existing=False, exists_ok=True):
         if self.output_path.exists():
             if remove_existing:
@@ -86,7 +102,9 @@ class OutputHelper:
         self.ind_seeds_path.mkdir(parents=True, exist_ok=exists_ok)
         self.output_path.mkdir(exist_ok=exists_ok)
         self.raw_path.mkdir(exist_ok=exists_ok)
-        self.report_path.mkdir(exist_ok=exists_ok)
+        self.report_test_path.mkdir(exist_ok=exists_ok)
+        self.report_train_path.mkdir(exist_ok=exists_ok)
+        self.report_stopset_path.mkdir(exist_ok=exists_ok)
         self.processed_path.mkdir(exist_ok=exists_ok)
         self.processed_individual_path.mkdir(exist_ok=exists_ok)
         self.processed_average_path.mkdir(exist_ok=exists_ok)

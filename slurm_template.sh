@@ -1,6 +1,6 @@
-#!/home/hpc/kurlanl1/bloodgood/modAL/env/bin/python -u
+#!./env/bin/python -u
 
-#SBATCH --chdir=/home/hpc/kurlanl1/bloodgood/modAL
+#SBATCH --chdir=/home/hpc/kurlanl1/bloodgood/ActiveLearning
 #SBATCH --job-name=avila
 #SBATCH --output=./slurm/jobs/job.%A_%a.out
 #SBATCH --signal=B:INT@600
@@ -16,7 +16,7 @@ import time
 import atexit
 import signal
 
-sys.path.append("/home/hpc/kurlanl1/bloodgood/modAL")
+sys.path.append("/home/hpc/kurlanl1/bloodgood/ActiveLearning/src")
 
 import main
 

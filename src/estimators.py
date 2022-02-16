@@ -6,7 +6,7 @@ from sklearn.multiclass import OneVsRestClassifier      # ova
 from sklearn.neural_network import MLPClassifier        # multiclass
 from sklearn.svm import SVC                             # ovo
 
-# FIXME: implement system to recieve model kwargs and output custom model
+# TODO: implement system to recieve model kwargs and output custom model
 def get_estimator_from_code(code, **model_kwargs):
     if code == 'mlp':
         return MLPClassifier()

@@ -7,7 +7,7 @@ from pprint import pprint
 
 import pandas as pd
 
-from output_helper import OutputHelper
+import output_helper
 
 def report_jsons_to_dicts(paths):
     
@@ -40,25 +40,25 @@ def report_dicts_to_dfs(data):
         
     return dfs
 
-def dict_of_dfs_to_csvs(output_helper, dfs):
+def dict_of_dfs_to_csvs(oh, dfs):
     
     for k, df in dfs.items():
         if k not in {"accuracy", "macro avg", "weighted avg"}:
-            path = output_helper.processed_individual_path / f"{k}.csv"
+            path = oh.processed_individual_path / f"{k}.csv"
         elif k == "accuracy":
             df.rename(columns={0:"accuracy"}, inplace=True)
-            path = output_helper.processed_average_path / f"{k}.csv"
+            path = oh.processed_average_path / f"{k}.csv"
         else:
-            path = output_helper.processed_average_path / f"{k.replace(' ', '_')}.csv"
+            path = oh.processed_average_path / f"{k.replace(' ', '_')}.csv"
         df.to_csv(path)
 
 def main(experiment_parameters=None):
     
-    output_helper = OutputHelper(**experiment_parameters)
-    report_paths = list(output_helper.report_path.iterdir())
+    oh = output_helper.OutputHelper(experiment_parameters)
+    report_paths = list(oh.report_test_path.iterdir())
     data = report_jsons_to_dicts(report_paths)
     dfs = report_dicts_to_dfs(data)
-    dict_of_dfs_to_csvs(output_helper, dfs)
+    dict_of_dfs_to_csvs(oh, dfs)
     
 if __name__ == "__main__":
     
@@ -72,7 +72,7 @@ if __name__ == "__main__":
         #"estimator": "MLPClassifier()",
         #"estimator": "SVC(kernel='linear', probability=True)",
         "dataset": "Avila",
-        "random_seed": 0
+        "random_state": 0
     }
     
     main(experiment_parameters)

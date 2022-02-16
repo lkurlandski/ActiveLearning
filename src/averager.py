@@ -6,7 +6,7 @@ from pathlib import Path
 import pandas as pd
 
 import graphing
-from output_helper import OutputHelper, contains_data
+import output_helper
 
 def mean_dataframes(dfs):
     
@@ -53,15 +53,15 @@ def average_file_in_directory(path):
 
 def main(experiment_parameters):
     
-    output_helper = OutputHelper(**experiment_parameters)
-    output_helper.setup_output_path(remove_existing=False, exists_ok=True)
+    oh = output_helper.OutputHelper(experiment_parameters)
+    oh.setup_output_path(remove_existing=False, exists_ok=True)
     mean_stopping_df, mean_accuracy_df, mean_macro_avg_df, mean_weighted_avg_df = \
-        average_file_in_directory(output_helper.ind_seeds_path)
+        average_file_in_directory(oh.ind_seeds_path)
         
-    mean_stopping_df.to_csv(output_helper.avg_stopping_results_file)
-    mean_accuracy_df.to_csv(output_helper.avg_processed_accuracy_file)
-    mean_macro_avg_df.to_csv(output_helper.avg_processed_macro_avg_file)
-    mean_weighted_avg_df.to_csv(output_helper.avg_processed_weighted_avg_file)
+    mean_stopping_df.to_csv(oh.avg_stopping_results_file)
+    mean_accuracy_df.to_csv(oh.avg_processed_accuracy_file)
+    mean_macro_avg_df.to_csv(oh.avg_processed_macro_avg_file)
+    mean_weighted_avg_df.to_csv(oh.avg_processed_weighted_avg_file)
 
 if __name__ == "__main__":
     
@@ -73,7 +73,7 @@ if __name__ == "__main__":
         "batch_size": 10,
         "estimator": "mlp",
         "dataset": "Avila",
-        "random_seed": 0
+        "random_state": 0
     }
     
     main(experiment_parameters)

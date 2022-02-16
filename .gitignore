@@ -1,5 +1,6 @@
 env
 slurm/jobs/*.out
 slurm/scripts/*.sh
+output/*
 .vscode/*
 */__pycache__

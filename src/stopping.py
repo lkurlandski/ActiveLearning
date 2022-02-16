@@ -1,6 +1,4 @@
 """Rudimentary stopping algorithms.
-
-# TODO: ultimately, we will want to incorporate the stopping criterion to run during AL.
 """
 
 from pprint import pprint
@@ -9,11 +7,11 @@ from statistics import mean
 import numpy as np
 import pandas as pd
 
-from output_helper import OutputHelper
+import output_helper
 
-def stabilizing_predictions(output_helper, windows=3, threshold=0.99):
+def stabilizing_predictions(oh, windows=3, threshold=0.99):
     
-    kappas = np.loadtxt(output_helper.kappa_file.as_posix())
+    kappas = np.loadtxt(oh.kappa_file.as_posix())
     for i in range(len(kappas)):
         if i - windows < 0:
             continue
@@ -28,14 +26,14 @@ def stabilizing_predictions(output_helper, windows=3, threshold=0.99):
 
 def main(experiment_parameters):
     
-    output_helper = OutputHelper(**experiment_parameters)
+    oh = output_helper.OutputHelper(experiment_parameters)
     stopping = {
-        "stabilizing_predictions": [stabilizing_predictions(output_helper, 3, 0.99)]
+        "stabilizing_predictions": [stabilizing_predictions(oh, 3, 0.99)]
     }
     
-    accuracy_df = pd.read_csv(output_helper.processed_accuracy_file)
-    macro_avg_df = pd.read_csv(output_helper.processed_macro_avg_file)
-    weighted_avg_df = pd.read_csv(output_helper.processed_weighted_avg_file)
+    accuracy_df = pd.read_csv(oh.processed_accuracy_file)
+    macro_avg_df = pd.read_csv(oh.processed_macro_avg_file)
+    weighted_avg_df = pd.read_csv(oh.processed_weighted_avg_file)
     
     for k in stopping:
         stop = stopping[k][0]
@@ -45,7 +43,7 @@ def main(experiment_parameters):
         stopping[k].extend([accuracy, macro_f1, weighted_f1])
         
     df = pd.DataFrame(stopping, index=["annotations", "accuracy", "macro_f1", "weighted_f1"])
-    df.to_csv(output_helper.stopping_results_file)
+    df.to_csv(oh.stopping_results_file)
     
 if __name__ == "__main__":
     
@@ -57,7 +55,7 @@ if __name__ == "__main__":
         "batch_size": 10, 
         "estimator": "mlp",
         "dataset": "Avila",
-        "random_seed": 5
+        "random_state": 5
     }
     
     main(experiment_parameters)

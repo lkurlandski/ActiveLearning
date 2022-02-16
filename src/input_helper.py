@@ -4,8 +4,7 @@
 from pathlib import Path
 
 import numpy as np
-
-from sklearn.datasets import fetch_20newsgroups, fetch_20newsgroups_vectorized, fetch_covtype
+from sklearn.datasets import fetch_20newsgroups, fetch_20newsgroups_vectorized, fetch_covtype, load_iris
 from sklearn.model_selection import train_test_split
 
 def shuffle_corresponding_arrays(a1, a2, random_state):
@@ -25,15 +24,14 @@ def get_covtype(random_state):
     
     X = bunch['data']
     y = bunch['target']
-    labels = [1,2,3,4,5,6,7]    # bunch['target_names'] appears to be broken...
+    labels = [1,2,3,4,5,6,7]    # bunch['target_names'] does not work
     
     X_train, X_test, y_train, y_test = \
         train_test_split(X, y, test_size=0.25, random_state=random_state)
         
     return X_train, X_test, y_train, y_test, labels
 
-# TODO: convert to the scipy.sparse.csr_array type instead of scipy.sparse.csr_matrix,
-    # then ensure the rest of the system is compatible with this type.
+# TODO: use scipy.sparse.csr_array not scipy.sparse.csr_matrix (per the scipy.sparse docs)
 def get_20_newsgroups(random_state):
     
     bunch = fetch_20newsgroups_vectorized(
@@ -48,11 +46,10 @@ def get_20_newsgroups(random_state):
     )
     X_test = bunch['data']
     y_test = bunch['target']
-    labels = bunch['target_names']
+    labels = bunch['target_names'].tolist()
         
     return X_train, X_test, y_train, y_test, labels
 
-# TODO: attempt to access bunch['file_names'] and create a streaming approach!
 def get_20_newsgroups_bert(random_state):
     
     bunch = fetch_20newsgroups(
@@ -60,14 +57,25 @@ def get_20_newsgroups_bert(random_state):
     )
     X_train = np.array(bunch['data'])
     y_train = np.array(bunch['target'])
-    labels = bunch['target_names']
     
     bunch = fetch_20newsgroups(
         subset='test', remove=('headers', 'footers', 'quotes'), random_state=random_state
     )
     X_test = np.array(bunch['data'])
     y_test = np.array(bunch['target'])
-    labels = bunch['target_names']
+    labels = bunch['target_names'].tolist()
+        
+    return X_train, X_test, y_train, y_test, labels
+
+def get_iris(random_state):
+    
+    bunch = load_iris()
+    X = np.array(bunch['data'])
+    y = np.array(bunch['target'])
+    labels = bunch['target_names'].tolist()
+    
+    X_train, X_test, y_train, y_test = \
+        train_test_split(X, y, test_size=0.25, random_state=random_state)
         
     return X_train, X_test, y_train, y_test, labels
 
@@ -87,17 +95,23 @@ def get_avila(random_state):
     
     return X_train, X_test, y_train, y_test, labels
 
+# TODO: Establish proper data types and ensure proper data types are being used
+# TODO: attempt to access bunch['file_names'] and create a streaming approach for text datasets
 def get_dataset(dataset, random_state=None):
     if dataset == "Avila":
-        return get_avila(random_state)
+        X_train, X_test, y_train, y_test, labels = get_avila(random_state)
     elif dataset == "20NewsGroups":
-        return get_20_newsgroups(random_state)
+        X_train, X_test, y_train, y_test, labels = get_20_newsgroups(random_state)
     elif dataset == "20NewsGroups-raw":
-        return get_20_newsgroups_bert(random_state)
+        X_train, X_test, y_train, y_test, labels = get_20_newsgroups_bert(random_state)
     elif dataset == "Covertype":
-        return get_covtype(random_state)
+        X_train, X_test, y_train, y_test, labels = get_covtype(random_state)
+    elif dataset == "Iris":
+        X_train, X_test, y_train, y_test, labels = get_iris(random_state)
     else:
         raise ValueError(f"Dataset not recognized: {dataset}")
+    
+    return X_train, X_test, y_train, y_test, labels
 
 if __name__ == "__main__":
     X_train, y_train, X_test, y_test, labels = get_dataset("20NewsGroups-bert", 0)
