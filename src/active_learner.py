@@ -108,17 +108,17 @@ def main(experiment_parameters):
         # Then apply an appropriate procedure of transformations specified by a new parameter.
     
     # Wrap a pipeline around the estimator!
-    from sklearn.pipeline import Pipeline
-    from transformers import BertTokenizer, BertModel
-    tokenizer = BertTokenizer.from_pretrained("bert-base-uncased")
-    bert_model = BertModel.from_pretrained("bert-base-uncased")
-    bert_transformer = vectorizers.BertTransformer(tokenizer, bert_model)
-    Pipeline(
-        [
-            ("vectorizer", bert_transformer),
-            ("estimator", estimator),
-        ]
-    )    
+    #from sklearn.pipeline import Pipeline
+    #from transformers import BertTokenizer, BertModel
+    #tokenizer = BertTokenizer.from_pretrained("bert-base-uncased")
+    #bert_model = BertModel.from_pretrained("bert-base-uncased")
+    #bert_transformer = vectorizers.BertTransformer(tokenizer, bert_model)
+    #Pipeline(
+    #    [
+    #        ("vectorizer", bert_transformer),
+    #        ("estimator", estimator),
+    #    ]
+    #)    
 
     # Create the active learner
     learner = ActiveLearner(
