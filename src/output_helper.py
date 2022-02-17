@@ -46,7 +46,7 @@ def get_structure_beneath_processed(processed_path):
         d[f"processed_{subset}_avg_path"] = processed_path / subset / "avg"
         for data_file in ("accuracy", "macro_avg", "weighted_avg"):
             d[f"processed_{subset}_{data_file}_path"] = \
-                d[f"processed_{subset}_avg_path"] / f"{data_file}.csv"
+                d[f"processed_{subset}_avg_path"] / f"{data_file}.csv"# TODO: should be file, not path
             
     return d
 

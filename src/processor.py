@@ -57,10 +57,14 @@ def main(experiment_parameters=None):
     
     oh = output_helper.OutputHelper(experiment_parameters)
     
+    num_training_data = pd.read_csv(oh.ind_rstates_paths["num_training_data_file"])['training_data']
+    
     for subset in ("test", "train", "stop_set"):
         report_paths = list(oh.ind_rstates_paths[f'report_{subset}_path'].iterdir())
         data = report_jsons_to_dicts(report_paths)
         dfs = report_dicts_to_dfs(data)
+        for df in dfs.values():
+            df.insert(0, 'training_data', num_training_data)
         dict_of_dfs_to_csvs(oh, dfs, subset)
     
 if __name__ == "__main__":
@@ -69,7 +73,7 @@ if __name__ == "__main__":
         "output_root": "./output",
         "task": "preprocessedClassification",
         "stop_set_size": 1000,
-        "batch_size": 1,
+        "batch_size": 7,
         "estimator": "svm",
         "dataset": "Iris",
         "random_state": 0,
