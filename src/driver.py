@@ -24,7 +24,7 @@ def sbatch_config_files(flags, temp_name=None):
         
         # TODO: SLURM overhaul: emulate TCNJ.py
         # Replace specific lines with what we need
-        for i in range(slurm_lines):
+        for i in range(len(slurm_lines)):
             if '--job-name' in slurm_lines[i]:
                 slurm_lines[i] = f"#SBATCH --job-name={str(temp_name)}\n"
             elif 'main.main' in slurm_lines[i]:
@@ -32,7 +32,7 @@ def sbatch_config_files(flags, temp_name=None):
             elif '--chdir' in slurm_lines[i]:
                 slurm_lines[i] = f"#SBATCH --chdir={config.location_of_ActiveLearning_dir}\n"
             elif 'sys.path.append' in slurm_lines[i]:
-                slurm_lines[i] = f"sys.path.append('{config.location_of_ActiveLearning_dir}'/src)\n"
+                slurm_lines[i] = f"sys.path.append('{config.location_of_ActiveLearning_dir}/src')\n"
             else:
                 pass
         

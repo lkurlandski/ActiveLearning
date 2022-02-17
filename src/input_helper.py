@@ -35,35 +35,36 @@ def get_covtype(random_state):
 def get_20_newsgroups(random_state):
     
     bunch = fetch_20newsgroups_vectorized(
-        subset='train', remove=('headers', 'footers', 'quotes'), random_state=random_state
+        subset='train', remove=('headers', 'footers', 'quotes')
     )
     X_train = bunch['data']
     y_train = bunch['target']
-    labels = bunch['target_names']
+    X_train, y_train = shuffle_corresponding_arrays(X_train, y_train, random_state)
     
     bunch = fetch_20newsgroups_vectorized(
-        subset='test', remove=('headers', 'footers', 'quotes'), random_state=random_state
+        subset='test', remove=('headers', 'footers', 'quotes')
     )
     X_test = bunch['data']
     y_test = bunch['target']
-    labels = bunch['target_names'].tolist()
+    labels = list(bunch['target_names'])
         
     return X_train, X_test, y_train, y_test, labels
 
 def get_20_newsgroups_bert(random_state):
     
     bunch = fetch_20newsgroups(
-        subset='train', remove=('headers', 'footers', 'quotes'), random_state=random_state
+        subset='train', remove=('headers', 'footers', 'quotes')
     )
     X_train = np.array(bunch['data'])
     y_train = np.array(bunch['target'])
+    X_train, y_train = shuffle_corresponding_arrays(X_train, y_train, random_state)
     
     bunch = fetch_20newsgroups(
-        subset='test', remove=('headers', 'footers', 'quotes'), random_state=random_state
+        subset='test', remove=('headers', 'footers', 'quotes')
     )
     X_test = np.array(bunch['data'])
     y_test = np.array(bunch['target'])
-    labels = bunch['target_names'].tolist()
+    labels = list(bunch['target_names'])
         
     return X_train, X_test, y_train, y_test, labels
 
