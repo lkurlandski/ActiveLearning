@@ -23,19 +23,13 @@ import output_helper
 import stat_helper
 import vectorizers
 
-def print_pool_update(
-        unlabeled_pool_initial_size,
-        y_training,
-        y_pool,
-        iteration,
-        n_iterations
-    ):
+def print_pool_update(unlabeled_pool_initial_size, y_pool, iteration, n_iterations):
     
     print(
         f"Iteration {iteration} / {n_iterations} = {round(100 * iteration/n_iterations, 2)}%:"
         f"\t|U_0|:{unlabeled_pool_initial_size}"
         f"\t|U|:{y_pool.shape[0]}"
-        f"\t|L|:{y_training.shape[0]}",
+        f"\t|L|:{unlabeled_pool_initial_size - y_pool.shape[0]}",
         flush=True
     )
 
@@ -61,7 +55,6 @@ def main(experiment_parameters):
     # Extract hyperparameters from the experiment parameters
     stop_set_size = int(experiment_parameters["stop_set_size"])
     batch_size = int(experiment_parameters["batch_size"])
-    initial_pool_size = int(experiment_parameters["initial_pool_size"])
     # TODO: pipelines
     estimator = estimators.get_estimator_from_code(experiment_parameters["estimator"])
     random_state = int(experiment_parameters["random_state"])
@@ -80,39 +73,27 @@ def main(experiment_parameters):
 
     # Get ids of one instance of each class
     idx = get_index_for_each_class(y_train, labels)
-
-    # Add additional random ids if the required size not met
-    extra_examples_needed = initial_pool_size - len(idx)
-    if extra_examples_needed > 0:
-        idx += choices([i for i in range(len(y_train)) if i not in idx], k=extra_examples_needed)
+    
+    # TODO: move the entire first iteration within the loop.
 
     # Remove first pool from the train set
-    X_pool, y_pool = X_train.copy(), y_train.copy()
-    X_initial, y_initial = X_pool[idx], y_pool[idx]
-    X_pool, y_pool = stat_helper.remove_ids_from_array(X_pool, idx), stat_helper.remove_ids_from_array(y_pool, idx)
+    X_pool = X_train.copy()
+    y_pool = y_train.copy()
+    X_initial = X_pool[idx]
+    y_initial = y_pool[idx]
+    X_pool = stat_helper.remove_ids_from_array(X_pool, idx)
+    y_pool = stat_helper.remove_ids_from_array(y_pool, idx)
     
     # Number of AL iterations
     n_iterations = math.ceil(y_pool.shape[0] / batch_size) + 1
+    
+    # Write the size of the unlabeled pool at each iteration to a file.
+    pd.DataFrame({'training_data' : 
+        [y_initial.shape[0] + i * batch_size for i in range(n_iterations - 1)] + [y_train.shape[0]]
+    }).to_csv(oh.ind_rstates_paths['num_training_data_file'])
 
     # Select the stop set
-    stop_set_idx = choices([i for i in range(len(y_train))], k=stop_set_size)
-    
-    # TODO: develop and elegant way of using pipelines. 
-        # Perhaps wrap every estimator in a Pipeline by default?
-        # Then apply an appropriate procedure of transformations specified by a new parameter.
-    
-    # Wrap a pipeline around the estimator!
-    #from sklearn.pipeline import Pipeline
-    #from transformers import BertTokenizer, BertModel
-    #tokenizer = BertTokenizer.from_pretrained("bert-base-uncased")
-    #bert_model = BertModel.from_pretrained("bert-base-uncased")
-    #bert_transformer = vectorizers.BertTransformer(tokenizer, bert_model)
-    #Pipeline(
-    #    [
-    #        ("vectorizer", bert_transformer),
-    #        ("estimator", estimator),
-    #    ]
-    #)    
+    stop_set_idx = choices([i for i in range(len(y_train))], k=stop_set_size) 
 
     # Create the active learner
     learner = ActiveLearner(
@@ -123,44 +104,66 @@ def main(experiment_parameters):
     )
     
     # Display the current pool sizes
-    print_pool_update(unlabeled_pool_initial_size, learner.y_training, y_pool, 0, n_iterations)
-    
-    # First evaluation of the learner
+    print_pool_update(unlabeled_pool_initial_size, y_initial, 0, n_iterations)
+        
+    # Evaluate the learner on the test set
     predictions = learner.predict(X_test)
-    report = classification_report(y_test, predictions, zero_division=1, output_dict=True)
-    with open(oh.report_test_path / f"1.json", 'w') as f:
+    report = classification_report(
+        y_test, predictions, zero_division=1, output_dict=True)
+    with open(oh.ind_rstates_paths["report_test_path"] / f"{str(0)}.json", 'w') as f:
+        json.dump(report, f, sort_keys=True, indent=4, separators=(',', ': '))
+
+    # Evaluate the learner on the train set
+    predictions = learner.predict(X_train)
+    report = classification_report(
+        y_train, predictions, zero_division=1, output_dict=True)
+    with open(oh.ind_rstates_paths["report_train_path"] / f"{str(0)}.json", 'w') as f:
+        json.dump(report, f, sort_keys=True, indent=4, separators=(',', ': '))
+        
+    # Evaluate the learner on the stop set
+    stop_set_predictions = learner.predict(X_train[stop_set_idx])
+    report = classification_report(
+        y_train[stop_set_idx], stop_set_predictions, zero_division=1, output_dict=True)
+    with open(oh.ind_rstates_paths["report_stop_set_path"] / f"{str(0)}.json", 'w') as f:
         json.dump(report, f, sort_keys=True, indent=4, separators=(',', ': '))
 
     # Set up Stabilizing Predictions tracking
     previous_stop_set_predictions = learner.predict(X_train[stop_set_idx])
     kappas = [np.NaN]
     
-    for i in range(1, n_iterations + 1):
+    for i in range(1, n_iterations):
 
         # Retrain the learner
-        query_idx, query_sample = learner.query(X_pool=X_pool, n_instances=batch_size)
-        query_labels = y_pool[query_idx]
+        idx, query_sample = learner.query(X_pool=X_pool, n_instances=batch_size)
+        query_labels = y_pool[idx]
         learner.teach(query_sample, query_labels)
         
+        # Remove the queried elements from the unlabeled pool
+        X_pool = stat_helper.remove_ids_from_array(X_pool, idx)
+        y_pool = stat_helper.remove_ids_from_array(y_pool, idx)
+        
         # Print the progress of the learning procedure
-        print_pool_update(unlabeled_pool_initial_size, learner.y_training, y_pool, i, n_iterations)
+        print_pool_update(unlabeled_pool_initial_size, y_pool, i, n_iterations)
 
         # Evaluate the learner on the test set
         predictions = learner.predict(X_test)
-        report = classification_report(y_test, predictions, zero_division=1, output_dict=True)
-        with open(oh.report_test_path / f"{str(i)}.json", 'w') as f:
+        report = classification_report(
+            y_test, predictions, zero_division=1, output_dict=True)
+        with open(oh.ind_rstates_paths["report_test_path"] / f"{str(i)}.json", 'w') as f:
             json.dump(report, f, sort_keys=True, indent=4, separators=(',', ': '))
 
         # Evaluate the learner on the train set
         predictions = learner.predict(X_train)
-        report = classification_report(y_train, predictions, zero_division=1, output_dict=True)
-        with open(oh.report_train_path / f"{str(i)}.json", 'w') as f:
+        report = classification_report(
+            y_train, predictions, zero_division=1, output_dict=True)
+        with open(oh.ind_rstates_paths["report_train_path"] / f"{str(i)}.json", 'w') as f:
             json.dump(report, f, sort_keys=True, indent=4, separators=(',', ': '))
             
         # Evaluate the learner on the stop set
         stop_set_predictions = learner.predict(X_train[stop_set_idx])
-        report = classification_report(y_train[stop_set_idx], stop_set_predictions, zero_division=1, output_dict=True)
-        with open(oh.report_stopset_path / f"{str(i)}.json", 'w') as f:
+        report = classification_report(
+            y_train[stop_set_idx], stop_set_predictions, zero_division=1, output_dict=True)
+        with open(oh.ind_rstates_paths["report_stop_set_path"] / f"{str(i)}.json", 'w') as f:
             json.dump(report, f, sort_keys=True, indent=4, separators=(',', ': '))
         
         # Update the list of kappas for stabilizing predictions
@@ -168,20 +171,17 @@ def main(experiment_parameters):
         kappas.append(kappa)
         previous_stop_set_predictions = stop_set_predictions
         
-    np.savetxt(oh.kappa_file, np.array(kappas), fmt='%f', delimiter=',')
+    np.savetxt(oh.ind_rstates_paths["kappa_file"], np.array(kappas), fmt='%f', delimiter=',')
     
 if __name__ == "__main__":
     
     experiment_parameters = {
-        # Only one value permitted
-        "output_root": "/home/hpc/kurlanl1/bloodgood/modAL/output",
+        "output_root": "./output",
         "task": "preprocessedClassification",
-        # Iterable of values required
         "stop_set_size": 1000,
-        "initial_pool_size": 10,
-        "batch_size": 100,
-        "estimator": "svm-ova",   # ["mlp", "svm", "svm-ova", "rf"],
-        "dataset": "20NewsGroups-raw",
+        "batch_size": 7,
+        "estimator": "svm",
+        "dataset": "Iris",
         "random_state": 0,
     }
     

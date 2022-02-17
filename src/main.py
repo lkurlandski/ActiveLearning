@@ -8,7 +8,7 @@ import warnings
 from sklearn.exceptions import ConvergenceWarning
 
 import active_learner
-import analysis
+import processor
 import averager
 import graphing
 import stopping
@@ -28,8 +28,8 @@ def main(config_file=None, experiment_parameters=None, flags=None):
 
         if "active_learning" in flags or flags is None:
             active_learner.main(experiment_parameters)
-        if "analysis" in flags or flags is None:
-            analysis.main(experiment_parameters)
+        if "processor" in flags or flags is None:
+            processor.main(experiment_parameters)
         if "stopping" in flags or flags is None:
             stopping.main(experiment_parameters)
             
@@ -44,10 +44,9 @@ def main(config_file=None, experiment_parameters=None, flags=None):
 if __name__ == "__main__":
     
     experiment_parameters = {
-        "output_root": "/home/hpc/kurlanl1/bloodgood/modAL/output",
+        "output_root": "./output",
         "task": "preprocessedClassification",
         "stop_set_size": 1000,
-        "initial_pool_size": 10,
         "batch_size": 10, 
         "estimator": "mlp",
         "dataset": "Avila",

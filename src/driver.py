@@ -52,28 +52,27 @@ def create_config_files(experiment_parameters_lists, flags, local):
     
     i = 0
     
-    for stop_set_size in experiment_parameters_lists["stop_set_size"]:
-        for batch_size in experiment_parameters_lists["batch_size"]:
-            for initial_pool_size in experiment_parameters_lists["initial_pool_size"]:
+    for random_state in experiment_parameters_lists["random_state"]:
+        for stop_set_size in experiment_parameters_lists["stop_set_size"]:
+            for batch_size in experiment_parameters_lists["batch_size"]:
                 for estimator in experiment_parameters_lists["estimator"]:
                     for dataset in experiment_parameters_lists["dataset"]:
-                        for random_state in experiment_parameters_lists["random_state"]:
-                            experiment_parameters = {
-                                "output_root": experiment_parameters_lists["output_root"],
-                                "task": experiment_parameters_lists["task"],
-                                "stop_set_size": stop_set_size,
-                                "initial_pool_size": initial_pool_size,
-                                "batch_size": batch_size, 
-                                "estimator": estimator,
-                                "dataset": dataset,
-                                "random_state": random_state
-                            }
-                            experiment_parameters = {k : str(v) for k, v in experiment_parameters.items()}
-                            
-                            if local:
-                                main.main(experiment_parameters=experiment_parameters, flags=flags)
-                            else:
-                                config_file = config.config_file_path / f"{i}.json"
-                                with open(config_file, 'w') as f:
-                                    json.dump(experiment_parameters, f, sort_keys=True, indent=4, separators=(',', ': '))
-                                i += 1
+                    
+                        experiment_parameters = {
+                            "output_root": experiment_parameters_lists["output_root"],
+                            "task": experiment_parameters_lists["task"],
+                            "stop_set_size": stop_set_size,
+                            "batch_size": batch_size, 
+                            "estimator": estimator,
+                            "dataset": dataset,
+                            "random_state": random_state
+                        }
+                        experiment_parameters = {k : str(v) for k, v in experiment_parameters.items()}
+                        
+                        if local:
+                            main.main(experiment_parameters=experiment_parameters, flags=flags)
+                        else:
+                            config_file = config.config_file_path / f"{i}.json"
+                            with open(config_file, 'w') as f:
+                                json.dump(experiment_parameters, f, sort_keys=True, indent=4, separators=(',', ': '))
+                            i += 1

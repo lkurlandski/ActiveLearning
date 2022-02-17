@@ -18,18 +18,17 @@ def main(local):
         "task": "preprocessedClassification",
         # Iterable of values required
         "stop_set_size": [1000],
-        "initial_pool_size": [3],
         "batch_size": [1],
         "estimator": ["svm"],   # ["mlp", "svm", "svm-ova", "rf"],
         "dataset": ["Iris"],
-        "random_state": [0, 1, 2, 3, 4]
+        "random_state": [0]
     }
     
     # Change the flags to run different parts of the ALL program.
     flags_phase1 = {
-        "active_learning", 
-        "analysis", 
-        "stopping", 
+        "active_learning",
+        "processor",
+        "stopping",
     }
     flags_phase2 = {
         "averaging",

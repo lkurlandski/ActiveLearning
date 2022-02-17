@@ -88,10 +88,9 @@ def main(experiment_parameters):
 if __name__ == "__main__":
     
     experiment_parameters = {
-        "output_root": "/home/hpc/kurlanl1/bloodgood/modAL/output",
+        "output_root": "./output",
         "task": "preprocessedClassification",
         "stop_set_size": 1000,
-        "initial_pool_size": 10,
         "batch_size": 10,
         "estimator": "mlp",
         "dataset": "Avila",

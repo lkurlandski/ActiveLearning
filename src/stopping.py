@@ -31,9 +31,9 @@ def main(experiment_parameters):
         "stabilizing_predictions": [stabilizing_predictions(oh, 3, 0.99)]
     }
     
-    accuracy_df = pd.read_csv(oh.processed_accuracy_file)
-    macro_avg_df = pd.read_csv(oh.processed_macro_avg_file)
-    weighted_avg_df = pd.read_csv(oh.processed_weighted_avg_file)
+    accuracy_df = pd.read_csv(oh.processed_test_accuracy_file)
+    macro_avg_df = pd.read_csv(oh.processed_test_macro_avg_file)
+    weighted_avg_df = pd.read_csv(oh.processed_test_weighted_avg_file)
     
     for k in stopping:
         stop = stopping[k][0]
@@ -48,10 +48,9 @@ def main(experiment_parameters):
 if __name__ == "__main__":
     
     experiment_parameters = {
-        "output_root": "/home/hpc/kurlanl1/bloodgood/modAL/output",
+        "output_root": "./output",
         "task": "preprocessedClassification",
         "stop_set_size": 1000,
-        "initial_pool_size": 10,
         "batch_size": 10, 
         "estimator": "mlp",
         "dataset": "Avila",

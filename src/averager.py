@@ -54,9 +54,9 @@ def average_file_in_directory(path):
 def main(experiment_parameters):
     
     oh = output_helper.OutputHelper(experiment_parameters)
-    oh.setup_output_path(remove_existing=False, exists_ok=True)
+    oh.setup_output_path(remove_existing=False, exist_ok=True)
     mean_stopping_df, mean_accuracy_df, mean_macro_avg_df, mean_weighted_avg_df = \
-        average_file_in_directory(oh.ind_seeds_path)
+        average_file_in_directory(oh.ind_rstates_path)
         
     mean_stopping_df.to_csv(oh.avg_stopping_results_file)
     mean_accuracy_df.to_csv(oh.avg_processed_accuracy_file)
@@ -66,10 +66,9 @@ def main(experiment_parameters):
 if __name__ == "__main__":
     
     experiment_parameters = {
-        "output_root": "/home/hpc/kurlanl1/bloodgood/modAL/output",
+        "output_root": "./output",
         "task": "preprocessedClassification",
         "stop_set_size": 1000,
-        "initial_pool_size": 10,
         "batch_size": 10,
         "estimator": "mlp",
         "dataset": "Avila",
