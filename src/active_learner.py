@@ -8,7 +8,6 @@ from pprint import pprint
 from random import choices
 import warnings
 
-import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 from sklearn.exceptions import ConvergenceWarning
@@ -21,12 +20,11 @@ import estimators
 import input_helper
 import output_helper
 import stat_helper
-import vectorizers
 
 def print_pool_update(unlabeled_pool_initial_size, y_pool, iteration, n_iterations):
     
     print(
-        f"Iteration {iteration} / {n_iterations} = {round(100 * iteration/n_iterations, 2)}%:"
+        f"Iteration {iteration} / {n_iterations-1} = {round(100 * iteration/(n_iterations-1), 2)}%:"
         f"\t|U_0|:{unlabeled_pool_initial_size}"
         f"\t|U|:{y_pool.shape[0]}"
         f"\t|L|:{unlabeled_pool_initial_size - y_pool.shape[0]}",
@@ -73,70 +71,39 @@ def main(experiment_parameters):
 
     # Get ids of one instance of each class
     idx = get_index_for_each_class(y_train, labels)
-    
-    # TODO: move the entire first iteration within the loop.
 
     # Remove first pool from the train set
     X_pool = X_train.copy()
     y_pool = y_train.copy()
-    X_initial = X_pool[idx]
-    y_initial = y_pool[idx]
-    X_pool = stat_helper.remove_ids_from_array(X_pool, idx)
-    y_pool = stat_helper.remove_ids_from_array(y_pool, idx)
     
     # Number of AL iterations
     n_iterations = math.ceil(y_pool.shape[0] / batch_size) + 1
     
     # Write the size of the unlabeled pool at each iteration to a file.
     pd.DataFrame({'training_data' : 
-        [y_initial.shape[0] + i * batch_size for i in range(n_iterations - 1)] + [y_train.shape[0]]
+        [len(idx) + i * batch_size for i in range(n_iterations - 1)] + [y_train.shape[0]]
     }).to_csv(oh.ind_rstates_paths['num_training_data_file'])
 
     # Select the stop set
     stop_set_idx = choices([i for i in range(len(y_train))], k=stop_set_size) 
 
-    # Create the active learner
-    learner = ActiveLearner(
-        estimator=estimator,
-        query_strategy=uncertainty_batch_sampling,
-        X_training=X_initial, 
-        y_training=y_initial
-    )
+    # These assets will be initialized in the 0th iteration of AL
+    learner, previous_stop_set_predictions, kappas = None, None, None
     
-    # Display the current pool sizes
-    print_pool_update(unlabeled_pool_initial_size, y_initial, 0, n_iterations)
+    for i in range(n_iterations):
         
-    # Evaluate the learner on the test set
-    predictions = learner.predict(X_test)
-    report = classification_report(
-        y_test, predictions, zero_division=1, output_dict=True)
-    with open(oh.ind_rstates_paths["report_test_path"] / f"{str(0)}.json", 'w') as f:
-        json.dump(report, f, sort_keys=True, indent=4, separators=(',', ': '))
-
-    # Evaluate the learner on the train set
-    predictions = learner.predict(X_train)
-    report = classification_report(
-        y_train, predictions, zero_division=1, output_dict=True)
-    with open(oh.ind_rstates_paths["report_train_path"] / f"{str(0)}.json", 'w') as f:
-        json.dump(report, f, sort_keys=True, indent=4, separators=(',', ': '))
+        # Setup the learner and stabilizing predictions in the 0th iteration.
+        if i == 0:
+            learner = ActiveLearner(estimator=estimator, query_strategy=uncertainty_batch_sampling)
+            learner.teach(X_pool[idx], y_pool[idx])
+            previous_stop_set_predictions = learner.predict(X_train[stop_set_idx])
+            kappas = [np.NaN]
         
-    # Evaluate the learner on the stop set
-    stop_set_predictions = learner.predict(X_train[stop_set_idx])
-    report = classification_report(
-        y_train[stop_set_idx], stop_set_predictions, zero_division=1, output_dict=True)
-    with open(oh.ind_rstates_paths["report_stop_set_path"] / f"{str(0)}.json", 'w') as f:
-        json.dump(report, f, sort_keys=True, indent=4, separators=(',', ': '))
-
-    # Set up Stabilizing Predictions tracking
-    previous_stop_set_predictions = learner.predict(X_train[stop_set_idx])
-    kappas = [np.NaN]
-    
-    for i in range(1, n_iterations):
-
         # Retrain the learner
-        idx, query_sample = learner.query(X_pool=X_pool, n_instances=batch_size)
-        query_labels = y_pool[idx]
-        learner.teach(query_sample, query_labels)
+        else:
+            idx, query_sample = learner.query(X_pool=X_pool, n_instances=batch_size)
+            query_labels = y_pool[idx]
+            learner.teach(query_sample, query_labels)
         
         # Remove the queried elements from the unlabeled pool
         X_pool = stat_helper.remove_ids_from_array(X_pool, idx)
