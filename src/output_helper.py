@@ -4,6 +4,7 @@
 import itertools
 from pathlib import Path
 import shutil
+from typing import Dict, Union
 
 from utils import DisplayablePath
 
@@ -11,8 +12,26 @@ from utils import DisplayablePath
     # Develop a system (along with the output helper) that writes the experiment
     # to the /local/scratch directory on the node, then copies them over to the local directory 
     # when complete.
+    
+# TODO: replace report_train_path etc. with report_unlabeled_pool_path
 
-def contains_data(path, ignore_raw=False):
+def contains_data(path:Path, ignore_raw : bool = False) -> bool:
+    """Determine if a particular directory contains experiment data or not.
+    
+    FIXME: this no longer works
+
+    Parameters
+    ----------
+    path : Path
+        Directory to check
+    ignore_raw : bool, optional
+        Ignore the directory named raw, by default False
+
+    Returns
+    -------
+    bool
+        If the directory contains data or not
+    """
     
     files = set((p.name for p in path.glob("*")))
 
@@ -24,7 +43,19 @@ def contains_data(path, ignore_raw=False):
     
     return False
 
-def get_structure_beneath_raw(raw_path):
+def get_structure_beneath_raw(raw_path:Path) -> Dict[str, Path]:
+    """Return the dictionary of path names that should occur beneath the raw directory.
+
+    Parameters
+    ----------
+    raw_path : Path
+        Location of the raw path in question
+
+    Returns
+    -------
+    Dict[str, Path]
+        Named structure beneath raw dictionary
+    """
     
     d = {
         'kappa_file' : raw_path / "kappas.csv",
@@ -36,7 +67,19 @@ def get_structure_beneath_raw(raw_path):
         
     return d
     
-def get_structure_beneath_processed(processed_path):
+def get_structure_beneath_processed(processed_path:Path) -> Dict[str, Path]:
+    """Return the dictionary of path names that should occur beneath the processed directory.
+
+    Parameters
+    ----------
+    processed_path : Path
+        Location of the processed path in question
+
+    Returns
+    -------
+    Dict[str, Path]
+        Named structure beneath processed dictionary
+    """
     
     d = {}
     
@@ -50,13 +93,37 @@ def get_structure_beneath_processed(processed_path):
             
     return d
 
-def get_structure_beneath_stopping(stopping_path):
+def get_structure_beneath_stopping(stopping_path:Path) -> Dict[str, Path]:
+    """Return the dictionary of path names that should occur beneath the stopping directory.
+
+    Parameters
+    ----------
+    stopping_path : Path
+        Location of the stopping path in question
+
+    Returns
+    -------
+    Dict[str, Path]
+        Named structure beneath stopping dictionary
+    """
     
     d = {'stopping_results_file' : stopping_path / "results.csv"}
     
     return d
 
-def get_ind_avg_rstates_structure(parent):
+def get_ind_avg_rstates_structure(parent:Path) -> Dict[str, Path]:
+    """Return the dictionary of path names that should occur beneath the ind/avg rstates directory.
+
+    Parameters
+    ----------
+    parent : Path
+        Parent of the ind/avg rstates in question
+
+    Returns
+    -------
+    Dict[str, Path]
+        Named structure beneath ind/avg rstates dictionary
+    """
     
     d = {
         'raw_path' : parent / "raw",
@@ -85,7 +152,19 @@ class OutputHelper:
         "random_state"
     }
     
-    def __init__(self, experiment_parameters):
+    def __init__(self, experiment_parameters:Dict[str, Union[str, int]]):
+        """Helper to manage the output structure and paths of experiments.
+
+        Parameters
+        ----------
+        experiment_parameters : Dict[str, Union[str, int]], optional
+            A single set of hyperparmaters and for the active learning experiment
+
+        Raises
+        ------
+        ValueError
+            If not all of required_experiment_parameters are contained in experiment_parameters
+        """
         
         # TODO: move all checking behavior into its own file.
         # Ensure every required experiment parameter is present
@@ -118,7 +197,14 @@ class OutputHelper:
         self.ind_rstates_paths = get_ind_avg_rstates_structure(self.output_path)
         self.avg_rstates_paths = get_ind_avg_rstates_structure(self.avg_rstates_path)
         
-    def __str__(self):
+    def __str__(self) -> str:
+        """Return a unix tree-like representation of this instance.
+
+        Returns
+        -------
+        str
+            str representation
+        """
         
         ret = []
         paths = DisplayablePath.make_tree(self.dataset_path)
@@ -127,7 +213,21 @@ class OutputHelper:
             
         return "\n".join(ret)
 
-    def setup_output_path(self, remove_existing=False, exist_ok=True):
+    def setup_output_path(self, remove_existing : bool = False, exist_ok : bool = True) -> None:
+        """Create, remove, and set up the output paths for this experiment.
+
+        Parameters
+        ----------
+        remove_existing : bool, optional
+            If True, removes the existing structure, by default False
+        exist_ok : bool, optional
+            If True, does not raise errors if directory exists, by default True
+
+        Raises
+        ------
+        FileExistsError
+            If the paths exists, but remove_existing not True
+        """
         
         if self.output_path.exists():
             if remove_existing:

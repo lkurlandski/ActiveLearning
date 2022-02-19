@@ -2,7 +2,9 @@
 """
 
 import json
+from pathlib import Path
 from pprint import pprint
+from typing import Dict, Set, Union
 import warnings
 
 from sklearn.exceptions import ConvergenceWarning
@@ -14,7 +16,27 @@ import graphing
 import stopping
 import verify
 
-def main(config_file=None, experiment_parameters=None, flags=None):
+def main(
+        config_file : Path = None, 
+        experiment_parameters : Dict[str, Union[str, int]]=None, 
+        flags : Set[str] = None
+    ):
+    """Run the AL pipeline from a configuration file or from a set of experiment parameters.
+
+    Parameters
+    ----------
+    config_file : Path, optional
+        Location of a configuration file, by default None
+    experiment_parameters : Dict[str, Union[str, int]], optional
+        A single set of hyperparmaters and for the active learning experiment, by default None
+    flags : Set[str], optional
+        Set of flags to control which parts of the AL pipeline are run, by default None
+
+    Raises
+    ------
+    ValueError
+        If neither a configuration file or experiment_parameters are given
+    """
     
     if config_file is None and experiment_parameters is None:
         raise ValueError("One of config_file or experiment_parameters must not be None")

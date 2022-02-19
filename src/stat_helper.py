@@ -10,9 +10,6 @@ def delete_rows_csr(mat, idx):
     if not isinstance(mat, scipy.sparse.csr_matrix):
         raise ValueError(f"Works only for CSR format, not {type(mat)}")
     
-    if not isinstance(idx, list):
-        raise ValueError(f"Works only for a single integer index, not {type(idx)}")
-    
     idx = list(idx)
     mask = np.ones(mat.shape[0], dtype=bool)
     mask[idx] = False

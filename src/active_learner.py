@@ -6,6 +6,7 @@ import math
 from pathlib import Path
 from pprint import pprint
 from random import choices
+from typing import Any, Dict, Union
 import warnings
 
 import numpy as np
@@ -21,19 +22,52 @@ import input_helper
 import output_helper
 import stat_helper
 
-def print_pool_update(unlabeled_pool_initial_size, y_pool, iteration, n_iterations):
+def print_pool_update(
+        unlabeled_pool_initial_size:int, 
+        y_unlabeled_pool:np.ndarray, 
+        iteration:int
+    ) -> None:
+    """Print an update of AL progress.
+
+    Parameters
+    ----------
+    unlabeled_pool_initial_size : int
+        Size of the unlabeled pool before the iterative process.
+    y_unlabeled_pool : np.ndarray
+        The current unlabeled pool.
+    iteration : int
+        The current iteration of AL.
+    """
+    
+    prop = (unlabeled_pool_initial_size - y_unlabeled_pool.shape[0]) / unlabeled_pool_initial_size
     
     print(
-        f"Iteration {iteration} / {n_iterations-1} = {round(100 * iteration/(n_iterations-1), 2)}%:"
+        f"Iteration {iteration} : {round(100 * prop, 2)}%:"
         f"\t|U_0|:{unlabeled_pool_initial_size}"
-        f"\t|U|:{y_pool.shape[0]}"
-        f"\t|L|:{unlabeled_pool_initial_size - y_pool.shape[0]}",
+        f"\t|U|:{y_unlabeled_pool.shape[0]}"
+        f"\t|L|:{unlabeled_pool_initial_size - y_unlabeled_pool.shape[0]}",
         flush=True
     )
 
-def get_index_for_each_class(y, labels):
+def get_index_for_each_class(y:np.ndarray, labels:np.ndarray) -> np.ndarray:
+    """Return indices that contain location of one element per class.
+
+    Parameters
+    ----------
+    y : np.ndarray
+        Array of train/test class labels that corresponds to an array of train/test data.
+    labels : np.ndarray
+        Array of all available classes in the labels.
+
+    Returns
+    -------
+    np.ndarray
+        Indices that contain location of one element per class from y.
+    """
     
-    # TODO: come up with a more elegant way to handle label encoding.
+    # TODO: come up with a better label-encoding strategy
+    # If the data is label-encoded (as it should be) but the labels are raw strings
+        # (as they perhaps should be) this ensures one of every encoded label is captured
     if y[0] not in labels:
         labels = [i for i in range(len(labels))]
         
@@ -45,7 +79,14 @@ def get_index_for_each_class(y, labels):
     
     return idx
 
-def main(experiment_parameters):
+def main(experiment_parameters:Dict[str, Union[str, int]]) -> None:
+    """Run the active learning algorithm for a set of experiment parmameters.
+
+    Parameters
+    ----------
+    experiment_parameters : Dict[str, Union[str, int]]
+        A single set of hyperparmaters and for the active learning experiment.
+    """
     
     print("active_learner called with experiment_parameters:")
     pprint(experiment_parameters)
@@ -53,64 +94,61 @@ def main(experiment_parameters):
     # Extract hyperparameters from the experiment parameters
     stop_set_size = int(experiment_parameters["stop_set_size"])
     batch_size = int(experiment_parameters["batch_size"])
-    # TODO: pipelines
     estimator = estimators.get_estimator_from_code(experiment_parameters["estimator"])
     random_state = int(experiment_parameters["random_state"])
 
-    # TODO: the names of the various sets are a little confusing: train, test, pool, initial etc.
-    # Get the dataset
-    X_train, X_test, y_train, y_test, labels = \
+    # Get the dataset and select a stop set from it
+    X_unlabeled_pool, X_test, y_unlabeled_pool, y_test, labels = \
         input_helper.get_dataset(experiment_parameters["dataset"], random_state)
-    unlabeled_pool_initial_size = y_train.shape[0]
+    unlabeled_pool_initial_size = y_unlabeled_pool.shape[0]
+    stop_set_idx = choices([i for i in range(len(y_unlabeled_pool))], k=stop_set_size)
+    X_stop_set, y_stop_set = X_unlabeled_pool[stop_set_idx], y_unlabeled_pool[stop_set_idx]
     
-    # TODO: SLURM overhaul
     # Setup output directory structure
     oh = output_helper.OutputHelper(experiment_parameters)
     oh.setup_output_path(remove_existing=True)
     print(f"output_path:{oh.output_path.as_posix()}\n")
 
     # Get ids of one instance of each class
-    idx = get_index_for_each_class(y_train, labels)
+    idx = get_index_for_each_class(y_unlabeled_pool, labels)
 
-    # Remove first pool from the train set
-    X_pool = X_train.copy()
-    y_pool = y_train.copy()
-    
-    # Number of AL iterations
-    n_iterations = math.ceil(y_pool.shape[0] / batch_size) + 1
-    
-    # Write the size of the unlabeled pool at each iteration to a file.
+    # Write the size of the unlabeled pool at each iteration to a file
+    n_iterations = math.ceil(y_unlabeled_pool.shape[0] / batch_size) + 1
     pd.DataFrame({'training_data' : 
-        [len(idx) + i * batch_size for i in range(n_iterations - 1)] + [y_train.shape[0]]
+        [len(idx) + i * batch_size for i in range(n_iterations - 1)] + [y_unlabeled_pool.shape[0]]
     }).to_csv(oh.ind_rstates_paths['num_training_data_file'])
-
-    # Select the stop set
-    stop_set_idx = choices([i for i in range(len(y_train))], k=stop_set_size) 
 
     # These assets will be initialized in the 0th iteration of AL
     learner, previous_stop_set_predictions, kappas = None, None, None
     
-    for i in range(n_iterations):
+    i = -1
+    while y_unlabeled_pool.shape[0] > 0:
+        
+        i += 1
         
         # Setup the learner and stabilizing predictions in the 0th iteration.
         if i == 0:
             learner = ActiveLearner(estimator=estimator, query_strategy=uncertainty_batch_sampling)
-            learner.teach(X_pool[idx], y_pool[idx])
-            previous_stop_set_predictions = learner.predict(X_train[stop_set_idx])
+            learner.teach(X_unlabeled_pool[idx], y_unlabeled_pool[idx])
+            previous_stop_set_predictions = learner.predict(X_unlabeled_pool[stop_set_idx])
             kappas = [np.NaN]
         
         # Retrain the learner
         else:
-            idx, query_sample = learner.query(X_pool=X_pool, n_instances=batch_size)
-            query_labels = y_pool[idx]
-            learner.teach(query_sample, query_labels)
+            # FIXME: remove this error handling once bug fixed
+            try:
+                idx, query_sample = learner.query(X_pool=X_unlabeled_pool, n_instances=batch_size)
+                query_labels = y_unlabeled_pool[idx]
+                learner.teach(query_sample, query_labels)
+            except ValueError as e:
+                print(f"Caught and ignoring the following exception:\n\t{e}")
         
         # Remove the queried elements from the unlabeled pool
-        X_pool = stat_helper.remove_ids_from_array(X_pool, idx)
-        y_pool = stat_helper.remove_ids_from_array(y_pool, idx)
+        X_unlabeled_pool = stat_helper.remove_ids_from_array(X_unlabeled_pool, idx)
+        y_unlabeled_pool = stat_helper.remove_ids_from_array(y_unlabeled_pool, idx)
         
         # Print the progress of the learning procedure
-        print_pool_update(unlabeled_pool_initial_size, y_pool, i, n_iterations)
+        print_pool_update(unlabeled_pool_initial_size, y_unlabeled_pool, i)
 
         # Evaluate the learner on the test set
         predictions = learner.predict(X_test)
@@ -119,17 +157,18 @@ def main(experiment_parameters):
         with open(oh.ind_rstates_paths["report_test_path"] / f"{str(i)}.json", 'w') as f:
             json.dump(report, f, sort_keys=True, indent=4, separators=(',', ': '))
 
-        # Evaluate the learner on the train set
-        predictions = learner.predict(X_train)
-        report = classification_report(
-            y_train, predictions, zero_division=1, output_dict=True)
-        with open(oh.ind_rstates_paths["report_train_path"] / f"{str(i)}.json", 'w') as f:
-            json.dump(report, f, sort_keys=True, indent=4, separators=(',', ': '))
+        # Evaluate the learner on the unlabeled pool
+        if y_unlabeled_pool.shape[0] > 0:
+            predictions = learner.predict(X_unlabeled_pool)
+            report = classification_report(
+                y_unlabeled_pool, predictions, zero_division=1, output_dict=True)
+            with open(oh.ind_rstates_paths["report_train_path"] / f"{str(i)}.json", 'w') as f:
+                json.dump(report, f, sort_keys=True, indent=4, separators=(',', ': '))
             
         # Evaluate the learner on the stop set
-        stop_set_predictions = learner.predict(X_train[stop_set_idx])
+        stop_set_predictions = learner.predict(X_stop_set)
         report = classification_report(
-            y_train[stop_set_idx], stop_set_predictions, zero_division=1, output_dict=True)
+            y_stop_set, stop_set_predictions, zero_division=1, output_dict=True)
         with open(oh.ind_rstates_paths["report_stop_set_path"] / f"{str(i)}.json", 'w') as f:
             json.dump(report, f, sort_keys=True, indent=4, separators=(',', ': '))
         

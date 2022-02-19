@@ -5,12 +5,22 @@ import json
 from pprint import pprint
 import shutil
 import subprocess
+from typing import Dict, List, Set, Union
 
 import config
 import main
 
-# TODO: SLURM overhaul
-def sbatch_config_files(flags, temp_name=None):
+# TODO: SLURM overhaul (remove this temp_name garbage)
+def sbatch_config_files(flags:Set[str], temp_name:str = None) -> None:
+    """Launch confiuration files using sbatch.
+
+    Parameters
+    ----------
+    flags : Set[str]
+        Set of flags to run main.main with
+    temp_name : str, optional
+        Name for the slurm job, by default None
+    """
     
     # Delete old files
     if config.slurm_scripts_path.exists():
@@ -43,7 +53,22 @@ def sbatch_config_files(flags, temp_name=None):
         result = subprocess.run(["sbatch", slurm_script_file.as_posix()], capture_output=True)
         print(result.stdout)
         
-def create_config_files(experiment_parameters_lists, flags, local):
+def create_config_files(
+        experiment_parameters_lists:Dict[str, List[Union[str, int]]], 
+        flags:Set[str], 
+        local:bool
+    ) -> None:
+    """Create configuration files or run the AL pipeline with a set of hyperparameters.
+
+    Parameters
+    ----------
+    experiment_parameters_lists : Dict[str, List[Union[str, int]]]
+        Lists of sets of experiment parameters
+    flags : Set[str]
+        Set of flags to run main.main with
+    local : bool
+        If True, the experiments should be run locally and config files not produced.
+    """
     
     # Delete old files
     if config.config_file_path.exists():

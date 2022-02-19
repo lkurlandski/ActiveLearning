@@ -1,19 +1,14 @@
 """
 Global configurations.
-
-TODO: SLURM overhaul
 """
 
 from pathlib import Path
 
+# This codebase needs to know where the ActiveLearning directory is
+location_of_ActiveLearning_dir = Path().resolve().as_posix()
+
 # Location of the template slurm path used to produce the slurm scripts
 slurm_template_path = Path("./slurm_template.sh")
-
-location_of_ActiveLearning_dir = "/home/hpc/kurlanl1/bloodgood/ActiveLearning"
-
-# TODO: SLURM overhaul: should be removed
-# Line number to replace with a custom call to our functions
-line_no = 37
 
 # Location of where the configuration files will be written to
 config_file_path = Path("./config_files")

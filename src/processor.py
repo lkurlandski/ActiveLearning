@@ -4,12 +4,27 @@
 import json
 from pathlib import Path
 from pprint import pprint
+from typing import Dict, List, Union
 
 import pandas as pd
 
 import output_helper
 
-def report_jsons_to_dicts(paths):
+def report_jsons_to_dicts(
+        paths:List[Path]
+    ) -> Dict[str, Union[List[float], Dict[str, List[float]]]]:
+    """Convert sroted report.json files into a dictionary strcuture.
+
+    Parameters
+    ----------
+    paths : List[Path]
+        List of files to convert
+
+    Returns
+    -------
+    Dict[str, Union[List[float], Dict[str, List[float]]]]
+        The named data elements found along from each report.json file concatonated into lists
+    """
     
     data = {}
     for p in sorted(paths):
@@ -32,7 +47,21 @@ def report_jsons_to_dicts(paths):
                         
     return data
 
-def report_dicts_to_dfs(data):
+def report_dicts_to_dfs(
+        data:Dict[str, Union[List[float], Dict[str, List[float]]]]
+    ) -> Dict[str, pd.DataFrame]:
+    """Convert the report.json dictionary representations into dataframe form.
+
+    Parameters
+    ----------
+    data : Dict[str, Union[List[float], Dict[str, List[float]]]]
+        report.json dictionary representation
+
+    Returns
+    -------
+    Dict[str, pd.DataFrame]
+        Named dataframes of data
+    """
     
     dfs = {}
     for k in list(data.keys()):
@@ -40,7 +69,22 @@ def report_dicts_to_dfs(data):
         
     return dfs
 
-def dict_of_dfs_to_csvs(oh, dfs, subset):
+def dict_of_dfs_to_csvs(
+        oh:output_helper.OutputHelper, 
+        dfs:Dict[str, pd.DataFrame], 
+        subset:str
+    ) -> None:
+    """Convert the processed dataframes into csv files.
+
+    Parameters
+    ----------
+    oh : output_helper.OutputHelper
+        OutputHelper for this experiment
+    dfs : Dict[str, pd.DataFrame]
+        Named dataframes of data
+    subset : str
+        one of train, test, or stop_set to refer to a particular data location
+    """
     
     for k, df in dfs.items():
         if k not in {"accuracy", "macro avg", "weighted avg"}:
@@ -53,7 +97,14 @@ def dict_of_dfs_to_csvs(oh, dfs, subset):
                 oh.ind_rstates_paths[f"processed_{subset}_avg_path"] / f"{k.replace(' ', '_')}.csv"
         df.to_csv(path)
 
-def main(experiment_parameters=None):
+def main(experiment_parameters:Dict[str, Union[str, int]]):
+    """Process the raw data from an AL experiment for a set of experiment parmameters.
+
+    Parameters
+    ----------
+    experiment_parameters : Dict[str, Union[str, int]]
+        A single set of hyperparmaters and for the active learning experiment.
+    """
     
     oh = output_helper.OutputHelper(experiment_parameters)
     
@@ -73,9 +124,9 @@ if __name__ == "__main__":
         "output_root": "./output",
         "task": "preprocessedClassification",
         "stop_set_size": 1000,
-        "batch_size": 7,
-        "estimator": "svm",
-        "dataset": "Iris",
+        "batch_size": 10,
+        "estimator": "svm-ova",
+        "dataset": "Avila",
         "random_state": 0,
     }
     

@@ -55,9 +55,9 @@ if __name__ == "__main__":
         "output_root": "./output",
         "task": "preprocessedClassification",
         "stop_set_size": 1000,
-        "batch_size": 7,
-        "estimator": "svm",
-        "dataset": "Iris",
+        "batch_size": 10,
+        "estimator": "svm-ova",
+        "dataset": "Avila",
         "random_state": 0,
     }
     

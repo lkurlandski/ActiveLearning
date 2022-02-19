@@ -2,22 +2,49 @@
 """
 
 from pathlib import Path
+from typing import Dict, List, Tuple, Union
 
 import pandas as pd
 
 import graphing
 import output_helper
 
-def mean_dataframes(dfs):
+def mean_dataframes(dfs:List[pd.DataFrame]) -> pd.DataFrame:
+    """Return the ``mean'' of a dataframe, taken in an element-wise fashion.
+
+    Parameters
+    ----------
+    dfs : List[pd.DataFrame]
+        Dataframes to operate upon.
+
+    Returns
+    -------
+    pd.DataFrame
+        Meaned dataframe.
+    """
     
     # Concatonates dataframes onto multiple indicies, then groups and averages them
     mean_df = pd.concat(dfs, keys=[i for i in range(len(dfs))]).groupby(level=1).mean()
     
     return mean_df
 
-def average_file_in_directory(path):
+def average_file_in_directory(
+        path:Path
+    ) -> Tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame, pd.DataFrame]:
+    """Average csv files with other csv files at the same level.
+
+    Parameters
+    ----------
+    path : Path
+        Head directory to perform the recursive search from.
+
+    Returns
+    -------
+    Tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame, pd.DataFrame]
+        The average of the stopping, accuracy, macro_avg, and weighted_avg csv files.
+    """
     
-    # FIXME: replace with output_helper.contains_data(path)
+    # TODO: replace with output_helper.contains_data(path)
     # Base case: finds a raw, processed, and stopping directories
     files = set((p.name for p in path.glob("*")))
     
@@ -51,7 +78,14 @@ def average_file_in_directory(path):
     
     return mean_stopping_df, mean_accuracy_df, mean_macro_avg_df, mean_weighted_avg_df
 
-def main(experiment_parameters):
+def main(experiment_parameters:Dict[str, Union[str, int]]) -> None:
+    """Run the averaging algorithm for a set of experiment parmameters.
+
+    Parameters
+    ----------
+    experiment_parameters : Dict[str, Union[str, int]]
+        A single set of hyperparmaters and for the active learning experiment.
+    """
     
     oh = output_helper.OutputHelper(experiment_parameters)
     oh.setup_output_path(remove_existing=False, exist_ok=True)
@@ -70,9 +104,9 @@ if __name__ == "__main__":
         "task": "preprocessedClassification",
         "stop_set_size": 1000,
         "batch_size": 10,
-        "estimator": "mlp",
-        "dataset": "Avila",
-        "random_state": 0
+        "estimator": "svm-ova",
+        "dataset": "Iris",
+        "random_state": 0,
     }
     
     main(experiment_parameters)

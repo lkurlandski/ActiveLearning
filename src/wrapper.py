@@ -10,7 +10,14 @@ import driver
     # completely unnessecary. It only needs to average for one configuration because that will
     # include all configurations.
 
-def main(local):
+def main(local:bool) -> None:
+    """Run the wrapper program to perform experiments in bulk.
+
+    Parameters
+    ----------
+    local : bool
+        If True, the experiments should be run locally, not on TCNJ's nodes.
+    """
     
     experiment_parameters_lists = {
         # Only one value permitted
@@ -18,10 +25,10 @@ def main(local):
         "task": "preprocessedClassification",
         # Iterable of values required
         "stop_set_size": [1000],
-        "batch_size": [1],
-        "estimator": ["svm"],   # ["mlp", "svm", "svm-ova", "rf"],
-        "dataset": ["Iris"],
-        "random_state": [0]
+        "batch_size": [100],
+        "estimator": ["svm-ova"],   # ["mlp", "svm", "svm-ova", "rf"],
+        "dataset": ["20NewsGroups"],
+        "random_state": [i for i in range(1, 5)]
     }
     
     # Change the flags to run different parts of the ALL program.

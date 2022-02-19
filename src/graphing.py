@@ -3,7 +3,10 @@
 
 from pathlib import Path
 from pprint import pprint
+from typing import Dict, List, Tuple, Union
 
+from matplotlib.axes import Axes
+from matplotlib.figure import Figure
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
@@ -19,20 +22,43 @@ colors_performance = [
 ]
 
 # TODO: implement this function
-def add_stopping_vlines(path, fig, ax, stopping_df):
-    
-    if stopping_df is None:
-        return fig, ax
+def add_stopping_vlines(path:Path, fig:Figure, ax:Axes, stopping_df:pd.DataFrame):
     
     return fig, ax
 
-def plot_from_dataframe(df, x_column=None, y_columns=None):
+def plot_from_dataframe(
+        df:pd.DataFrame, 
+        x_column:str = None, 
+        y_columns:List[str] = None
+    ) -> Tuple[Figure, Axes]:
+    """Create a plot from a DataFrame of data.
+
+    Parameters
+    ----------
+    df : pd.DataFrame
+        Dataframe of information to plot
+    x_column : str, optional
+        Indicates which column from the dataframe should be used as the x-axis
+    y_columns : List[str], optional
+        Indicates which column(s) from the dataframe should be used as the x-axis
+
+    Returns
+    -------
+    Tuple[Figure, Axes]
+        The figure and axes of the plot
+
+    Raises
+    ------
+    ValueError
+        If more y-values are requested than colors are available
+    """
     
     y_columns = df.columns.tolist() if y_columns is None else y_columns
     y_columns = y_columns.remove(x_column) if x_column in y_columns else y_columns
     
     if len(y_columns) > len(colors_performance):
-        raise ValueError(f"Too many y_columns to plot and not enough colors:\n\t{y_columns}\n\t{colors_performance}")
+        raise ValueError(f"Too many y_columns to plot and not enough colors:"
+            f"\n\t{y_columns}\n\t{colors_performance}")
 
     x = df.index.to_numpy() if x_column is None else df[x_column]
 
@@ -50,7 +76,14 @@ def plot_from_dataframe(df, x_column=None, y_columns=None):
     
     return fig, ax
 
-def recursively_create_simple_graphs(path):
+def recursively_create_simple_graphs(path:Path) -> None:
+    """Search the output structure for csv files and make graphs of them.
+
+    Parameters
+    ----------
+    path : Path
+        Root directory to search
+    """
     
     for p in path.iterdir():
         if output_helper.contains_data(p, ignore_raw=True):
@@ -58,9 +91,9 @@ def recursively_create_simple_graphs(path):
                 # this code with those paths from the OutputHelper
             stopping_file = p / "stopping" / "results.csv"
             files = [
-                p / "processed" / "average" / "accuracy",
-                p / "processed" / "average" / "macro_avg",
-                p / "processed" / "average" / "weighted_avg"
+                p / "processed" / "test" / "avg" / "accuracy",
+                p / "processed" / "test" / "avg" / "macro_avg",
+                p / "processed" / "test" / "avg" / "weighted_avg"
             ]
             
             # TODO: remove the checks for files existing and use verify.verify_all_runs_successful
@@ -70,7 +103,7 @@ def recursively_create_simple_graphs(path):
                     
             stopping_df = pd.read_csv(stopping_file) if stopping_file.exists() else None
             
-            for f in files:                    
+            for f in files:
                 df = pd.read_csv(f.with_suffix('.csv'))
                 # TODO: indicate the x_column should be 'labels'
                 fig, ax = plot_from_dataframe(df, x_column=None)
@@ -80,7 +113,14 @@ def recursively_create_simple_graphs(path):
         else:
             recursively_create_simple_graphs(p)
 
-def main(experiment_parameters):
+def main(experiment_parameters:Dict[str, Union[str, int]]) -> None:
+    """Run the graphing algorithm for a set of experiment parmameters.
+
+    Parameters
+    ----------
+    experiment_parameters : Dict[str, Union[str, int]]
+        A single set of hyperparmaters and for the active learning experiment.
+    """
     
     oh = output_helper.OutputHelper(experiment_parameters)
     recursively_create_simple_graphs(oh.dataset_path)
@@ -94,7 +134,7 @@ if __name__ == "__main__":
         "batch_size": 10,
         "estimator": "mlp",
         "dataset": "Avila",
-        "random_state": 0
+        "random_state": 0,
     }
     
     main(experiment_parameters)

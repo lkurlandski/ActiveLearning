@@ -7,7 +7,7 @@
 #SBATCH --constraint="skylake|broadwell"
 #SBATCH --partition=long
 
-print("Here")
+
 
 import os
 import platform
