@@ -18,7 +18,7 @@ def main(local:bool) -> None:
     local : bool
         If True, the experiments should be run locally, not on TCNJ's nodes.
     """
-    
+
     experiment_parameters_lists = {
         # Only one value permitted
         "output_root": "./output",
@@ -30,7 +30,7 @@ def main(local:bool) -> None:
         "dataset": ["20NewsGroups"],
         "random_state": [i for i in range(1, 5)]
     }
-    
+
     # Change the flags to run different parts of the ALL program.
     flags_phase1 = {
         "active_learning",
@@ -42,18 +42,18 @@ def main(local:bool) -> None:
         "graphing",
         "verify",
     }
-    
+
     flags = flags_phase1
-    
+
     driver.create_config_files(experiment_parameters_lists, flags, local)
     if not local:
         # TODO: refactor the slurm process to be allow for more elegant naming of jobs
         driver.sbatch_config_files(flags, temp_name=experiment_parameters_lists["dataset"][0])
-    
+
 if __name__ == "__main__":
-    
+
     parser = argparse.ArgumentParser()
     parser.add_argument("--local", help="Run locally, not through SLURM", action="store_true")
     args = parser.parse_args()
-    
+
     main(args.local)

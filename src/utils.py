@@ -3,7 +3,10 @@
 
 from pathlib import Path
 
+# Used to display a pathlib.Path object in a human-readable way. 
+# Copied from: https://stackoverflow.com/questions/9727673/list-directory-tree-structure-in-python
 class DisplayablePath(object):
+
     display_filename_prefix_middle = '├──'
     display_filename_prefix_last = '└──'
     display_parent_prefix_middle = '    '

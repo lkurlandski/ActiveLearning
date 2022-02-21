@@ -37,14 +37,14 @@ def main(
     ValueError
         If neither a configuration file or experiment_parameters are given
     """
-    
+
     if config_file is None and experiment_parameters is None:
         raise ValueError("One of config_file or experiment_parameters must not be None")
-        
+
     if experiment_parameters is None:
         with open(config_file, 'r') as f:
             experiment_parameters = json.load(f)
-    
+
     with warnings.catch_warnings():
         warnings.filterwarnings("ignore", category=ConvergenceWarning)
 
@@ -54,7 +54,7 @@ def main(
             processor.main(experiment_parameters)
         if "stopping" in flags or flags is None:
             stopping.main(experiment_parameters)
-            
+
         # TODO: SLURM overhaul: these should only be run once per set of experiments
         if "averaging" in flags or flags is None:
             averager.main(experiment_parameters)
@@ -62,9 +62,9 @@ def main(
             graphing.main(experiment_parameters)
         if "verify" in flags or flags is None:
             verify.main(experiment_parameters)
-    
+
 if __name__ == "__main__":
-    
+
     experiment_parameters = {
         "output_root": "./output",
         "task": "preprocessedClassification",
@@ -74,5 +74,5 @@ if __name__ == "__main__":
         "dataset": "Avila",
         "random_state": 0,
     }
-    
+
     main(experiment_parameters=experiment_parameters)

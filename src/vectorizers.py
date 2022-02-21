@@ -7,9 +7,8 @@ import pandas as pd
 from sklearn.base import TransformerMixin, BaseEstimator
 import torch
 
-# TODO: review this code (I ripped it straight from the web without reading it at all)
-    # https://towardsdatascience.com/build-a-bert-sci-kit-transformer-59d60ddd54a5
-
+# Used to create bert vectors. TODO: review this code to make sure it is reliable.
+    # Copied from: https://towardsdatascience.com/build-a-bert-sci-kit-transformer-59d60ddd54a5
 class BertTransformer(BaseEstimator, TransformerMixin):
     def __init__(
             self,

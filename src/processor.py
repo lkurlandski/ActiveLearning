@@ -25,7 +25,7 @@ def report_jsons_to_dicts(
     Dict[str, Union[List[float], Dict[str, List[float]]]]
         The named data elements found along from each report.json file concatonated into lists
     """
-    
+
     data = {}
     for p in sorted(paths):
         with open(p, 'r') as f:
@@ -44,7 +44,7 @@ def report_jsons_to_dicts(
                         data[k][k2].append(v2)
                     else:
                         data[k][k2] = [v2]  
-                        
+
     return data
 
 def report_dicts_to_dfs(
@@ -62,11 +62,11 @@ def report_dicts_to_dfs(
     Dict[str, pd.DataFrame]
         Named dataframes of data
     """
-    
+
     dfs = {}
     for k in list(data.keys()):
         dfs[k] = pd.DataFrame(data[k])
-        
+
     return dfs
 
 def dict_of_dfs_to_csvs(
@@ -85,7 +85,7 @@ def dict_of_dfs_to_csvs(
     subset : str
         one of train, test, or stop_set to refer to a particular data location
     """
-    
+
     for k, df in dfs.items():
         if k not in {"accuracy", "macro avg", "weighted avg"}:
             path = oh.ind_rstates_paths[f"processed_{subset}_ind_path"] / f"{k}.csv"
@@ -105,11 +105,11 @@ def main(experiment_parameters:Dict[str, Union[str, int]]):
     experiment_parameters : Dict[str, Union[str, int]]
         A single set of hyperparmaters and for the active learning experiment.
     """
-    
+
     oh = output_helper.OutputHelper(experiment_parameters)
-    
+
     num_training_data = pd.read_csv(oh.ind_rstates_paths["num_training_data_file"])['training_data']
-    
+
     for subset in ("test", "train", "stop_set"):
         report_paths = list(oh.ind_rstates_paths[f'report_{subset}_path'].iterdir())
         data = report_jsons_to_dicts(report_paths)
@@ -117,9 +117,9 @@ def main(experiment_parameters:Dict[str, Union[str, int]]):
         for df in dfs.values():
             df.insert(0, 'training_data', num_training_data)
         dict_of_dfs_to_csvs(oh, dfs, subset)
-    
+
 if __name__ == "__main__":
-    
+
     experiment_parameters = {
         "output_root": "./output",
         "task": "preprocessedClassification",
@@ -129,5 +129,5 @@ if __name__ == "__main__":
         "dataset": "Avila",
         "random_state": 0,
     }
-    
+
     main(experiment_parameters)

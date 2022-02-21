@@ -3,15 +3,23 @@
 
 from pathlib import Path
 from pprint import pprint
+from typing import Dict, Union
 
 import output_helper
 
-def verify_all_runs_successful(experiment_parameters):
-    
+def verify_all_runs_successful(experiment_parameters:Dict[str, Union[str, int]]):
+    """Ensure that all of the files from an experiment are present in the output directory.
+
+    Parameters
+    ----------
+    experiment_parameters : Dict[str, Union[str, int]]
+        A single set of hyperparmaters and for the active learning experiment.
+    """
+
     oh = output_helper.OutputHelper(experiment_parameters)
 
     first_print_out_performed = False
-    
+
     files_to_check = [
         oh.kappa_file,
         oh.processed_test_accuracy_file,
@@ -33,13 +41,20 @@ def verify_all_runs_successful(experiment_parameters):
 
             print(f"\t{f}")
     print()
-    
-def main(experiment_parameters):
-    
+
+def main(experiment_parameters:Dict[str, Union[str, int]]):
+    """Run the vertification procedure.
+
+    Parameters
+    ----------
+    experiment_parameters : Dict[str, Union[str, int]]
+        A single set of hyperparmaters and for the active learning experiment.
+    """
+
     verify_all_runs_successful(experiment_parameters)
-    
+
 if __name__ == "__main__":
-    
+
     experiment_parameters = {
         "output_root": "./output",
         "task": "preprocessedClassification",
@@ -49,5 +64,5 @@ if __name__ == "__main__":
         "dataset": "Avila",
         "random_state": 0
     }
-    
+
     main(experiment_parameters)

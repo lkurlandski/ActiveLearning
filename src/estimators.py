@@ -26,7 +26,7 @@ def get_estimator_from_code(code:str) -> sklearn.base.BaseEstimator:
     ValueError
         If the code is not recognized
     """
-    
+
     if code == 'mlp':
         return MLPClassifier()
     elif code == 'svm':
