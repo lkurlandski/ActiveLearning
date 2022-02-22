@@ -27,7 +27,7 @@ def report_jsons_to_dicts(
     """
 
     data = {}
-    for p in sorted(paths):
+    for p in sorted(paths, key=lambda x: int(x.name.replace("report", "").replace(".json", ""))):
         with open(p, 'r') as f:
             d = json.load(f)
         for k, v in d.items():
@@ -124,9 +124,9 @@ if __name__ == "__main__":
         "output_root": "./output",
         "task": "preprocessedClassification",
         "stop_set_size": 1000,
-        "batch_size": 10,
+        "batch_size": 50,
         "estimator": "svm-ova",
-        "dataset": "Avila",
+        "dataset": "20NewsGroups",
         "random_state": 0,
     }
 

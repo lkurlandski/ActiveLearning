@@ -1,6 +1,7 @@
 env
+config_files/*.json
 slurm/jobs/*.out
 slurm/scripts/*.sh
-output/*
+output*/*
 .vscode/*
 */__pycache__

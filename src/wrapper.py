@@ -21,14 +21,14 @@ def main(local:bool) -> None:
 
     experiment_parameters_lists = {
         # Only one value permitted
-        "output_root": "./output",
+        "output_root": "./output2",
         "task": "preprocessedClassification",
         # Iterable of values required
         "stop_set_size": [1000],
-        "batch_size": [100],
-        "estimator": ["svm-ova"],   # ["mlp", "svm", "svm-ova", "rf"],
-        "dataset": ["20NewsGroups"],
-        "random_state": [i for i in range(1, 5)]
+        "batch_size": [10],
+        "estimator": ["svm-ova", "mlp", "rf"],
+        "dataset": ["Avila"],
+        "random_state": [i for i in range(30)]
     }
 
     # Change the flags to run different parts of the ALL program.
@@ -36,11 +36,11 @@ def main(local:bool) -> None:
         "active_learning",
         "processor",
         "stopping",
+        "graphing",
     }
     flags_phase2 = {
         "averaging",
-        "graphing",
-        "verify",
+        #"verify",
     }
 
     flags = flags_phase1

@@ -108,7 +108,7 @@ def main(experiment_parameters:Dict[str, Union[str, int]]) -> None:
 
     # Setup output directory structure
     oh = output_helper.OutputHelper(experiment_parameters)
-    oh.setup_output_path(remove_existing=True)
+    oh.setup_output_path(remove_existing=False, exist_ok=True)
     print(f"output_path:{oh.output_path.as_posix()}\n")
 
     # Get ids of one instance of each class
@@ -184,12 +184,12 @@ def main(experiment_parameters:Dict[str, Union[str, int]]) -> None:
 if __name__ == "__main__":
 
     experiment_parameters = {
-        "output_root": "./output",
+        "output_root": "./output2",
         "task": "preprocessedClassification",
         "stop_set_size": 1000,
-        "batch_size": 7,
-        "estimator": "svm",
-        "dataset": "Iris",
+        "batch_size": 50,
+        "estimator": "svm-ova",
+        "dataset": "20NewsGroups",
         "random_state": 0,
     }
 

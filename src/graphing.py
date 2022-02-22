@@ -19,18 +19,43 @@ import output_helper
 colors_stopping = ['lime', 'blue', 'megenta', 'midnightblue']
 # Colors for performance metrics
 colors_performance = [
-    f'tab:{c}' for c in 
+    f'tab:{c}' for c in
     ['blue', 'orange', 'green', 'red', 'purple', 'brown', 'pink', 'grey', 'olive', 'cyan']
 ]
 
-# TODO: implement this function
-def add_stopping_vlines(path:Path, fig:Figure, ax:Axes, stopping_df:pd.DataFrame):
+def add_stopping_vlines(fig:Figure, ax:Axes, stopping_df:pd.DataFrame) -> Tuple[Figure, Axes]:
+    """Add vertical lines to a plot to indicate when stopping methods stopped.
 
+    Parameters
+    ----------
+    fig : Figure
+        matplotlib figure to modifify (learning curve)
+    ax : Axes
+        matplotlib axes to modifify (learning curve)
+    stopping_df : pd.DataFrame
+        Stopping results dataframe to extract the performance of stopping methods from
+
+    Returns
+    -------
+    Tuple[Figure, Axes]
+        Modified learning curves
+    """
+
+    for i, stopping_method in enumerate(stopping_df):
+        ax.vlines(
+            x=stopping_df.at["annotations", stopping_method],
+            ymin=0,
+            ymax=1,
+            colors=colors_stopping[i],
+            linestyle='dashdot',
+            label=stopping_method
+        )
+    
     return fig, ax
 
 def plot_from_dataframe(
-        df:pd.DataFrame, 
-        x_column:str = None, 
+        df:pd.DataFrame,
+        x_column:str = None,
         y_columns:List[str] = None,
     ) -> Tuple[Figure, Axes]:
     """Create a plot from a DataFrame of data.
@@ -80,20 +105,67 @@ def plot_from_dataframe(
 
 ####################################################################################################
 
-def create_accuracy_graph(accuracy_df):
+def create_accuracy_graph(accuracy_df:pd.DataFrame) -> Tuple[Figure, Axes]:
+    """Create the accuracy vs labeling effort curve.
+
+    Parameters
+    ----------
+    accuracy_df : pd.DataFrame
+        Performance of model per throughout learning
+
+    Returns
+    -------
+    Tuple[Figure, Axes]
+        The learning curve
+    """
 
     return plot_from_dataframe(accuracy_df, x_column="training_data", y_columns=["accuracy"])
 
-def create_weighted_average_graph(weighted_average_df):
+def create_weighted_average_graph(weighted_avg_df:pd.DataFrame) -> Tuple[Figure, Axes]:
+    """Create the weighted average vs labeling effort curve.
 
-    return plot_from_dataframe(weighted_average_df, x_column="training_data", y_columns=["f1-score"])
+    Parameters
+    ----------
+    accuracy_df : pd.DataFrame
+        Performance of model per throughout learning
 
-def create_macro_average_graph(macro_average_df):
+    Returns
+    -------
+    Tuple[Figure, Axes]
+        The learning curve
+    """
 
-    return plot_from_dataframe(macro_average_df, x_column="training_data", y_columns=["f1-score"])
+    return plot_from_dataframe(weighted_avg_df, x_column="training_data", y_columns=["f1-score"])
 
-def create_graphs_for_avg(avg_path):
-    
+def create_macro_average_graph(macro_avg_df:pd.DataFrame) -> Tuple[Figure, Axes]:
+    """Create the macro average vs labeling effort curve.
+
+    Parameters
+    ----------
+    accuracy_df : pd.DataFrame
+        Performance of model per throughout learning
+
+    Returns
+    -------
+    Tuple[Figure, Axes]
+        The learning curve
+    """
+
+    return plot_from_dataframe(macro_avg_df, x_column="training_data", y_columns=["f1-score"])
+
+def create_graphs_for_avg(avg_path:Path, stopping_df : pd.DataFrame = None):
+    """Create graphs which should exist under the avg directory.
+
+    Parameters
+    ----------
+    avg_path : Path
+        Location of the avg path to create graphs from. Should contain "accuracy", "macro_avg", and
+            "weighted_avg" subdirectories
+    stopping_df : pd.DataFrame, optional
+        Stopping results dataframe to extract the performance of stopping methods from, 
+            by default None
+    """
+
     for data_file in ("accuracy", "macro_avg", "weighted_avg"):
         df = pd.read_csv(avg_path / f"{data_file}.csv", index_col=0)
 
@@ -104,26 +176,75 @@ def create_graphs_for_avg(avg_path):
         elif data_file == "weighted_avg":
             fig, ax = create_weighted_average_graph(df)
 
+        if stopping_df is not None:
+            add_stopping_vlines(fig, ax, stopping_df)
+
         fig.savefig(avg_path / f"{data_file}.png", dpi=400)
         plt.close()
 
 ####################################################################################################
 
-def create_graphs_for_ind(ind_path):
+def create_graphs_for_ind(ind_path:Path, stopping_df : pd.DataFrame = None):
+    """Create graphs which should exist under the ind directory.
+
+    Parameters
+    ----------
+    ind_path : Path
+        Location of the ind path to create graphs from. Should contain csv files for each category
+    stopping_df : pd.DataFrame, optional
+        Stopping results dataframe to extract the performance of stopping methods from, 
+            by default None
+    """
 
     pass
 
 ####################################################################################################
 
-def create_graphs_for_subset(subset_path):
+def create_graphs_for_subset(subset_path:Path, stopping_df : pd.DataFrame = None):
+    """Create graphs which should exist under each of the train, test, and top_set directories.
 
-    create_graphs_for_avg(subset_path / "avg")
-    create_graphs_for_ind(subset_path / "ind")
+    Parameters
+    ----------
+    subset_path : Path
+        Location of the avg path to create graphs from. Should contain "ind", "avg" subdirectories
+    stopping_df : pd.DataFrame, optional
+        Stopping results dataframe to extract the performance of stopping methods from, 
+            by default None
+    """
 
-def create_graphs_for_processed(processed_path):
+    create_graphs_for_avg(subset_path / "avg", stopping_df)
+    create_graphs_for_ind(subset_path / "ind", stopping_df)
+
+####################################################################################################
+
+def create_graphs_for_processed(
+        processed_path:Path,
+        stopping_file : Path = None,
+        stopping_methods : List[str] = ['stabilizing_predictions']
+    ) -> None:
+    """Create graphs for everything that exists under the processed directory.
+
+    Parameters
+    ----------
+    processed_path : Path
+        Location of the processed path to create graphs from. 
+            Should contain "train", "test", "stop_set" subdirectories
+    stopping_file : Path
+        Location of the stopping results file for applying vertical stopping lines, by default None,
+            which will not apply any lines
+    stopping_df : pd.DataFrame, optional
+        Stopping results dataframe to extract the performance of stopping methods from, 
+            by default ['stabilizing_predictions']
+    """
+
+    stopping_df = None
+    if stopping_file is not None:
+        stopping_df = pd.read_csv(stopping_file, index_col=0)
+        if stopping_methods is not None:
+            stopping_df = stopping_df[stopping_methods]
 
     for subset in ("test", "train", "stop_set"):
-        create_graphs_for_subset(processed_path / subset)
+        create_graphs_for_subset(processed_path / subset, stopping_df)
 
 def main(experiment_parameters:Dict[str, Union[str, int]]) -> None:
     """Run the graphing algorithm for a set of experiment parmameters.
@@ -135,7 +256,10 @@ def main(experiment_parameters:Dict[str, Union[str, int]]) -> None:
     """
 
     oh = output_helper.OutputHelper(experiment_parameters)
-    create_graphs_for_processed(oh.ind_rstates_paths['processed_path'])
+    create_graphs_for_processed(
+        oh.ind_rstates_paths['processed_path'],
+        oh.ind_rstates_paths['stopping_results_file'],
+    )
 
 if __name__ == "__main__":
 
@@ -143,10 +267,10 @@ if __name__ == "__main__":
         "output_root": "./output",
         "task": "preprocessedClassification",
         "stop_set_size": 1000,
-        "batch_size": 50,
+        "batch_size": 10,
         "estimator": "svm-ova",
-        "dataset": "20NewsGroups",
-        "random_state": 4,
+        "dataset": "Avila",
+        "random_state": 0,
     }
 
     main(experiment_parameters)

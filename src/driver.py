@@ -22,6 +22,7 @@ def sbatch_config_files(flags:Set[str], temp_name:str = None) -> None:
         Name for the slurm job, by default None
     """
 
+    # TODO: do not delete the .gitkeep file!
     # Delete old files
     if config.slurm_scripts_path.exists():
         shutil.rmtree(config.slurm_scripts_path)
@@ -73,6 +74,7 @@ def create_config_files(
         If True, the experiments should be run locally and config files not produced.
     """
 
+    # TODO: do not delete the .gitkeep file!
     # Delete old files
     if config.config_file_path.exists():
         shutil.rmtree(config.config_file_path)
