@@ -3,6 +3,7 @@
 TODO: this is essentially broken...needs significant refactoring.
 """
 
+from operator import index
 from pathlib import Path
 from pprint import pprint
 from typing import Dict, List, Tuple, Union
@@ -30,7 +31,7 @@ def add_stopping_vlines(path:Path, fig:Figure, ax:Axes, stopping_df:pd.DataFrame
 def plot_from_dataframe(
         df:pd.DataFrame, 
         x_column:str = None, 
-        y_columns:List[str] = None
+        y_columns:List[str] = None,
     ) -> Tuple[Figure, Axes]:
     """Create a plot from a DataFrame of data.
 
@@ -77,42 +78,52 @@ def plot_from_dataframe(
 
     return fig, ax
 
-def recursively_create_simple_graphs(path:Path) -> None:
-    """Search the output structure for csv files and make graphs of them.
+####################################################################################################
 
-    Parameters
-    ----------
-    path : Path
-        Root directory to search
-    """
+def create_accuracy_graph(accuracy_df):
 
-    for p in path.iterdir():
-        if output_helper.contains_data(p, ignore_raw=True):
-            # TODO: incorporate these relative paths into the OutputHelper and eventually replace
-                # this code with those paths from the OutputHelper
-            stopping_file = p / "stopping" / "results.csv"
-            files = [
-                p / "processed" / "test" / "avg" / "accuracy",
-                p / "processed" / "test" / "avg" / "macro_avg",
-                p / "processed" / "test" / "avg" / "weighted_avg"
-            ]
+    return plot_from_dataframe(accuracy_df, x_column="training_data", y_columns=["accuracy"])
 
-            # TODO: remove the checks for files existing and use verify.verify_all_runs_successful
-            for f in files + [stopping_file]:
-                if not f.with_suffix('.csv').exists():
-                    print(f"Caught and ignoring error:\n{FileNotFoundError(f.as_posix())}")
+def create_weighted_average_graph(weighted_average_df):
+
+    return plot_from_dataframe(weighted_average_df, x_column="training_data", y_columns=["f1-score"])
+
+def create_macro_average_graph(macro_average_df):
+
+    return plot_from_dataframe(macro_average_df, x_column="training_data", y_columns=["f1-score"])
+
+def create_graphs_for_avg(avg_path):
     
-            stopping_df = pd.read_csv(stopping_file) if stopping_file.exists() else None
+    for data_file in ("accuracy", "macro_avg", "weighted_avg"):
+        df = pd.read_csv(avg_path / f"{data_file}.csv", index_col=0)
 
-            for f in files:
-                df = pd.read_csv(f.with_suffix('.csv'))
-                # TODO: indicate the x_column should be 'labels'
-                fig, ax = plot_from_dataframe(df, x_column=None)
-                fig, ax = add_stopping_vlines(p, fig, ax, stopping_df)
-                fig.savefig(f.with_suffix('.png'), dpi=400)
-                plt.close()
-        else:
-            recursively_create_simple_graphs(p)
+        if data_file == "accuracy":
+            fig, ax = create_accuracy_graph(df)
+        elif data_file == "macro_avg":
+            fig, ax = create_macro_average_graph(df)
+        elif data_file == "weighted_avg":
+            fig, ax = create_weighted_average_graph(df)
+
+        fig.savefig(avg_path / f"{data_file}.png", dpi=400)
+        plt.close()
+
+####################################################################################################
+
+def create_graphs_for_ind(ind_path):
+
+    pass
+
+####################################################################################################
+
+def create_graphs_for_subset(subset_path):
+
+    create_graphs_for_avg(subset_path / "avg")
+    create_graphs_for_ind(subset_path / "ind")
+
+def create_graphs_for_processed(processed_path):
+
+    for subset in ("test", "train", "stop_set"):
+        create_graphs_for_subset(processed_path / subset)
 
 def main(experiment_parameters:Dict[str, Union[str, int]]) -> None:
     """Run the graphing algorithm for a set of experiment parmameters.
@@ -124,7 +135,7 @@ def main(experiment_parameters:Dict[str, Union[str, int]]) -> None:
     """
 
     oh = output_helper.OutputHelper(experiment_parameters)
-    recursively_create_simple_graphs(oh.dataset_path)
+    create_graphs_for_processed(oh.ind_rstates_paths['processed_path'])
 
 if __name__ == "__main__":
 
@@ -132,10 +143,10 @@ if __name__ == "__main__":
         "output_root": "./output",
         "task": "preprocessedClassification",
         "stop_set_size": 1000,
-        "batch_size": 10,
-        "estimator": "mlp",
-        "dataset": "Avila",
-        "random_state": 0,
+        "batch_size": 50,
+        "estimator": "svm-ova",
+        "dataset": "20NewsGroups",
+        "random_state": 4,
     }
 
     main(experiment_parameters)

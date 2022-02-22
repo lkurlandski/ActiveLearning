@@ -1,85 +1,15 @@
 """Average the data across multiple sampling versions.
-
-# TODO: needs significant refactoring and updating...remove this recursive garbage...too complex.
 """
 
 from pathlib import Path
+from pprint import pprint
 from typing import Dict, List, Tuple, Union
 
 import pandas as pd
 
 import graphing
 import output_helper
-
-def mean_dataframes(dfs:List[pd.DataFrame]) -> pd.DataFrame:
-    """Return the ``mean'' of a dataframe, taken in an element-wise fashion.
-
-    Parameters
-    ----------
-    dfs : List[pd.DataFrame]
-        Dataframes to operate upon.
-
-    Returns
-    -------
-    pd.DataFrame
-        Meaned dataframe.
-    """
-
-    # Concatonates dataframes onto multiple indicies, then groups and averages them
-    mean_df = pd.concat(dfs, keys=[i for i in range(len(dfs))]).groupby(level=1).mean()
-
-    return mean_df
-
-def average_file_in_directory(
-        path:Path
-    ) -> Tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame, pd.DataFrame]:
-    """Average csv files with other csv files at the same level.
-
-    Parameters
-    ----------
-    path : Path
-        Head directory to perform the recursive search from.
-
-    Returns
-    -------
-    Tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame, pd.DataFrame]
-        The average of the stopping, accuracy, macro_avg, and weighted_avg csv files.
-    """
-
-    # TODO: replace with output_helper.contains_data(path)
-    # Base case: finds a raw, processed, and stopping directories
-    files = set((p.name for p in path.glob("*")))
-
-    if "raw" in files and "processed" in files and "stopping" in files:
-        stopping_df = pd.read_csv(path / "stopping" / "results.csv")
-        accuracy_df = pd.read_csv(path / "processed" / "average" / "accuracy.csv")
-        macro_avg_df = pd.read_csv(path / "processed" / "average" / "macro_avg.csv")
-        weighted_avg_df = pd.read_csv(path / "processed" / "average" / "weighted_avg.csv")
-
-        return stopping_df, accuracy_df, macro_avg_df, weighted_avg_df
-
-    stopping_dfs, accuracy_dfs, macro_avg_dfs, weighted_avg_dfs = [], [], [], []
-
-    for f in sorted(p for p in path.glob("*")):
-        if f.is_dir():
-            try:
-                stopping_df, accuracy_df, macro_avg_df, weighted_avg_df = \
-                    average_file_in_directory(f)
-            except FileNotFoundError as e:
-                print(f"Caught and ignoring error:\n{e}")
-                continue
-
-            stopping_dfs.append(stopping_df)
-            accuracy_dfs.append(accuracy_df)
-            macro_avg_dfs.append(macro_avg_df)
-            weighted_avg_dfs.append(weighted_avg_df)
-
-    mean_stopping_df = mean_dataframes(stopping_dfs)
-    mean_accuracy_df = mean_dataframes(accuracy_dfs)
-    mean_macro_avg_df = mean_dataframes(macro_avg_dfs)
-    mean_weighted_avg_df = mean_dataframes(weighted_avg_dfs)
-
-    return mean_stopping_df, mean_accuracy_df, mean_macro_avg_df, mean_weighted_avg_df
+import stat_helper
 
 def main(experiment_parameters:Dict[str, Union[str, int]]) -> None:
     """Run the averaging algorithm for a set of experiment parmameters.
@@ -90,15 +20,25 @@ def main(experiment_parameters:Dict[str, Union[str, int]]) -> None:
         A single set of hyperparmaters and for the active learning experiment.
     """
 
+    # Determine which rtates are available for averaging
     oh = output_helper.OutputHelper(experiment_parameters)
-    oh.setup_output_path(remove_existing=False, exist_ok=True)
-    mean_stopping_df, mean_accuracy_df, mean_macro_avg_df, mean_weighted_avg_df = \
-        average_file_in_directory(oh.ind_rstates_path)
+    available_rstates = [int(p.name) for p in oh.ind_rstates_path.glob("*")]
 
-    mean_stopping_df.to_csv(oh.avg_stopping_results_file)
-    mean_accuracy_df.to_csv(oh.avg_processed_accuracy_file)
-    mean_macro_avg_df.to_csv(oh.avg_processed_macro_avg_file)
-    mean_weighted_avg_df.to_csv(oh.avg_processed_weighted_avg_file)
+    # TODO: additionally, average the data across the individual categories
+    for subset in ("test", "train", "stop_set"):
+        for data_file in ("accuracy", "macro_avg", "weighted_avg"):
+            # Attain a list of corresponding files across the rstates
+            files_to_avg = []
+            for rstate in available_rstates:
+                experiment_parameters["random_state"] = rstate
+                oh = output_helper.OutputHelper(experiment_parameters)
+                files_to_avg.append(oh.ind_rstates_paths[f"processed_{subset}_{data_file}_path"])
+            # Average the files, and save them to the average rstate path
+            dfs = [pd.read_csv(p, index_col=0) for p in files_to_avg]
+            df = stat_helper.mean_dataframes(dfs)
+            df.to_csv(oh.avg_rstates_paths[f"processed_{subset}_{data_file}_path"])
+            
+    graphing.create_graphs_for_processed(oh.avg_rstates_paths['processed_path'])
 
 if __name__ == "__main__":
 
@@ -106,9 +46,9 @@ if __name__ == "__main__":
         "output_root": "./output",
         "task": "preprocessedClassification",
         "stop_set_size": 1000,
-        "batch_size": 10,
+        "batch_size": 50,
         "estimator": "svm-ova",
-        "dataset": "Iris",
+        "dataset": "20NewsGroups",
         "random_state": 0,
     }
 

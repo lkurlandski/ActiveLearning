@@ -1,8 +1,30 @@
 """Helpful statistical functions to assist in math and data wrangling.
 """
 
+from typing import List
+
 import numpy as np
+import pandas as pd
 import scipy
+
+def mean_dataframes(dfs:List[pd.DataFrame]) -> pd.DataFrame:
+    """Return the ``mean'' of a dataframe, taken in an element-wise fashion.
+
+    Parameters
+    ----------
+    dfs : List[pd.DataFrame]
+        Dataframes to operate upon.
+
+    Returns
+    -------
+    pd.DataFrame
+        Meaned dataframe.
+    """
+
+    # Concatonates dataframes onto multiple indicies, then groups and averages them
+    mean_df = pd.concat(dfs, keys=[i for i in range(len(dfs))]).groupby(level=1).mean()
+
+    return mean_df
 
 # TODO: test this function!!
 def delete_rows_csr(mat, idx):
