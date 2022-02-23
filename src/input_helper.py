@@ -8,6 +8,8 @@ import numpy as np
 from sklearn.datasets import fetch_20newsgroups, fetch_20newsgroups_vectorized, fetch_covtype, load_iris
 from sklearn.model_selection import train_test_split
 
+from datasets import load_dataset
+
 def shuffle_corresponding_arrays(
         a1:np.ndarray, 
         a2:np.ndarray, 
@@ -103,6 +105,19 @@ def get_20_newsgroups(
     labels = list(bunch['target_names'])
 
     return X_train, X_test, y_train, y_test, labels
+
+def get_emotions():
+    test_dataset = load_dataset('emotion', split = 'test')
+    labels = test_dataset.features['label'].names
+    X_test = test_dataset['text']
+    y_test = test_dataset['label']
+
+    test_dataset = load_dataset('emotion', split = 'train')
+    X_train = test_dataset['text']
+    y_train = test_dataset['label']
+
+    return X_train, X_test, np.asarray(y_train), np.asarray(y_test), labels
+
 
 # TODO: rename this function
 def get_20_newsgroups_bert(
@@ -229,6 +244,9 @@ def get_dataset(
         X_train, X_test, y_train, y_test, labels = get_covtype(random_state)
     elif dataset == "Iris":
         X_train, X_test, y_train, y_test, labels = get_iris(random_state)
+    elif dataset == "Emotions":
+        #might need to add random_state
+        X_train, X_test, y_train, y_test, labels = get_emotions()
     else:
         raise ValueError(f"Dataset not recognized: {dataset}")
 
