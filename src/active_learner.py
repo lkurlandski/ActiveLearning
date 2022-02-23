@@ -102,6 +102,7 @@ def main(experiment_parameters:Dict[str, Union[str, int]]) -> None:
     # Get the dataset and select a stop set from it
     X_unlabeled_pool, X_test, y_unlabeled_pool, y_test, labels = \
         input_helper.get_dataset(experiment_parameters["dataset"], random_state)
+    print(X_unlabeled_pool)
     unlabeled_pool_initial_size = y_unlabeled_pool.shape[0]
     stop_set_idx = choices([i for i in range(len(y_unlabeled_pool))], k=stop_set_size)
     X_stop_set, y_stop_set = X_unlabeled_pool[stop_set_idx], y_unlabeled_pool[stop_set_idx]
@@ -127,6 +128,9 @@ def main(experiment_parameters:Dict[str, Union[str, int]]) -> None:
     while y_unlabeled_pool.shape[0] > 0:
 
         i += 1
+
+        #teach is fit
+        #predict is predict
 
         # Setup the learner and stabilizing predictions in the 0th iteration.
         if i == 0:
