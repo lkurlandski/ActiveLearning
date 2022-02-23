@@ -4,7 +4,15 @@ An active learning experimental environment based upon open source active learni
 
 ## Technical Requirements
 
-Codebase is written in Python 3.7.5. Requirements are contained in requirements.txt. Setup a virtual environment, install nessecary packages, and run.
+Codebase is written in Python 3.7.5. Goal is to upgrade this to Python 3.9.9. Requirements are contained in requirements.txt. 
+
+Currently, the system uses a slurm_template.sh file to create slurm scripts and execute them. The first line is this file tells the slurm script where to find the Python interpreter to use. The first line is '#!./env/bin/python -u', which indicates that it is looking for a Python interpreter in the ./env/bin/python location. Eventually, we will want to improve upon this clumsy behavior, but for now, you can simply perform the following:
+
+> python3 -m venv env
+> pip install -r requirements.txt
+> source env/bin/activate
+
+Users are advised to familiarize themselves with the engineering aspects of the Python language and execution evironment.
 
 ## Codebase Documentation
 
