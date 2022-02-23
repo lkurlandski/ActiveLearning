@@ -23,6 +23,7 @@ import estimators
 import input_helper
 import output_helper
 import stat_helper
+import vectorize
 
 def print_pool_update(
         unlabeled_pool_initial_size:int, 
@@ -102,7 +103,11 @@ def main(experiment_parameters:Dict[str, Union[str, int]]) -> None:
     # Get the dataset and select a stop set from it
     X_unlabeled_pool, X_test, y_unlabeled_pool, y_test, labels = \
         input_helper.get_dataset(experiment_parameters["dataset"], random_state)
-    print(X_unlabeled_pool)
+
+    #X_test, X_unlabeled_pool = vectorize.w2v_vectorize(X_test, X_unlabeled_pool)   
+    #print(type(X_test))
+    #print(type(X_unlabeled_pool))
+        
     unlabeled_pool_initial_size = y_unlabeled_pool.shape[0]
     stop_set_idx = choices([i for i in range(len(y_unlabeled_pool))], k=stop_set_size)
     X_stop_set, y_stop_set = X_unlabeled_pool[stop_set_idx], y_unlabeled_pool[stop_set_idx]
@@ -191,9 +196,9 @@ if __name__ == "__main__":
         "output_root": "./output2",
         "task": "preprocessedClassification",
         "stop_set_size": 1000,
-        "batch_size": 50,
+        "batch_size": 800,
         "estimator": "svm-ova",
-        "dataset": "20NewsGroups",
+        "dataset": "Emotions",
         "random_state": 0,
     }
 
