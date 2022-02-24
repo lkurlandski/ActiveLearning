@@ -57,6 +57,7 @@ def sbatch_config_files(flags:Set[str], temp_name:str = None) -> None:
         )
         print(result.stdout)
 
+# TODO: rename this function to more precicely describe its performance
 def create_config_files(
         experiment_parameters_lists:Dict[str, List[Union[str, int]]], 
         flags:Set[str], 

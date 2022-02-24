@@ -27,7 +27,8 @@ class StoppingMethod(ABC):
 
     def __repr__(self):
 
-        return (self.name + str(self.get_hyperparameters_dict())).replace(' ', '').replace("'","")
+        return self.name + str(self.get_hyperparameters_dict())\
+            .replace(' ', '').replace("'","").replace(':','=').replace('{', '(').replace('}', ')')
 
     @abstractmethod
     def get_hyperparameters_dict(self):
@@ -39,7 +40,8 @@ class StoppingMethod(ABC):
 
     def update_results(self, **results):
 
-        self.results = dict(results)
+        if not self.stopped:
+            self.results = dict(results)
 
 class Manager:
 
@@ -50,9 +52,14 @@ class Manager:
     def check_stopped(self, **kwargs):
 
         for m in self.stopping_methods:
-            m.check_stopped(kwargs)
+            m.check_stopped(**kwargs)
 
         return [m for m in self.stopping_methods if m.stopped]
+
+    def update_results(self, **results):
+
+        for m in self.stopping_methods:
+            m.update_results(**results)
 
     def results_to_dataframe(self):
         
@@ -60,13 +67,9 @@ class Manager:
             {repr(m) : pd.Series(m.results) for m in self.stopping_methods}
         )
 
-    def results_to_csv(self, path, **pandas_to_csv_kwargs):
+    def results_to_dict(self):
 
-        pd.to_csv(path, self.results_to_dataframe(), pandas_to_csv_kwargs)
-
-    def results_to_json(self):
-
-        pass
+        return {repr(m) : m.results for m in self.stopping_methods}
 
 class StabilizingPredictions(StoppingMethod):
 
@@ -119,6 +122,16 @@ class OracleAccuracyMCS:
 class PerformanceConvergence:
 
     pass
+
+def stopping_condition_met(
+        stopping_condition:StoppingMethod, 
+        stopped_methods:List[StoppingMethod]
+    ):
+    
+    if repr(stopping_condition) in set([repr(m) for m in stopped_methods]):
+        return True
+    
+    return False
 
 def tests():
     
