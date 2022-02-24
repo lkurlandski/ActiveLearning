@@ -11,6 +11,9 @@ import graphing
 import output_helper
 import stat_helper
 
+# TODO: the averager should only be run once per random state
+# TODO: separate functions for averaging across random states, datasets, and other parameters
+
 def main(experiment_parameters:Dict[str, Union[str, int]]) -> None:
     """Run the averaging algorithm for a set of experiment parmameters.
 
@@ -58,13 +61,13 @@ def main(experiment_parameters:Dict[str, Union[str, int]]) -> None:
 if __name__ == "__main__":
 
     experiment_parameters = {
-        "output_root": "./output",
+        "output_root": "./output2",
         "task": "preprocessedClassification",
         "stop_set_size": 1000,
-        "batch_size": 50,
-        "estimator": "svm-ova",
-        "dataset": "20NewsGroups",
-        "random_state": 0,
+        "batch_size": 10,
+        "estimator": "mlp",
+        "dataset": "Avila",
+        "random_state": '13',
     }
 
     main(experiment_parameters)

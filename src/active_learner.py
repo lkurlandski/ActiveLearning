@@ -8,6 +8,7 @@ import math
 from pathlib import Path
 from pprint import pprint
 from random import choices
+import sys
 from typing import Any, Dict, Union
 import warnings
 
@@ -24,21 +25,25 @@ import input_helper
 import output_helper
 import stat_helper
 
-def print_pool_update(
+# TODO: include a measurement of how much time has elapsed
+def print_update(
         unlabeled_pool_initial_size:int, 
         y_unlabeled_pool:np.ndarray, 
-        iteration:int
+        iteration:int,
+        accuracy:float
     ) -> None:
     """Print an update of AL progress.
 
     Parameters
     ----------
     unlabeled_pool_initial_size : int
-        Size of the unlabeled pool before the iterative process.
+        Size of the unlabeled pool before the iterative process
     y_unlabeled_pool : np.ndarray
-        The current unlabeled pool.
+        The current unlabeled pool
     iteration : int
-        The current iteration of AL.
+        The current iteration of AL
+    accuracy : float
+        The current accuracy of the model on a test set
     """
 
     prop = (unlabeled_pool_initial_size - y_unlabeled_pool.shape[0]) / unlabeled_pool_initial_size
@@ -47,7 +52,8 @@ def print_pool_update(
         f"Iteration {iteration} : {round(100 * prop, 2)}%:"
         f"\t|U_0|:{unlabeled_pool_initial_size}"
         f"\t|U|:{y_unlabeled_pool.shape[0]}"
-        f"\t|L|:{unlabeled_pool_initial_size - y_unlabeled_pool.shape[0]}",
+        f"\t|L|:{unlabeled_pool_initial_size - y_unlabeled_pool.shape[0]}"
+        f"\tacc:{round(100*accuracy, 1)}%",
         flush=True
     )
 
@@ -90,14 +96,14 @@ def main(experiment_parameters:Dict[str, Union[str, int]]) -> None:
         A single set of hyperparmaters and for the active learning experiment.
     """
 
-    print("active_learner called with experiment_parameters:")
-    pprint(experiment_parameters)
-
     # Extract hyperparameters from the experiment parameters
     stop_set_size = int(experiment_parameters["stop_set_size"])
     batch_size = int(experiment_parameters["batch_size"])
     estimator = estimators.get_estimator_from_code(experiment_parameters["estimator"])
     random_state = int(experiment_parameters["random_state"])
+    
+    # To attain reproducibility with modAL, we need to use legacy numpy random seeding code
+    np.random.seed(random_state)
 
     # Get the dataset and select a stop set from it
     X_unlabeled_pool, X_test, y_unlabeled_pool, y_test, labels = \
@@ -132,25 +138,18 @@ def main(experiment_parameters:Dict[str, Union[str, int]]) -> None:
         if i == 0:
             learner = ActiveLearner(estimator=estimator, query_strategy=uncertainty_batch_sampling)
             learner.teach(X_unlabeled_pool[idx], y_unlabeled_pool[idx])
-            previous_stop_set_predictions = learner.predict(X_unlabeled_pool[stop_set_idx])
+            previous_stop_set_predictions = learner.predict(X_stop_set)
             kappas = [np.NaN]
 
         # Retrain the learner
         else:
-            # FIXME: remove this error handling once bug fixed
-            try:
-                idx, query_sample = learner.query(X_pool=X_unlabeled_pool, n_instances=batch_size)
-                query_labels = y_unlabeled_pool[idx]
-                learner.teach(query_sample, query_labels)
-            except ValueError as e:
-                print(f"Caught and ignoring the following exception:\n\t{e}")
+            idx, query_sample = learner.query(X_pool=X_unlabeled_pool, n_instances=batch_size)
+            query_labels = y_unlabeled_pool[idx]
+            learner.teach(query_sample, query_labels)
 
         # Remove the queried elements from the unlabeled pool
         X_unlabeled_pool = stat_helper.remove_ids_from_array(X_unlabeled_pool, idx)
         y_unlabeled_pool = stat_helper.remove_ids_from_array(y_unlabeled_pool, idx)
-
-        # Print the progress of the learning procedure
-        print_pool_update(unlabeled_pool_initial_size, y_unlabeled_pool, i)
 
         # Evaluate the learner on the test set
         predictions = learner.predict(X_test)
@@ -158,6 +157,9 @@ def main(experiment_parameters:Dict[str, Union[str, int]]) -> None:
             y_test, predictions, zero_division=1, output_dict=True)
         with open(oh.ind_rstates_paths["report_test_path"] / f"{str(i)}.json", 'w') as f:
             json.dump(report, f, sort_keys=True, indent=4, separators=(',', ': '))
+            
+        # Print the progress of the learning procedure
+        print_update(unlabeled_pool_initial_size, y_unlabeled_pool, i, report['accuracy'])
 
         # Evaluate the learner on the unlabeled pool
         if y_unlabeled_pool.shape[0] > 0:
@@ -184,12 +186,12 @@ def main(experiment_parameters:Dict[str, Union[str, int]]) -> None:
 if __name__ == "__main__":
 
     experiment_parameters = {
-        "output_root": "./output2",
+        "output_root": "./output",
         "task": "preprocessedClassification",
         "stop_set_size": 1000,
-        "batch_size": 50,
-        "estimator": "svm-ova",
-        "dataset": "20NewsGroups",
+        "batch_size": 10,
+        "estimator": "mlp",
+        "dataset": "Avila",
         "random_state": 0,
     }
 

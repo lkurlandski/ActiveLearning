@@ -45,6 +45,11 @@ def main(
         with open(config_file, 'r') as f:
             experiment_parameters = json.load(f)
 
+    print("main.main called with flags:")
+    pprint(flags)
+    print("main.main called with experiment_parameters:")
+    pprint(experiment_parameters)
+
     with warnings.catch_warnings():
         warnings.filterwarnings("ignore", category=ConvergenceWarning)
 
