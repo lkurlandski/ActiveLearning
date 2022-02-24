@@ -14,6 +14,7 @@ import matplotlib.pyplot as plt
 import pandas as pd
 
 import output_helper
+import stopping_methods
 
 # Colors for stopping methods
 colors_stopping = ['lime', 'blue', 'megenta', 'midnightblue']
@@ -220,7 +221,7 @@ def create_graphs_for_subset(subset_path:Path, stopping_df : pd.DataFrame = None
 def create_graphs_for_processed(
         processed_path:Path,
         stopping_file : Path = None,
-        stopping_methods : List[str] = ['stabilizing_predictions']
+        stp_mthd : List[str] = None
     ) -> None:
     """Create graphs for everything that exists under the processed directory.
 
@@ -239,9 +240,7 @@ def create_graphs_for_processed(
 
     stopping_df = None
     if stopping_file is not None:
-        stopping_df = pd.read_csv(stopping_file, index_col=0)
-        if stopping_methods is not None:
-            stopping_df = stopping_df[stopping_methods]
+        stopping_df = pd.read_csv(stopping_file, index_col=0)[stp_mthd]
 
     for subset in ("test", "train", "stop_set"):
         create_graphs_for_subset(processed_path / subset, stopping_df)
@@ -259,6 +258,7 @@ def main(experiment_parameters:Dict[str, Union[str, int]]) -> None:
     create_graphs_for_processed(
         oh.ind_rstates_paths['processed_path'],
         oh.ind_rstates_paths['stopping_results_file'],
+        [repr(stopping_methods.StabilizingPredictions())]
     )
 
 if __name__ == "__main__":
@@ -267,9 +267,9 @@ if __name__ == "__main__":
         "output_root": "./output",
         "task": "preprocessedClassification",
         "stop_set_size": 1000,
-        "batch_size": 10,
-        "estimator": "svm-ova",
-        "dataset": "Avila",
+        "batch_size": 7,
+        "estimator": "mlp",
+        "dataset": "Iris",
         "random_state": 0,
     }
 

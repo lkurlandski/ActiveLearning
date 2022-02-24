@@ -3,7 +3,7 @@
 
 import json
 from pathlib import Path
-from pprint import pprint
+from pprint import pformat
 from typing import Dict, Set, Union
 import warnings
 
@@ -45,10 +45,7 @@ def main(
         with open(config_file, 'r') as f:
             experiment_parameters = json.load(f)
 
-    print("main.main called with flags:")
-    pprint(flags)
-    print("main.main called with experiment_parameters:")
-    pprint(experiment_parameters)
+    print(f'main.main\nflags:\n{flags},\nexperiment_parameters:\n{pformat(experiment_parameters)}')
 
     with warnings.catch_warnings():
         warnings.filterwarnings("ignore", category=ConvergenceWarning)
@@ -59,14 +56,11 @@ def main(
             processor.main(experiment_parameters)
         if "stopping" in flags or flags is None:
             stopping.main(experiment_parameters)
-
-        # TODO: SLURM overhaul: these should only be run once per set of experiments
-        if "averaging" in flags or flags is None:
-            averager.main(experiment_parameters)
         if "graphing" in flags or flags is None:
             graphing.main(experiment_parameters)
-        if "verify" in flags or flags is None:
-            verify.main(experiment_parameters)
+        # TODO: this should only be run once for all sets of a particular rstate
+        if "averaging" in flags or flags is None:
+            averager.main(experiment_parameters)
 
 if __name__ == "__main__":
 

@@ -21,33 +21,31 @@ def main(local:bool) -> None:
 
     experiment_parameters_lists = {
         # Only one value permitted
-        "output_root": "./output2",
+        "output_root": "./output",
         "task": "preprocessedClassification",
         # Iterable of values required
         "stop_set_size": [1000],
-        "batch_size": [10],
-        "estimator": ["svm-ova", "mlp", "rf"],
-        "dataset": ["Avila"],
-        "random_state": [i for i in range(30)]
+        "batch_size": [7],
+        "estimator": ["svm-ova", "mlp"],
+        "dataset": ["Iris"],
+        "random_state": [i for i in range(5)]
     }
 
     # Change the flags to run different parts of the ALL program.
     flags_phase1 = {
         "active_learning",
         "processor",
-        "stopping",
         "graphing",
     }
     flags_phase2 = {
         "averaging",
-        #"verify",
     }
 
-    flags = flags_phase1
+    flags = flags_phase2
 
     driver.create_config_files(experiment_parameters_lists, flags, local)
     if not local:
-        # TODO: refactor the slurm process to be allow for more elegant naming of jobs
+        # TODO: figure out a better way to name the slurm jobs
         driver.sbatch_config_files(flags, temp_name=experiment_parameters_lists["dataset"][0])
 
 if __name__ == "__main__":

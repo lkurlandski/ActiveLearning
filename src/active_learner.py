@@ -1,21 +1,20 @@
 """Run the active learning process.
-
-TODO: may contain some sort of bug that causes signficant dips in accuracy, unexpectedly.
 """
 
+import datetime
 import json
 import math
 from pathlib import Path
 from pprint import pprint
 from random import choices
-import sys
-from typing import Any, Dict, Union
+import time
+from typing import Dict, Union
 import warnings
 
 import numpy as np
 import pandas as pd
 from sklearn.exceptions import ConvergenceWarning
-from sklearn.metrics import cohen_kappa_score, classification_report
+from sklearn.metrics import classification_report
 
 from modAL.batch import uncertainty_batch_sampling
 from modAL.models import ActiveLearner
@@ -24,9 +23,11 @@ import estimators
 import input_helper
 import output_helper
 import stat_helper
+import stopping_methods
 
 # TODO: include a measurement of how much time has elapsed
 def print_update(
+        start_time:float,
         unlabeled_pool_initial_size:int, 
         y_unlabeled_pool:np.ndarray, 
         iteration:int,
@@ -36,6 +37,8 @@ def print_update(
 
     Parameters
     ----------
+    start_time : float
+        Time which the AL main method began
     unlabeled_pool_initial_size : int
         Size of the unlabeled pool before the iterative process
     y_unlabeled_pool : np.ndarray
@@ -48,14 +51,34 @@ def print_update(
 
     prop = (unlabeled_pool_initial_size - y_unlabeled_pool.shape[0]) / unlabeled_pool_initial_size
 
+    pool_zfill = len(str(unlabeled_pool_initial_size))
+
     print(
-        f"Iteration {iteration} : {round(100 * prop, 2)}%:"
-        f"\t|U_0|:{unlabeled_pool_initial_size}"
-        f"\t|U|:{y_unlabeled_pool.shape[0]}"
-        f"\t|L|:{unlabeled_pool_initial_size - y_unlabeled_pool.shape[0]}"
-        f"\tacc:{round(100*accuracy, 1)}%",
+        f"itr: {str(iteration).zfill(4)}"
+        f"    pgs: {str(round(100 * prop, 2)).zfill(5)}%"
+        f"    time: {str(datetime.timedelta(seconds=(round(time.time() - start_time))))}"
+        f"    acy: {round(accuracy, 3)}"
+        f"    |U_0|: {unlabeled_pool_initial_size}"
+        f"    |U|: {str(y_unlabeled_pool.shape[0]).zfill(pool_zfill)}"
+        f"    |L|: {str(unlabeled_pool_initial_size - y_unlabeled_pool.shape[0]).zfill(pool_zfill)}",
         flush=True
     )
+
+def report_to_json(report:Dict[str, Union[float, Dict[str, float]]], report_path:Path, i:int):
+    """Write a report taken from active learning to a specially named json output path.
+
+    Parameters
+    ----------
+    report : Dict[str, Union[float, Dict[str, float]]]
+        The report like the dict returned by sklearn.metrics.classification_report
+    report_path : Path
+        Directory to store the json file
+    i : int
+        The iteration of active learning, used the name the json file
+    """
+
+    with open(report_path / f"{str(i)}.json", 'w') as f:
+        json.dump(report, f, sort_keys=True, indent=4, separators=(',', ': '))
 
 def get_index_for_each_class(y:np.ndarray, labels:np.ndarray) -> np.ndarray:
     """Return indices that contain location of one element per class.
@@ -96,12 +119,31 @@ def main(experiment_parameters:Dict[str, Union[str, int]]) -> None:
         A single set of hyperparmaters and for the active learning experiment.
     """
 
+    start = time.time()
+    print(f"{str(datetime.timedelta(seconds=(round(start - start))))} -- Beginning Active Learning")
+
     # Extract hyperparameters from the experiment parameters
     stop_set_size = int(experiment_parameters["stop_set_size"])
     batch_size = int(experiment_parameters["batch_size"])
     estimator = estimators.get_estimator_from_code(experiment_parameters["estimator"])
     random_state = int(experiment_parameters["random_state"])
-    
+
+    # Determine a stopping condition to wait upon, this one will never stop :)
+    stopping_condition = stopping_methods.StabilizingPredictions(windows=3, threshold=1.0)
+    # Set up the stopping method manager
+    stopping_manager = stopping_methods.Manager(
+        [
+            stopping_methods.StabilizingPredictions(windows=w, threshold=t)
+            for w in [2,3,4] for t in [.97,.98,.99]
+        ]
+        +
+        [
+            stopping_condition
+        ]
+    )
+    # Initial empty list of stopped methods
+    stopped_methods = []
+
     # To attain reproducibility with modAL, we need to use legacy numpy random seeding code
     np.random.seed(random_state)
 
@@ -109,39 +151,37 @@ def main(experiment_parameters:Dict[str, Union[str, int]]) -> None:
     X_unlabeled_pool, X_test, y_unlabeled_pool, y_test, labels = \
         input_helper.get_dataset(experiment_parameters["dataset"], random_state)
     unlabeled_pool_initial_size = y_unlabeled_pool.shape[0]
+
+    # Select a stop set for stabilizing predictions
+    stop_set_size = min(stop_set_size, unlabeled_pool_initial_size)
     stop_set_idx = choices([i for i in range(len(y_unlabeled_pool))], k=stop_set_size)
     X_stop_set, y_stop_set = X_unlabeled_pool[stop_set_idx], y_unlabeled_pool[stop_set_idx]
 
     # Setup output directory structure
     oh = output_helper.OutputHelper(experiment_parameters)
     oh.setup_output_path(remove_existing=False, exist_ok=True)
-    print(f"output_path:{oh.output_path.as_posix()}\n")
 
     # Get ids of one instance of each class
     idx = get_index_for_each_class(y_unlabeled_pool, labels)
 
     # Write the size of the unlabeled pool at each iteration to a file
     n_iterations = math.ceil(y_unlabeled_pool.shape[0] / batch_size) + 1
-    pd.DataFrame({'training_data' : 
+    pd.DataFrame({'training_data' :
         [len(idx) + i * batch_size for i in range(n_iterations - 1)] + [y_unlabeled_pool.shape[0]]
     }).to_csv(oh.ind_rstates_paths['num_training_data_file'])
 
-    # These assets will be initialized in the 0th iteration of AL
-    learner, previous_stop_set_predictions, kappas = None, None, None
+    i = 0
+    while (
+        y_unlabeled_pool.shape[0] > 0
+        and not stopping_methods.stopping_condition_met(stopping_condition, stopped_methods)
+        ):
 
-    i = -1
-    while y_unlabeled_pool.shape[0] > 0:
-
-        i += 1
-
-        # Setup the learner and stabilizing predictions in the 0th iteration.
+        # Setup the learner and stabilizing predictions in the 0th iteration
         if i == 0:
             learner = ActiveLearner(estimator=estimator, query_strategy=uncertainty_batch_sampling)
             learner.teach(X_unlabeled_pool[idx], y_unlabeled_pool[idx])
-            previous_stop_set_predictions = learner.predict(X_stop_set)
-            kappas = [np.NaN]
 
-        # Retrain the learner
+        # Retrain the learner during every other iteration
         else:
             idx, query_sample = learner.query(X_pool=X_unlabeled_pool, n_instances=batch_size)
             query_labels = y_unlabeled_pool[idx]
@@ -152,36 +192,61 @@ def main(experiment_parameters:Dict[str, Union[str, int]]) -> None:
         y_unlabeled_pool = stat_helper.remove_ids_from_array(y_unlabeled_pool, idx)
 
         # Evaluate the learner on the test set
-        predictions = learner.predict(X_test)
-        report = classification_report(
-            y_test, predictions, zero_division=1, output_dict=True)
-        with open(oh.ind_rstates_paths["report_test_path"] / f"{str(i)}.json", 'w') as f:
-            json.dump(report, f, sort_keys=True, indent=4, separators=(',', ': '))
-            
-        # Print the progress of the learning procedure
-        print_update(unlabeled_pool_initial_size, y_unlabeled_pool, i, report['accuracy'])
+        preds_test = learner.predict(X_test)
+        report_test = classification_report(
+            y_test, preds_test, zero_division=1, output_dict=True
+        )
+        report_to_json(report_test, oh.ind_rstates_paths["report_test_path"], i)
+        #with open(oh.ind_rstates_paths["report_test_path"] / f"{str(i)}.json", 'w') as f:
+        #    json.dump(report_test, f, sort_keys=True, indent=4, separators=(',', ': '))
 
         # Evaluate the learner on the unlabeled pool
         if y_unlabeled_pool.shape[0] > 0:
-            predictions = learner.predict(X_unlabeled_pool)
-            report = classification_report(
-                y_unlabeled_pool, predictions, zero_division=1, output_dict=True)
-            with open(oh.ind_rstates_paths["report_train_path"] / f"{str(i)}.json", 'w') as f:
-                json.dump(report, f, sort_keys=True, indent=4, separators=(',', ': '))
+            preds_unlabeled_pool = learner.predict(X_unlabeled_pool)
+            report_unlabeled_pool = classification_report(
+                y_unlabeled_pool, preds_unlabeled_pool, zero_division=1, output_dict=True
+            )
+            report_to_json(report_unlabeled_pool, oh.ind_rstates_paths["report_train_path"], i)
+            #with open(oh.ind_rstates_paths["report_train_path"] / f"{str(i)}.json", 'w') as f:
+            #    json.dump(report_unlabeled_pool, f, sort_keys=True, indent=4, separators=(',', ': '))
 
         # Evaluate the learner on the stop set
-        stop_set_predictions = learner.predict(X_stop_set)
-        report = classification_report(
-            y_stop_set, stop_set_predictions, zero_division=1, output_dict=True)
-        with open(oh.ind_rstates_paths["report_stop_set_path"] / f"{str(i)}.json", 'w') as f:
-            json.dump(report, f, sort_keys=True, indent=4, separators=(',', ': '))
+        preds_stop_set = learner.predict(X_stop_set)
+        report_stop_set = classification_report(
+            y_stop_set, preds_stop_set, zero_division=1, output_dict=True
+        )
+        report_to_json(report_stop_set, oh.ind_rstates_paths["report_stop_set_path"], i)
+        #with open(oh.ind_rstates_paths["report_stop_set_path"] / f"{str(i)}.json", 'w') as f:
+        #    json.dump(report_stop_set, f, sort_keys=True, indent=4, separators=(',', ': '))
 
-        # Update the list of kappas for stabilizing predictions
-        kappa = cohen_kappa_score(stop_set_predictions, previous_stop_set_predictions)
-        kappas.append(kappa)
-        previous_stop_set_predictions = stop_set_predictions
+        # Evaluate the stopping methods
+        stopped_methods = stopping_manager.check_stopped(stop_set_predictions=preds_stop_set)
+        results = {
+            'annotations' : learner.y_training.shape[0],
+            'iteration' : i,
+            'accuracy' : report_test['accuracy'],
+            'macro avg f1-score' : report_test['macro avg']['f1-score'],
+            'weighted avg f1-score' : report_test['weighted avg']['f1-score']
+        }
+        stopping_manager.update_results(**results)
 
-    np.savetxt(oh.ind_rstates_paths["kappa_file"], np.array(kappas), fmt='%f', delimiter=',')
+        # Print a status update and increment the iteration counter
+        print_update(
+            start,
+            unlabeled_pool_initial_size,
+            y_unlabeled_pool,
+            i,
+            report_test['accuracy']
+        )
+
+        i += 1
+
+    stopping_manager.results_to_dataframe().to_csv(oh.ind_rstates_paths['stopping_results_file'])
+    with open(oh.ind_rstates_paths['stopping_results_file'].with_suffix(".json"), 'w') as f:
+        json.dump(stopping_manager.results_to_dict(), f, sort_keys=True, indent=4, separators=(',', ': '))
+
+    end = time.time()
+    print(f"{str(datetime.timedelta(seconds=(round(start - start))))} -- Ending Active Learning")
 
 if __name__ == "__main__":
 
@@ -189,9 +254,9 @@ if __name__ == "__main__":
         "output_root": "./output",
         "task": "preprocessedClassification",
         "stop_set_size": 1000,
-        "batch_size": 10,
+        "batch_size": 7,
         "estimator": "mlp",
-        "dataset": "Avila",
+        "dataset": "Iris",
         "random_state": 0,
     }
 

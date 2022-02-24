@@ -10,6 +10,7 @@ import pandas as pd
 import graphing
 import output_helper
 import stat_helper
+import stopping_methods
 
 # TODO: the averager should only be run once per random state
 # TODO: separate functions for averaging across random states, datasets, and other parameters
@@ -56,6 +57,7 @@ def main(experiment_parameters:Dict[str, Union[str, int]]) -> None:
     graphing.create_graphs_for_processed(
         oh.avg_rstates_paths['processed_path'],
         oh.avg_rstates_paths['stopping_results_file'],
+        [repr(stopping_methods.StabilizingPredictions())]
     )
 
 if __name__ == "__main__":
