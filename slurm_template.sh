@@ -18,7 +18,7 @@ import signal
 
 sys.path.append("/home/hpc/kurlanl1/bloodgood/ActiveLearning/src")
 
-import main
+import runner
 
 print('Running on:', platform.node())
 
@@ -33,9 +33,9 @@ def sigint_handler(signum, frame):
 signal.signal(signal.SIGINT, sigint_handler)
 
 # Start job and print out config file path
-print('Starting main.sh job for gc task at: ' + time.strftime('%m/%d/%Y %H:%M'))
+print('Starting runner.sh job for gc task at: ' + time.strftime('%m/%d/%Y %H:%M'))
 
-main.main()
+runner.main()
 
 # Job Finished
 print('Job finished at: ' + time.strftime('%m/%d/%Y %H:%M'), flush=True)

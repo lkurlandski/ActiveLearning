@@ -8,38 +8,38 @@ import subprocess
 from typing import Dict, List, Set, Union
 
 import config
-import main
+import runner
 
 # TODO: SLURM overhaul (remove this temp_name garbage)
-def sbatch_config_files(flags:Set[str], temp_name:str = None) -> None:
+def sbatch_config_files(flags:Set[str], job_names:List[str]) -> None:
     """Launch confiuration files using sbatch.
 
     Parameters
     ----------
     flags : Set[str]
-        Set of flags to run main.main with
-    temp_name : str, optional
-        Name for the slurm job, by default None
+        Set of flags to run runner.main with
+    job_names : List[str]
+        Sorted names for the slurm jobs
     """
 
-    # TODO: do not delete the .gitkeep file!
-    # Delete old files
+    # Delete old slurm files make the directory if needed
     if config.slurm_scripts_path.exists():
-        shutil.rmtree(config.slurm_scripts_path)
-    config.slurm_scripts_path.mkdir()
+        for p in config.slurm_scripts_path.glob("*.sh"):
+            p.unlink()
+    else:
+        config.slurm_scripts_path.mkdir()
 
     with open(config.slurm_template_path, 'r') as f:
         slurm_lines = f.readlines()
 
-    for i, p in enumerate(sorted(config.config_file_path.glob("*.json"))):
+    for i, (p, n) in enumerate(zip(sorted(config.config_file_path.glob("*.json")), job_names)):
 
-        # TODO: SLURM overhaul: emulate TCNJ.py
         # Replace specific lines with what we need
         for i in range(len(slurm_lines)):
             if '--job-name' in slurm_lines[i]:
-                slurm_lines[i] = f"#SBATCH --job-name={str(temp_name)}\n"
-            elif 'main.main' in slurm_lines[i]:
-                slurm_lines[i] = f"main.main(config_file='{p.as_posix()}', flags={flags})\n"
+                slurm_lines[i] = f"#SBATCH --job-name={n}\n"
+            elif 'runner.main' in slurm_lines[i]:
+                slurm_lines[i] = f"runner.main(config_file='{p.as_posix()}', flags={flags})\n"
             elif '--chdir' in slurm_lines[i]:
                 slurm_lines[i] = f"#SBATCH --chdir={config.location_of_ActiveLearning_dir}\n"
             elif 'sys.path.append' in slurm_lines[i]:
@@ -57,8 +57,22 @@ def sbatch_config_files(flags:Set[str], temp_name:str = None) -> None:
         )
         print(result.stdout)
 
-# TODO: rename this function to more precicely describe its performance
-def create_config_files(
+def create_config_file(experiment_parameters:Dict[str, Union[str, int]], i:int):
+    """Create the configuration file for a particular set of hyperparameters.
+
+    Parameters
+    ----------
+    experiment_parameters : Dict[str, Union[str, int]]
+        Experiment specifications
+    i : int
+        Used to give the config file a unique name
+    """
+
+    config_file = config.config_file_path / f"{i}.json"
+    with open(config_file, 'w') as f:
+        json.dump(experiment_parameters, f, sort_keys=True, indent=4, separators=(',', ': '))
+
+def main(
         experiment_parameters_lists:Dict[str, List[Union[str, int]]],
         flags:Set[str],
         local:bool
@@ -70,19 +84,21 @@ def create_config_files(
     experiment_parameters_lists : Dict[str, List[Union[str, int]]]
         Lists of sets of experiment parameters
     flags : Set[str]
-        Set of flags to run main.main with
+        Set of flags to run runner.main with
     local : bool
         If True, the experiments should be run locally and config files not produced.
     """
 
-    # TODO: do not delete the .gitkeep file!
-    # Delete old files
-    if config.config_file_path.exists():
-        shutil.rmtree(config.config_file_path)
-    config.config_file_path.mkdir()
+    # Delete old configuration files if running on the cluster and make the directory if needed
+    if not local:
+        if config.config_file_path.exists():
+            for p in config.config_file_path.glob("*.json"):
+                p.unlink()
+        else:
+            config.config_file_path.mkdir()
 
+    job_names = []
     i = 0
-
     for random_state in experiment_parameters_lists["random_state"]:
         for stop_set_size in experiment_parameters_lists["stop_set_size"]:
             for batch_size in experiment_parameters_lists["batch_size"]:
@@ -103,12 +119,12 @@ def create_config_files(
                         }
 
                         if local:
-                            main.main(experiment_parameters=experiment_parameters, flags=flags)
+                            runner.main(experiment_parameters=experiment_parameters, flags=flags)
                         else:
-                            config_file = config.config_file_path / f"{i}.json"
-                            with open(config_file, 'w') as f:
-                                json.dump(
-                                    experiment_parameters, f, sort_keys=True,
-                                    indent=4, separators=(',', ': ')
-                                )
-                            i += 1
+                            create_config_file(experiment_parameters, i)
+
+                        job_names.append(dataset)
+                        i += 1
+
+    if not local:
+        sbatch_config_files(flags, job_names)

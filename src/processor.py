@@ -106,6 +106,8 @@ def main(experiment_parameters:Dict[str, Union[str, int]]):
         A single set of hyperparmaters and for the active learning experiment.
     """
 
+    print("Beginning Processing", flush=True)
+
     oh = output_helper.OutputHelper(experiment_parameters)
 
     num_training_data = pd.read_csv(oh.ind_rstates_paths["num_training_data_file"])['training_data']
@@ -117,6 +119,8 @@ def main(experiment_parameters:Dict[str, Union[str, int]]):
         for df in dfs.values():
             df.insert(0, 'training_data', num_training_data)
         dict_of_dfs_to_csvs(oh, dfs, subset)
+
+    print("Ending Processing", flush=True)
 
 if __name__ == "__main__":
 

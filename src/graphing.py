@@ -254,12 +254,16 @@ def main(experiment_parameters:Dict[str, Union[str, int]]) -> None:
         A single set of hyperparmaters and for the active learning experiment.
     """
 
+    print("Beginning Graphing", flush=True)
+
     oh = output_helper.OutputHelper(experiment_parameters)
     create_graphs_for_processed(
         oh.ind_rstates_paths['processed_path'],
         oh.ind_rstates_paths['stopping_results_file'],
         [repr(stopping_methods.StabilizingPredictions())]
     )
+
+    print("Ending Graphing", flush=True)
 
 if __name__ == "__main__":
 

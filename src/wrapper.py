@@ -6,10 +6,6 @@ from pprint import pprint
 
 import driver
 
-# TODO: at the moment, the phase2 flags are run for every possible configuration, which is
-    # completely unnessecary. It only needs to average for one configuration because that will
-    # include all configurations.
-
 def main(local:bool) -> None:
     """Run the wrapper program to perform experiments in bulk.
 
@@ -26,7 +22,7 @@ def main(local:bool) -> None:
         # Iterable of values required
         "stop_set_size": [1000],
         "batch_size": [7],
-        "estimator": ["svm-ova", "mlp"],
+        "estimator": ["mlp"],
         "dataset": ["Iris"],
         "random_state": [i for i in range(5)]
     }
@@ -41,12 +37,8 @@ def main(local:bool) -> None:
         "averaging",
     }
 
-    flags = flags_phase2
-
-    driver.create_config_files(experiment_parameters_lists, flags, local)
-    if not local:
-        # TODO: figure out a better way to name the slurm jobs
-        driver.sbatch_config_files(flags, temp_name=experiment_parameters_lists["dataset"][0])
+    flags = flags_phase1
+    driver.main(experiment_parameters_lists, flags, local)
 
 if __name__ == "__main__":
 

@@ -29,8 +29,8 @@ Each of these scripts can be run from the command line by changing the experimen
 
 To run a many active learning experiments with several different options for the various parameters on the HPC, you need to use the following, which can all be easily controlled from wrapper.py:
 - driver.py - creates configuration files, creates slurm scripts, calls sbatch to run slurm scripts
-- main.py - interfaces to the active_learner, processor, stopping, graphing, and averager scripts
-- wrapper.py - interfaces to the driver and the main scripts
+- runner.py - interfaces to the active_learner, processor, stopping, graphing, and averager scripts
+- wrapper.py - interfaces to the driver and the runner scripts
 
 Additional assets include:
 - config.py - system-level configurations

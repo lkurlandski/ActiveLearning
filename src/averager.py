@@ -24,6 +24,8 @@ def main(experiment_parameters:Dict[str, Union[str, int]]) -> None:
         A single set of hyperparmaters and for the active learning experiment.
     """
 
+    print("Beginning Averaging", flush=True)
+
     # Determine which rtates are available for averaging
     oh = output_helper.OutputHelper(experiment_parameters)
     available_rstates = [int(p.name) for p in oh.ind_rstates_path.glob("*")]
@@ -59,6 +61,8 @@ def main(experiment_parameters:Dict[str, Union[str, int]]) -> None:
         oh.avg_rstates_paths['stopping_results_file'],
         [repr(stopping_methods.StabilizingPredictions())]
     )
+
+    print("Ending Averaging", flush=True)
 
 if __name__ == "__main__":
 
