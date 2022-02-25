@@ -41,9 +41,9 @@ def main(experiment_parameters:Dict[str, Union[str, int]]) -> None:
             dfs = [pd.read_csv(p, index_col=0) for p in files_to_avg]
             df = stat_helper.mean_dataframes(dfs)
             df.to_csv(oh.avg_rstates_paths[f"processed_{subset}_{data_file}_path"])
-            
+
     # TODO: additionally, average the data across the individual, i.e., raw, categories
-    
+
     # Average the contents of the stoppping directory across all the random states
     files_to_avg = []
     for rstate in available_rstates:
@@ -53,7 +53,7 @@ def main(experiment_parameters:Dict[str, Union[str, int]]) -> None:
     dfs = [pd.read_csv(p, index_col=0) for p in files_to_avg]
     df = stat_helper.mean_dataframes(dfs)
     df.to_csv(oh.avg_rstates_paths['stopping_results_file'])
-    
+
     graphing.create_graphs_for_processed(
         oh.avg_rstates_paths['processed_path'],
         oh.avg_rstates_paths['stopping_results_file'],
@@ -62,14 +62,14 @@ def main(experiment_parameters:Dict[str, Union[str, int]]) -> None:
 
 if __name__ == "__main__":
 
-    experiment_parameters = {
-        "output_root": "./output2",
-        "task": "preprocessedClassification",
-        "stop_set_size": 1000,
-        "batch_size": 10,
-        "estimator": "mlp",
-        "dataset": "Avila",
-        "random_state": '13',
-    }
-
-    main(experiment_parameters)
+    main(experiment_parameters=
+        {
+            "output_root": "./output",
+            "task": "cls",
+            "stop_set_size": 1000,
+            "batch_size": 10,
+            "estimator": "mlp",
+            "dataset": "Avila",
+            "random_state": 0,
+        }
+    )

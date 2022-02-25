@@ -28,8 +28,8 @@ import stopping_methods
 # TODO: include a measurement of how much time has elapsed
 def print_update(
         start_time:float,
-        unlabeled_pool_initial_size:int, 
-        y_unlabeled_pool:np.ndarray, 
+        unlabeled_pool_initial_size:int,
+        y_unlabeled_pool:np.ndarray,
         iteration:int,
         accuracy:float
     ) -> None:
@@ -128,8 +128,9 @@ def main(experiment_parameters:Dict[str, Union[str, int]]) -> None:
     estimator = estimators.get_estimator_from_code(experiment_parameters["estimator"])
     random_state = int(experiment_parameters["random_state"])
 
-    # Determine a stopping condition to wait upon, this one will never stop :)
-    stopping_condition = stopping_methods.StabilizingPredictions(windows=3, threshold=1.0)
+    # Determine a stopping condition to wait upon
+    stopping_condition = stopping_methods.StabilizingPredictions(windows=3, threshold=.99)
+    early_stopping_enabled = False
     # Set up the stopping method manager
     stopping_manager = stopping_methods.Manager(
         [
@@ -141,8 +142,6 @@ def main(experiment_parameters:Dict[str, Union[str, int]]) -> None:
             stopping_condition
         ]
     )
-    # Initial empty list of stopped methods
-    stopped_methods = []
 
     # To attain reproducibility with modAL, we need to use legacy numpy random seeding code
     np.random.seed(random_state)
@@ -170,10 +169,11 @@ def main(experiment_parameters:Dict[str, Union[str, int]]) -> None:
         [len(idx) + i * batch_size for i in range(n_iterations - 1)] + [y_unlabeled_pool.shape[0]]
     }).to_csv(oh.ind_rstates_paths['num_training_data_file'])
 
+    # Guard had some complex boolean algebra, but is correct
     i = 0
     while (
-        y_unlabeled_pool.shape[0] > 0
-        and not stopping_methods.stopping_condition_met(stopping_condition, stopped_methods)
+        y_unlabeled_pool.shape[0] > 0 and not
+        (stopping_manager.stopping_condition_met(stopping_condition) and early_stopping_enabled)
         ):
 
         # Setup the learner and stabilizing predictions in the 0th iteration
@@ -197,8 +197,6 @@ def main(experiment_parameters:Dict[str, Union[str, int]]) -> None:
             y_test, preds_test, zero_division=1, output_dict=True
         )
         report_to_json(report_test, oh.ind_rstates_paths["report_test_path"], i)
-        #with open(oh.ind_rstates_paths["report_test_path"] / f"{str(i)}.json", 'w') as f:
-        #    json.dump(report_test, f, sort_keys=True, indent=4, separators=(',', ': '))
 
         # Evaluate the learner on the unlabeled pool
         if y_unlabeled_pool.shape[0] > 0:
@@ -207,8 +205,6 @@ def main(experiment_parameters:Dict[str, Union[str, int]]) -> None:
                 y_unlabeled_pool, preds_unlabeled_pool, zero_division=1, output_dict=True
             )
             report_to_json(report_unlabeled_pool, oh.ind_rstates_paths["report_train_path"], i)
-            #with open(oh.ind_rstates_paths["report_train_path"] / f"{str(i)}.json", 'w') as f:
-            #    json.dump(report_unlabeled_pool, f, sort_keys=True, indent=4, separators=(',', ': '))
 
         # Evaluate the learner on the stop set
         preds_stop_set = learner.predict(X_stop_set)
@@ -216,11 +212,9 @@ def main(experiment_parameters:Dict[str, Union[str, int]]) -> None:
             y_stop_set, preds_stop_set, zero_division=1, output_dict=True
         )
         report_to_json(report_stop_set, oh.ind_rstates_paths["report_stop_set_path"], i)
-        #with open(oh.ind_rstates_paths["report_stop_set_path"] / f"{str(i)}.json", 'w') as f:
-        #    json.dump(report_stop_set, f, sort_keys=True, indent=4, separators=(',', ': '))
 
         # Evaluate the stopping methods
-        stopped_methods = stopping_manager.check_stopped(stop_set_predictions=preds_stop_set)
+        stopping_manager.check_stopped(stop_set_predictions=preds_stop_set)
         results = {
             'annotations' : learner.y_training.shape[0],
             'iteration' : i,
@@ -242,24 +236,25 @@ def main(experiment_parameters:Dict[str, Union[str, int]]) -> None:
         i += 1
 
     stopping_manager.results_to_dataframe().to_csv(oh.ind_rstates_paths['stopping_results_file'])
+    results = stopping_manager.results_to_dict()
     with open(oh.ind_rstates_paths['stopping_results_file'].with_suffix(".json"), 'w') as f:
-        json.dump(stopping_manager.results_to_dict(), f, sort_keys=True, indent=4, separators=(',', ': '))
+        json.dump(results, f, sort_keys=True, indent=4, separators=(',', ': '))
 
     end = time.time()
-    print(f"{str(datetime.timedelta(seconds=(round(start - start))))} -- Ending Active Learning")
+    print(f"{str(datetime.timedelta(seconds=(round(end - start))))} -- Ending Active Learning")
 
 if __name__ == "__main__":
 
-    experiment_parameters = {
-        "output_root": "./output",
-        "task": "preprocessedClassification",
-        "stop_set_size": 1000,
-        "batch_size": 7,
-        "estimator": "mlp",
-        "dataset": "Iris",
-        "random_state": 0,
-    }
-
     with warnings.catch_warnings():
         warnings.filterwarnings("ignore", category=ConvergenceWarning)
-        main(experiment_parameters)
+        main(experiment_parameters=
+            {
+                "output_root": "./output",
+                "task": "cls",
+                "stop_set_size": 1000,
+                "batch_size": 10,
+                "estimator": "mlp",
+                "dataset": "Iris",
+                "random_state": 0,
+            }
+        )

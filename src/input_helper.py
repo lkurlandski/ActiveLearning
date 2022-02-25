@@ -9,8 +9,8 @@ from sklearn.datasets import fetch_20newsgroups, fetch_20newsgroups_vectorized, 
 from sklearn.model_selection import train_test_split
 
 def shuffle_corresponding_arrays(
-        a1:np.ndarray, 
-        a2:np.ndarray, 
+        a1:np.ndarray,
+        a2:np.ndarray,
         random_state:int
     ) -> Tuple[np.ndarray, np.ndarray]:
     """Shuffle two arrays with the exact same ordering applied to each array.
@@ -196,7 +196,7 @@ def get_avila(
 # TODO: Establish proper data types and ensure proper data types are being used
 # TODO: attempt to access bunch['file_names'] and create a streaming approach for text datasets
 def get_dataset(
-        dataset:str, 
+        dataset:str,
         random_state : int = None
     ) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
     """Return any implemented dataset.
@@ -234,6 +234,9 @@ def get_dataset(
 
     return X_train, X_test, y_train, y_test, labels
 
-if __name__ == "__main__":
+def test():
     X_train, y_train, X_test, y_test, labels = get_dataset("20NewsGroups-bert", 0)
-    print()
+    print("Done")
+
+if __name__ == "__main__":
+    test()

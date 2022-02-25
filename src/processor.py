@@ -43,7 +43,7 @@ def report_jsons_to_dicts(
                     if k2 in data[k]:
                         data[k][k2].append(v2)
                     else:
-                        data[k][k2] = [v2]  
+                        data[k][k2] = [v2]
 
     return data
 
@@ -70,8 +70,8 @@ def report_dicts_to_dfs(
     return dfs
 
 def dict_of_dfs_to_csvs(
-        oh:output_helper.OutputHelper, 
-        dfs:Dict[str, pd.DataFrame], 
+        oh:output_helper.OutputHelper,
+        dfs:Dict[str, pd.DataFrame],
         subset:str
     ) -> None:
     """Convert the processed dataframes into csv files.
@@ -120,14 +120,14 @@ def main(experiment_parameters:Dict[str, Union[str, int]]):
 
 if __name__ == "__main__":
 
-    experiment_parameters = {
-        "output_root": "./output",
-        "task": "preprocessedClassification",
-        "stop_set_size": 1000,
-        "batch_size": 50,
-        "estimator": "svm-ova",
-        "dataset": "20NewsGroups",
-        "random_state": 0,
-    }
-
-    main(experiment_parameters)
+    main(experiment_parameters=
+        {
+            "output_root": "./output",
+            "task": "cls",
+            "stop_set_size": 1000,
+            "batch_size": 10,
+            "estimator": "mlp",
+            "dataset": "Avila",
+            "random_state": 0,
+        }
+    )

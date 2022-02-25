@@ -1,4 +1,6 @@
 """Searches an experimental configuration for failed or missing files.
+
+# TODO: this script is depreciated
 """
 
 from pathlib import Path
@@ -21,15 +23,15 @@ def verify_all_runs_successful(experiment_parameters:Dict[str, Union[str, int]])
     first_print_out_performed = False
 
     files_to_check = [
-        oh.kappa_file,
-        oh.processed_test_accuracy_file,
-        oh.processed_test_macro_avg_file,
-        oh.processed_test_weighted_avg_file,
-        oh.stopping_results_file,
-        oh.avg_processed_accuracy_file,
-        oh.avg_processed_macro_avg_file,
-        oh.avg_processed_weighted_avg_file,
-        oh.avg_stopping_results_file,
+        #oh.kappa_file,
+        #oh.processed_test_accuracy_file,
+        #oh.processed_test_macro_avg_file,
+        #oh.processed_test_weighted_avg_file,
+        #oh.stopping_results_file,
+        #oh.avg_processed_accuracy_file,
+        #oh.avg_processed_macro_avg_file,
+        #oh.avg_processed_weighted_avg_file,
+        #oh.avg_stopping_results_file,
     ]
     for f in files_to_check:
         if not f.exists():
@@ -55,14 +57,14 @@ def main(experiment_parameters:Dict[str, Union[str, int]]):
 
 if __name__ == "__main__":
 
-    experiment_parameters = {
-        "output_root": "./output",
-        "task": "preprocessedClassification",
-        "stop_set_size": 1000,
-        "batch_size": 10,
-        "estimator": "mlp",
-        "dataset": "Avila",
-        "random_state": 0
-    }
-
-    main(experiment_parameters)
+    main(experiment_parameters=
+        {
+            "output_root": "./output",
+            "task": "cls",
+            "stop_set_size": 1000,
+            "batch_size": 10,
+            "estimator": "mlp",
+            "dataset": "Avila",
+            "random_state": 0,
+        }
+    )

@@ -12,7 +12,7 @@ from utils import DisplayablePath
 
 # TODO: currently, this runs the experiments on the hpc nodes, but writes files locally.
     # Develop a system (along with the output helper) that writes the experiment
-    # to the /local/scratch directory on the node, then copies them over to the local directory 
+    # to the /local/scratch directory on the node, then copies them over to the local directory
     # when complete.
 
 # TODO: replace report_train_path etc. with report_unlabeled_pool_path
@@ -130,7 +130,7 @@ def get_ind_avg_rstates_structure(parent:Path) -> Dict[str, Path]:
     d = {
         'raw_path' : parent / "raw",
         'processed_path' : parent / "processed",
-        'stopping_path' : parent / "stopping", 
+        'stopping_path' : parent / "stopping",
     }
 
     d.update(get_structure_beneath_raw(d['raw_path']))
@@ -254,17 +254,17 @@ class OutputHelper:
 
 if __name__ == "__main__":
 
-    experiment_parameters = {
-        "output_root": "./output",
-        "task": "preprocessedClassification",
-        "stop_set_size": 1000,
-        "batch_size": 10, 
-        "estimator": "svm",
-        "dataset": "Avila",
-        "random_state": 0
-    }
-
-    oh = OutputHelper(experiment_parameters)
+    oh = OutputHelper(experiment_parameters=
+        {
+            "output_root": "./output",
+            "task": "cls",
+            "stop_set_size": 1000,
+            "batch_size": 10,
+            "estimator": "mlp",
+            "dataset": "Avila",
+            "random_state": 0,
+        }
+    )
     oh.setup_output_path()
 
     print(str(oh))

@@ -17,7 +17,7 @@ class TestManager(unittest.TestCase):
         sp_1 = stopping_methods.StabilizingPredictions(windows=3, threshold=.66)
         sp_2 = stopping_methods.StabilizingPredictions(windows=3, threshold=.67)
         sp_3 = stopping_methods.StabilizingPredictions(windows=3, threshold=1.0) # should never stop
-        
+
         mg = stopping_methods.Manager([sp_1, sp_2, sp_3])
 
         stopped = mg.check_stopped(stop_set_predictions=[1,2,3], other_random_args=None)
@@ -35,7 +35,7 @@ class TestManager(unittest.TestCase):
                 self.assertEqual(len(stopped), 2)
                 self.assertEqual(repr(stopped[0]), repr(sp_1))
                 self.assertEqual(repr(stopped[1]), repr(sp_2))
-    
+
     def test_update_results(self):
 
         sp_1 = stopping_methods.StabilizingPredictions(windows=3, threshold=.66)
@@ -58,13 +58,13 @@ class TestStabilizingPredictions(unittest.TestCase):
 
         m = stopping_methods.StabilizingPredictions(windows=3, threshold=0.67)
         self.assertFalse(m.stopped)
-        
+
         preds = [1,2,3]
         m.check_stopped(preds)
         self.assertFalse(m.stopped)
         self.assertTrue(np.isnan(m.kappas[0]))
         self.assertEqual(m.previous_stop_set_predictions, preds)
-        
+
         preds = [3,1,2]
         m.check_stopped(preds)
         self.assertFalse(m.stopped)
@@ -94,7 +94,7 @@ class TestStabilizingPredictions(unittest.TestCase):
         self.assertTrue(m.stopped)
         self.assertEqual(m.kappas[-1], 1)
         self.assertEqual(m.previous_stop_set_predictions, preds)
-    
+
     def test_update_results(self):
 
         m = stopping_methods.StabilizingPredictions(windows=3, threshold=0.99)

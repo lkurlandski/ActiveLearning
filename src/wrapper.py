@@ -6,7 +6,7 @@ from pprint import pprint
 
 import driver
 
-# TODO: at the moment, the phase2 flags are run for every possible configuration, which is 
+# TODO: at the moment, the phase2 flags are run for every possible configuration, which is
     # completely unnessecary. It only needs to average for one configuration because that will
     # include all configurations.
 

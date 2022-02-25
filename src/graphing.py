@@ -51,7 +51,7 @@ def add_stopping_vlines(fig:Figure, ax:Axes, stopping_df:pd.DataFrame) -> Tuple[
             linestyle='dashdot',
             label=stopping_method
         )
-    
+
     return fig, ax
 
 def plot_from_dataframe(
@@ -163,7 +163,7 @@ def create_graphs_for_avg(avg_path:Path, stopping_df : pd.DataFrame = None):
         Location of the avg path to create graphs from. Should contain "accuracy", "macro_avg", and
             "weighted_avg" subdirectories
     stopping_df : pd.DataFrame, optional
-        Stopping results dataframe to extract the performance of stopping methods from, 
+        Stopping results dataframe to extract the performance of stopping methods from,
             by default None
     """
 
@@ -193,7 +193,7 @@ def create_graphs_for_ind(ind_path:Path, stopping_df : pd.DataFrame = None):
     ind_path : Path
         Location of the ind path to create graphs from. Should contain csv files for each category
     stopping_df : pd.DataFrame, optional
-        Stopping results dataframe to extract the performance of stopping methods from, 
+        Stopping results dataframe to extract the performance of stopping methods from,
             by default None
     """
 
@@ -209,7 +209,7 @@ def create_graphs_for_subset(subset_path:Path, stopping_df : pd.DataFrame = None
     subset_path : Path
         Location of the avg path to create graphs from. Should contain "ind", "avg" subdirectories
     stopping_df : pd.DataFrame, optional
-        Stopping results dataframe to extract the performance of stopping methods from, 
+        Stopping results dataframe to extract the performance of stopping methods from,
             by default None
     """
 
@@ -228,13 +228,13 @@ def create_graphs_for_processed(
     Parameters
     ----------
     processed_path : Path
-        Location of the processed path to create graphs from. 
+        Location of the processed path to create graphs from.
             Should contain "train", "test", "stop_set" subdirectories
     stopping_file : Path
         Location of the stopping results file for applying vertical stopping lines, by default None,
             which will not apply any lines
     stopping_df : pd.DataFrame, optional
-        Stopping results dataframe to extract the performance of stopping methods from, 
+        Stopping results dataframe to extract the performance of stopping methods from,
             by default ['stabilizing_predictions']
     """
 
@@ -263,14 +263,14 @@ def main(experiment_parameters:Dict[str, Union[str, int]]) -> None:
 
 if __name__ == "__main__":
 
-    experiment_parameters = {
-        "output_root": "./output",
-        "task": "preprocessedClassification",
-        "stop_set_size": 1000,
-        "batch_size": 7,
-        "estimator": "mlp",
-        "dataset": "Iris",
-        "random_state": 0,
-    }
-
-    main(experiment_parameters)
+    main(experiment_parameters=
+        {
+            "output_root": "./output",
+            "task": "cls",
+            "stop_set_size": 1000,
+            "batch_size": 10,
+            "estimator": "mlp",
+            "dataset": "Avila",
+            "random_state": 0,
+        }
+    )

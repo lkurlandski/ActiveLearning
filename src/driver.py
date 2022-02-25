@@ -52,15 +52,15 @@ def sbatch_config_files(flags:Set[str], temp_name:str = None) -> None:
             f.writelines(slurm_lines)
 
         result = subprocess.run(
-            ["sbatch", slurm_script_file.as_posix()], 
+            ["sbatch", slurm_script_file.as_posix()],
             capture_output=True, check=True
         )
         print(result.stdout)
 
 # TODO: rename this function to more precicely describe its performance
 def create_config_files(
-        experiment_parameters_lists:Dict[str, List[Union[str, int]]], 
-        flags:Set[str], 
+        experiment_parameters_lists:Dict[str, List[Union[str, int]]],
+        flags:Set[str],
         local:bool
     ) -> None:
     """Create configuration files or run the AL pipeline with a set of hyperparameters.
@@ -93,7 +93,7 @@ def create_config_files(
                             "output_root": experiment_parameters_lists["output_root"],
                             "task": experiment_parameters_lists["task"],
                             "stop_set_size": stop_set_size,
-                            "batch_size": batch_size, 
+                            "batch_size": batch_size,
                             "estimator": estimator,
                             "dataset": dataset,
                             "random_state": random_state
@@ -108,7 +108,7 @@ def create_config_files(
                             config_file = config.config_file_path / f"{i}.json"
                             with open(config_file, 'w') as f:
                                 json.dump(
-                                    experiment_parameters, f, sort_keys=True, 
+                                    experiment_parameters, f, sort_keys=True,
                                     indent=4, separators=(',', ': ')
                                 )
                             i += 1

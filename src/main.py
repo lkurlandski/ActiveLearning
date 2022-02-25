@@ -13,12 +13,10 @@ import active_learner
 import processor
 import averager
 import graphing
-import stopping
-import verify
 
 def main(
-        config_file : Path = None, 
-        experiment_parameters : Dict[str, Union[str, int]]=None, 
+        config_file : Path = None,
+        experiment_parameters : Dict[str, Union[str, int]]=None,
         flags : Set[str] = None
     ):
     """Run the AL pipeline from a configuration file or from a set of experiment parameters.
@@ -54,8 +52,6 @@ def main(
             active_learner.main(experiment_parameters)
         if "processor" in flags or flags is None:
             processor.main(experiment_parameters)
-        if "stopping" in flags or flags is None:
-            stopping.main(experiment_parameters)
         if "graphing" in flags or flags is None:
             graphing.main(experiment_parameters)
         # TODO: this should only be run once for all sets of a particular rstate
@@ -64,14 +60,14 @@ def main(
 
 if __name__ == "__main__":
 
-    experiment_parameters = {
-        "output_root": "./output",
-        "task": "preprocessedClassification",
-        "stop_set_size": 1000,
-        "batch_size": 10, 
-        "estimator": "mlp",
-        "dataset": "Avila",
-        "random_state": 0,
-    }
-
-    main(experiment_parameters=experiment_parameters)
+    main(experiment_parameters=
+        {
+            "output_root": "./output",
+            "task": "cls",
+            "stop_set_size": 1000,
+            "batch_size": 10,
+            "estimator": "mlp",
+            "dataset": "Avila",
+            "random_state": 0,
+        }
+    )
