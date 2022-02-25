@@ -43,7 +43,9 @@ def main(
         with open(config_file, 'r') as f:
             experiment_parameters = json.load(f)
 
-    print(f'main.main\nflags:\n{flags},\nexperiment_parameters:\n{pformat(experiment_parameters)}')
+    print(
+        f'runner.main\nflags:\n{flags},\nexperiment_parameters:\n{pformat(experiment_parameters)}'
+    )
 
     with warnings.catch_warnings():
         warnings.filterwarnings("ignore", category=ConvergenceWarning)
