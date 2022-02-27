@@ -1,13 +1,11 @@
 """Searches an experimental configuration for failed or missing files.
-
-# TODO: this script is depreciated
 """
 
-from pathlib import Path
-from pprint import pprint
+from pprint import pprint                                           # pylint: disable=unused-import
+import sys                                                          # pylint: disable=unused-import
 from typing import Dict, Union
 
-import output_helper
+import output
 
 def verify_all_runs_successful(experiment_parameters:Dict[str, Union[str, int]]):
     """Ensure that all of the files from an experiment are present in the output directory.
@@ -18,7 +16,7 @@ def verify_all_runs_successful(experiment_parameters:Dict[str, Union[str, int]])
         A single set of hyperparmaters and for the active learning experiment.
     """
 
-    oh = output_helper.OutputHelper(experiment_parameters)
+    #oh = output.OutputHelper(experiment_parameters)
 
     first_print_out_performed = False
 

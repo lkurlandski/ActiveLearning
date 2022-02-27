@@ -1,6 +1,8 @@
 """Functionality to vectorize text into numeric output.
 """
 
+from pprint import pprint                                           # pylint: disable=unused-import
+import sys                                                          # pylint: disable=unused-import
 from typing import Callable, List, Optional, Tuple
 
 import pandas as pd

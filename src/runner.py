@@ -40,7 +40,7 @@ def main(
         raise ValueError("One of config_file or experiment_parameters must not be None")
 
     if experiment_parameters is None:
-        with open(config_file, 'r') as f:
+        with open(config_file, 'r', encoding="utf8") as f:
             experiment_parameters = json.load(f)
 
     print(

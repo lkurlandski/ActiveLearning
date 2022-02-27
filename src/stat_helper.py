@@ -1,12 +1,18 @@
 """Helpful statistical functions to assist in math and data wrangling.
 """
 
-from typing import List
+from pathlib import Path
+from pprint import pprint                                           # pylint: disable=unused-import
+import sys                                                          # pylint: disable=unused-import
+from typing import Any, List
 
 import numpy as np
 import pandas as pd
 import scipy
 
+# TODO: if a column of the original dataframe was integer type and the corresponding column in
+    # the new dataframe is also integer, but represented by a floating point (eg 1.000),
+    # change the new column's type to the same type as the orignal column
 def mean_dataframes(dfs:List[pd.DataFrame]) -> pd.DataFrame:
     """Return the ``mean'' of a dataframe, taken in an element-wise fashion.
 
@@ -21,12 +27,46 @@ def mean_dataframes(dfs:List[pd.DataFrame]) -> pd.DataFrame:
         Meaned dataframe.
     """
 
-    # Concatonates dataframes onto multiple indicies, then groups and averages them
-    mean_df = pd.concat(dfs, keys=[i for i in range(len(dfs))]).groupby(level=1).mean()
+    mean_df = (pd.concat(dfs, keys=list(range(len(dfs))))    # concat with specific keys
+        .groupby(level=1)                                           # group on first level
+        .mean()                                                     # take mean
+        .reindex(dfs[0].index)                                      # use index order of first arg
+    )
+
+    # Coherce certain types of the mean dataframe to be same as the original dataframe, if possible
+    #for c in mean_df.columns.tolist():
+    #    org_dtype = dfs[0][c].dtype
+    #    new_dtype = mean_df[c].dtype
+
+    #    if pd.api.types.is_integer_dtype(org_dtype) and pd.api.types.is_float_dtype(new_dtype):
+    #        if all(i.is_integer() for i in mean_df[c]):
+    #            mean_df[c] = mean_df[c].as_type(int)
 
     return mean_df
 
-# TODO: test this function!!
+def mean_dataframes_from_files(paths:List[Path], **read_csv_kwargs) -> pd.DataFrame:
+    """Return the ``mean'' of a dataframe, taken in an element-wise fashion, from csv files.
+
+    Parameters
+    ----------
+    paths : List[Path]
+        .csv files to be read as dataframes
+
+    Other Parameters
+    ----------------
+    **read_csv_kwargs : dict
+        Named arguments passed along to pd.read_csv()
+
+    Returns
+    -------
+    pd.DataFrame
+        Meaned dataframe.
+    """
+
+    dfs = [pd.read_csv(p, **read_csv_kwargs) for p in paths]
+    return mean_dataframes(dfs)
+
+# TODO: test and document this function
 def delete_rows_csr(mat, idx):
 
     if not isinstance(mat, scipy.sparse.csr_matrix):
@@ -37,7 +77,7 @@ def delete_rows_csr(mat, idx):
     mask[idx] = False
     return mat[mask]
 
-# TODO: test this function!!
+# TODO: test and document this function
 def delete_row_csr(mat, i):
 
     if not isinstance(mat, scipy.sparse.csr_matrix):
@@ -57,7 +97,9 @@ def delete_row_csr(mat, i):
     mat.indptr = mat.indptr[:-1]
     mat._shape = (mat._shape[0]-1, mat._shape[1])
 
-# TODO: test this function!!
+    return mat
+
+# TODO: test and document this function
 def delete_row_lil(mat, i):
 
     if not isinstance(mat, scipy.sparse.csr_matrix):
@@ -70,13 +112,38 @@ def delete_row_lil(mat, i):
     mat.data = np.delete(mat.data, i)
     mat._shape = (mat._shape[0] - 1, mat._shape[1])
 
-def remove_ids_from_array(a, idx):
+    return mat
+
+# TODO: test and document this function
+def remove_ids_from_array(a:Any, idx:np.ndarray) -> Any:
+    """Remove certain elements from several types of contiguous data structures.
+
+    Parameters
+    ----------
+    a : Any
+        An input array or data structure
+    idx : np.ndarray
+        ids to remove from the input data structure
+
+    Returns
+    -------
+    Any
+        The input array with the seleted ids removed (same type as input)
+
+    Raises
+    ------
+    ValueError
+        If the type of the input array is unexpected
+    """
 
     if isinstance(a, np.ndarray):
         return np.delete(a, idx, axis=0)
-    elif isinstance(a, scipy.sparse.csr_matrix):
+    if isinstance(a, scipy.sparse.csr_matrix):
         return delete_rows_csr(a, idx)
-    elif isinstance(a, scipy.sparse.lil_matrix):
+    if isinstance(a, scipy.sparse.lil_matrix):
         return delete_row_lil(a, idx)
-    else:
-        raise ValueError(f"Unknown matrix passed to remove_ids_from_array: {type(a)}")
+
+    raise ValueError(f"Unknown matrix passed to remove_ids_from_array: {type(a)}")
+
+if __name__ == "__main__":
+    pass

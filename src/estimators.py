@@ -29,11 +29,11 @@ def get_estimator_from_code(code:str) -> sklearn.base.BaseEstimator:
 
     if code == 'mlp':
         return MLPClassifier()
-    elif code == 'svm':
+    if code == 'svm':
         return SVC(kernel='linear', probability=True)
-    elif code == 'svm-ova':
+    if code == 'svm-ova':
         return OneVsRestClassifier(SVC(kernel='linear', probability=True))
-    elif code == 'rf':
+    if code == 'rf':
         return RandomForestClassifier()
-    else:
-        raise ValueError(f"code: {code} not recognized.")
+
+    raise ValueError(f"code: {code} not recognized.")

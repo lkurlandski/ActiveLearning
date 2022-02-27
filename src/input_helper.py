@@ -1,7 +1,9 @@
 """Get training and test data.
 """
 
+from pprint import pprint                                           # pylint: disable=unused-import
 from pathlib import Path
+import sys                                                          # pylint: disable=unused-import
 from typing import Tuple
 
 import numpy as np
@@ -235,8 +237,10 @@ def get_dataset(
     return X_train, X_test, y_train, y_test, labels
 
 def test():
+    """Test.
+    """
     X_train, y_train, X_test, y_test, labels = get_dataset("20NewsGroups-bert", 0)
-    print("Done")
+    print(X_train, y_train, X_test, y_test, labels)
 
 if __name__ == "__main__":
     test()

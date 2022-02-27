@@ -2,6 +2,8 @@
 """
 
 from pathlib import Path
+from pprint import pprint                                           # pylint: disable=unused-import
+import sys                                                          # pylint: disable=unused-import
 
 # Used to display a pathlib.Path object in a human-readable way.
 # Copied from: https://stackoverflow.com/questions/9727673/list-directory-tree-structure-in-python

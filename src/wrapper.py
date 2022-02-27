@@ -2,7 +2,8 @@
 """
 
 import argparse
-from pprint import pprint
+from pprint import pprint                                           # pylint: disable=unused-import
+import sys                                                          # pylint: disable=unused-import
 
 import driver
 
@@ -16,15 +17,13 @@ def main(local:bool) -> None:
     """
 
     experiment_parameters_lists = {
-        # Only one value permitted
         "output_root": "./output",
-        "task": "preprocessedClassification",
-        # Iterable of values required
+        "task": "cls",
         "stop_set_size": [1000],
-        "batch_size": [7],
+        "batch_size": [10],
         "estimator": ["mlp"],
         "dataset": ["Iris"],
-        "random_state": [i for i in range(5)]
+        "random_state": list(range(5)),
     }
 
     # Change the flags to run different parts of the ALL program.
@@ -37,7 +36,7 @@ def main(local:bool) -> None:
         "averaging",
     }
 
-    flags = flags_phase1
+    flags = flags_phase2
     driver.main(experiment_parameters_lists, flags, local)
 
 if __name__ == "__main__":

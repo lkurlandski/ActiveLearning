@@ -1,5 +1,5 @@
-from pprint import pprint
-import sys
+from pprint import pprint                                           # pylint: disable=unused-import
+import sys                                                          # pylint: disable=unused-import
 import unittest
 
 import numpy as np
@@ -26,7 +26,7 @@ class TestManager(unittest.TestCase):
         for i in range(10):
             stopped = mg.check_stopped(stop_set_predictions=[3,2,1], other_random_args=None)
 
-            if i == 0 or i == 1:
+            if i in (0, 1):
                 self.assertEqual(stopped, [])
             elif i == 2:
                 self.assertEqual(len(stopped), 1)

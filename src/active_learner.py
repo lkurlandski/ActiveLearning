@@ -3,10 +3,9 @@
 
 import datetime
 import json
-import math
 from pathlib import Path
-from pprint import pprint
-from random import choices
+from pprint import pprint                                           # pylint: disable=unused-import
+import sys                                                          # pylint: disable=unused-import
 import time
 from typing import Dict, Union
 import warnings
@@ -21,11 +20,10 @@ from modAL.models import ActiveLearner
 
 import estimators
 import input_helper
-import output_helper
+import output
 import stat_helper
 import stopping_methods
 
-# TODO: include a measurement of how much time has elapsed
 def print_update(
         start_time:float,
         unlabeled_pool_initial_size:int,
@@ -77,9 +75,10 @@ def report_to_json(report:Dict[str, Union[float, Dict[str, float]]], report_path
         The iteration of active learning, used the name the json file
     """
 
-    with open(report_path / f"{str(i)}.json", 'w') as f:
+    with open(report_path / f"{str(i)}.json", 'w', encoding="utf8") as f:
         json.dump(report, f, sort_keys=True, indent=4, separators=(',', ': '))
 
+# TODO: come up with a better label-encoding strategy
 def get_index_for_each_class(y:np.ndarray, labels:np.ndarray) -> np.ndarray:
     """Return indices that contain location of one element per class.
 
@@ -96,20 +95,21 @@ def get_index_for_each_class(y:np.ndarray, labels:np.ndarray) -> np.ndarray:
         Indices that contain location of one element per class from y.
     """
 
-    # TODO: come up with a better label-encoding strategy
     # If the data is label-encoded (as it should be) but the labels are raw strings
         # (as they perhaps should be) this ensures one of every encoded label is captured
-    if y[0] not in labels:
-        labels = [i for i in range(len(labels))]
+    labels = list(range(len(labels))) if y[0] not in labels else labels
 
     idx = {l : None for l in labels}
     for i, l in enumerate(y):
         if idx[l] is None:
             idx[l] = i
-    idx = [i for i in idx.values()]
+
+    idx = list(idx.values())
 
     return idx
 
+# TODO: refactor this long function to improve code quality
+# TODO: instead of deleting elements from the unlabeled pool, use masked arrays for efficiency
 def main(experiment_parameters:Dict[str, Union[str, int]]) -> None:
     """Run the active learning algorithm for a set of experiment parmameters.
 
@@ -145,6 +145,8 @@ def main(experiment_parameters:Dict[str, Union[str, int]]) -> None:
 
     # To attain reproducibility with modAL, we need to use legacy numpy random seeding code
     np.random.seed(random_state)
+    # Otherwise, we use the most up-to-date methods provided by numpy
+    rng = np.random.default_rng(random_state)
 
     # Get the dataset and select a stop set from it
     X_unlabeled_pool, X_test, y_unlabeled_pool, y_test, labels = \
@@ -153,21 +155,18 @@ def main(experiment_parameters:Dict[str, Union[str, int]]) -> None:
 
     # Select a stop set for stabilizing predictions
     stop_set_size = min(stop_set_size, unlabeled_pool_initial_size)
-    stop_set_idx = choices([i for i in range(len(y_unlabeled_pool))], k=stop_set_size)
+    stop_set_idx = rng.choice(unlabeled_pool_initial_size, size=stop_set_size, replace=False)
     X_stop_set, y_stop_set = X_unlabeled_pool[stop_set_idx], y_unlabeled_pool[stop_set_idx]
 
     # Setup output directory structure
-    oh = output_helper.OutputHelper(experiment_parameters)
-    oh.setup_output_path(remove_existing=False, exist_ok=True)
+    oh = output.OutputHelper(experiment_parameters)
+    oh.setup()
 
     # Get ids of one instance of each class
     idx = get_index_for_each_class(y_unlabeled_pool, labels)
 
-    # Write the size of the unlabeled pool at each iteration to a file
-    n_iterations = math.ceil(y_unlabeled_pool.shape[0] / batch_size) + 1
-    pd.DataFrame({'training_data' :
-        [len(idx) + i * batch_size for i in range(n_iterations - 1)] + [y_unlabeled_pool.shape[0]]
-    }).to_csv(oh.ind_rstates_paths['num_training_data_file'])
+    # Track the number of training data in the labeled pool
+    training_data = []
 
     # Guard had some complex boolean algebra, but is correct
     i = 0
@@ -196,7 +195,7 @@ def main(experiment_parameters:Dict[str, Union[str, int]]) -> None:
         report_test = classification_report(
             y_test, preds_test, zero_division=1, output_dict=True
         )
-        report_to_json(report_test, oh.ind_rstates_paths["report_test_path"], i)
+        report_to_json(report_test, oh.container.raw_test_set_path, i)
 
         # Evaluate the learner on the unlabeled pool
         if y_unlabeled_pool.shape[0] > 0:
@@ -204,14 +203,14 @@ def main(experiment_parameters:Dict[str, Union[str, int]]) -> None:
             report_unlabeled_pool = classification_report(
                 y_unlabeled_pool, preds_unlabeled_pool, zero_division=1, output_dict=True
             )
-            report_to_json(report_unlabeled_pool, oh.ind_rstates_paths["report_train_path"], i)
+            report_to_json(report_unlabeled_pool, oh.container.raw_train_set_path, i)
 
         # Evaluate the learner on the stop set
         preds_stop_set = learner.predict(X_stop_set)
         report_stop_set = classification_report(
             y_stop_set, preds_stop_set, zero_division=1, output_dict=True
         )
-        report_to_json(report_stop_set, oh.ind_rstates_paths["report_stop_set_path"], i)
+        report_to_json(report_stop_set, oh.container.raw_stop_set_path, i)
 
         # Evaluate the stopping methods
         stopping_manager.check_stopped(stop_set_predictions=preds_stop_set)
@@ -234,11 +233,15 @@ def main(experiment_parameters:Dict[str, Union[str, int]]) -> None:
         )
 
         i += 1
+        training_data.append(learner.y_training.shape[0])
 
-    stopping_manager.results_to_dataframe().to_csv(oh.ind_rstates_paths['stopping_results_file'])
+    # Save as both csv and json file
+    stopping_manager.results_to_dataframe().to_csv(oh.container.stopping_results_csv_file)
     results = stopping_manager.results_to_dict()
-    with open(oh.ind_rstates_paths['stopping_results_file'].with_suffix(".json"), 'w') as f:
+    with open(oh.container.stopping_results_json_file, 'w', encoding="utf8") as f:
         json.dump(results, f, sort_keys=True, indent=4, separators=(',', ': '))
+
+    pd.DataFrame({'training_data' : training_data}).to_csv(oh.container.training_data_file)
 
     end = time.time()
     print(f"{str(datetime.timedelta(seconds=(round(end - start))))} -- Ending Active Learning")
@@ -249,7 +252,7 @@ if __name__ == "__main__":
         warnings.filterwarnings("ignore", category=ConvergenceWarning)
         main(experiment_parameters=
             {
-                "output_root": "./output",
+                "output_root": "../output",
                 "task": "cls",
                 "stop_set_size": 1000,
                 "batch_size": 10,

@@ -2,8 +2,9 @@
 """
 
 from abc import ABC, abstractmethod
-from pprint import pprint
+from pprint import pprint                                           # pylint: disable=unused-import
 import statistics
+import sys                                                          # pylint: disable=unused-import
 from typing import Any, Dict, List
 
 import pandas as pd
@@ -57,20 +58,24 @@ class StoppingMethod(ABC):
         """Update this StoppingMethod instance with the current status of the AL experiment.
 
         User should provide an update containing useful information like the model's performance
-            on a test set, the number of labels annotated by an orcale etc.   
+            on a test set, the number of labels annotated by an orcale etc.
         """
 
         if not self.stopped:
             self.results = dict(results)
 
 class StabilizingPredictions(StoppingMethod):
+    """Stablizing Predictions stopping method.
+    """
+
+    stop_set_predictions:np.ndarray
 
     def __init__(self,
             windows : int = 3,
             threshold : float = 0.99,
             initial_stop_set_predictions:np.ndarray = None
         ):
-        """_summary_
+        """Stablizing Predictions stopping method.
 
         Parameters
         ----------
@@ -128,21 +133,18 @@ class StabilizingPredictions(StoppingMethod):
         self.kappas.append(kappa)
         self.previous_stop_set_predictions = self.stop_set_predictions
 
-class ClassificationChange:
+# TODO: implement
+#class ClassificationChange:
+#    pass
 
-    pass
+#class OverallUncertainty:
+#    pass
 
-class OverallUncertainty:
+#class OracleAccuracyMCS:
+#    pass
 
-    pass
-
-class OracleAccuracyMCS:
-
-    pass
-
-class PerformanceConvergence:
-
-    pass
+#class PerformanceConvergence:
+#    pass
 
 class Manager:
     """Manage multiple instances of the StoppingMethod class.
@@ -173,7 +175,7 @@ class Manager:
             Whether the StoppingMethod stopping conditions says to stop or not
         """
 
-        if repr(stopping_condition) in set([repr(m) for m in self.stopping_methods if m.stopped]):
+        if repr(stopping_condition) in {repr(m) for m in self.stopping_methods if m.stopped}:
             return True
 
         return False
@@ -227,6 +229,8 @@ class Manager:
         return {repr(m) : m.results for m in self.stopping_methods}
 
 def test():
+    """Testing.
+    """
 
     stopping_method = StabilizingPredictions(windows=3, threshold=0.99)
     print(str(stopping_method))
