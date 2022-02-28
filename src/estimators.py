@@ -2,13 +2,13 @@
 """
 
 import sklearn
-from sklearn.ensemble import RandomForestClassifier     # multiclass
-from sklearn.multiclass import OneVsRestClassifier      # ova
-from sklearn.neural_network import MLPClassifier        # multiclass
-from sklearn.svm import SVC                             # ovo
+from sklearn.ensemble import RandomForestClassifier  # multiclass
+from sklearn.multiclass import OneVsRestClassifier  # ova
+from sklearn.neural_network import MLPClassifier  # multiclass
+from sklearn.svm import SVC  # ovo
 
 # TODO: implement system to recieve model kwargs and output custom model
-def get_estimator_from_code(code:str) -> sklearn.base.BaseEstimator:
+def get_estimator_from_code(code: str) -> sklearn.base.BaseEstimator:
     """Return an instance of a estimator.
 
     Parameters
@@ -27,13 +27,13 @@ def get_estimator_from_code(code:str) -> sklearn.base.BaseEstimator:
         If the code is not recognized
     """
 
-    if code == 'mlp':
+    if code == "mlp":
         return MLPClassifier()
-    if code == 'svm':
-        return SVC(kernel='linear', probability=True)
-    if code == 'svm-ova':
-        return OneVsRestClassifier(SVC(kernel='linear', probability=True))
-    if code == 'rf':
+    if code == "svm":
+        return SVC(kernel="linear", probability=True)
+    if code == "svm-ova":
+        return OneVsRestClassifier(SVC(kernel="linear", probability=True))
+    if code == "rf":
         return RandomForestClassifier()
 
     raise ValueError(f"code: {code} not recognized.")

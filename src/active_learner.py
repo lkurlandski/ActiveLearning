@@ -4,8 +4,8 @@
 import datetime
 import json
 from pathlib import Path
-from pprint import pprint                                           # pylint: disable=unused-import
-import sys                                                          # pylint: disable=unused-import
+from pprint import pprint  # pylint: disable=unused-import
+import sys  # pylint: disable=unused-import
 import time
 from typing import Dict, Union
 import warnings
@@ -24,13 +24,14 @@ import output
 import stat_helper
 import stopping_methods
 
+
 def print_update(
-        start_time:float,
-        unlabeled_pool_initial_size:int,
-        y_unlabeled_pool:np.ndarray,
-        iteration:int,
-        accuracy:float
-    ) -> None:
+    start_time: float,
+    unlabeled_pool_initial_size: int,
+    y_unlabeled_pool: np.ndarray,
+    iteration: int,
+    accuracy: float,
+) -> None:
     """Print an update of AL progress.
 
     Parameters
@@ -59,10 +60,11 @@ def print_update(
         f"    |U_0|: {unlabeled_pool_initial_size}"
         f"    |U|: {str(y_unlabeled_pool.shape[0]).zfill(pool_zfill)}"
         f"    |L|: {str(unlabeled_pool_initial_size - y_unlabeled_pool.shape[0]).zfill(pool_zfill)}",
-        flush=True
+        flush=True,
     )
 
-def report_to_json(report:Dict[str, Union[float, Dict[str, float]]], report_path:Path, i:int):
+
+def report_to_json(report: Dict[str, Union[float, Dict[str, float]]], report_path: Path, i: int):
     """Write a report taken from active learning to a specially named json output path.
 
     Parameters
@@ -75,11 +77,12 @@ def report_to_json(report:Dict[str, Union[float, Dict[str, float]]], report_path
         The iteration of active learning, used the name the json file
     """
 
-    with open(report_path / f"{str(i)}.json", 'w', encoding="utf8") as f:
-        json.dump(report, f, sort_keys=True, indent=4, separators=(',', ': '))
+    with open(report_path / f"{str(i)}.json", "w", encoding="utf8") as f:
+        json.dump(report, f, sort_keys=True, indent=4, separators=(",", ": "))
+
 
 # TODO: come up with a better label-encoding strategy
-def get_index_for_each_class(y:np.ndarray, labels:np.ndarray) -> np.ndarray:
+def get_index_for_each_class(y: np.ndarray, labels: np.ndarray) -> np.ndarray:
     """Return indices that contain location of one element per class.
 
     Parameters
@@ -96,10 +99,10 @@ def get_index_for_each_class(y:np.ndarray, labels:np.ndarray) -> np.ndarray:
     """
 
     # If the data is label-encoded (as it should be) but the labels are raw strings
-        # (as they perhaps should be) this ensures one of every encoded label is captured
+    # (as they perhaps should be) this ensures one of every encoded label is captured
     labels = list(range(len(labels))) if y[0] not in labels else labels
 
-    idx = {l : None for l in labels}
+    idx = {l: None for l in labels}
     for i, l in enumerate(y):
         if idx[l] is None:
             idx[l] = i
@@ -108,9 +111,10 @@ def get_index_for_each_class(y:np.ndarray, labels:np.ndarray) -> np.ndarray:
 
     return idx
 
+
 # TODO: refactor this long function to improve code quality
 # TODO: instead of deleting elements from the unlabeled pool, use masked arrays for efficiency
-def main(experiment_parameters:Dict[str, Union[str, int]]) -> None:
+def main(experiment_parameters: Dict[str, Union[str, int]]) -> None:
     """Run the active learning algorithm for a set of experiment parmameters.
 
     Parameters
@@ -129,18 +133,16 @@ def main(experiment_parameters:Dict[str, Union[str, int]]) -> None:
     random_state = int(experiment_parameters["random_state"])
 
     # Determine a stopping condition to wait upon
-    stopping_condition = stopping_methods.StabilizingPredictions(windows=3, threshold=.99)
+    stopping_condition = stopping_methods.StabilizingPredictions(windows=3, threshold=0.99)
     early_stopping_enabled = False
     # Set up the stopping method manager
     stopping_manager = stopping_methods.Manager(
         [
             stopping_methods.StabilizingPredictions(windows=w, threshold=t)
-            for w in [2,3,4] for t in [.97,.98,.99]
+            for w in [2, 3, 4]
+            for t in [0.97, 0.98, 0.99]
         ]
-        +
-        [
-            stopping_condition
-        ]
+        + [stopping_condition]
     )
 
     # To attain reproducibility with modAL, we need to use legacy numpy random seeding code
@@ -149,8 +151,9 @@ def main(experiment_parameters:Dict[str, Union[str, int]]) -> None:
     rng = np.random.default_rng(random_state)
 
     # Get the dataset and select a stop set from it
-    X_unlabeled_pool, X_test, y_unlabeled_pool, y_test, labels = \
-        input_helper.get_dataset(experiment_parameters["dataset"], random_state)
+    X_unlabeled_pool, X_test, y_unlabeled_pool, y_test, labels = input_helper.get_dataset(
+        experiment_parameters["dataset"], random_state
+    )
     unlabeled_pool_initial_size = y_unlabeled_pool.shape[0]
 
     # Select a stop set for stabilizing predictions
@@ -170,10 +173,9 @@ def main(experiment_parameters:Dict[str, Union[str, int]]) -> None:
 
     # Guard had some complex boolean algebra, but is correct
     i = 0
-    while (
-        y_unlabeled_pool.shape[0] > 0 and not
-        (stopping_manager.stopping_condition_met(stopping_condition) and early_stopping_enabled)
-        ):
+    while y_unlabeled_pool.shape[0] > 0 and not (
+        stopping_manager.stopping_condition_met(stopping_condition) and early_stopping_enabled
+    ):
 
         # Setup the learner and stabilizing predictions in the 0th iteration
         if i == 0:
@@ -192,9 +194,7 @@ def main(experiment_parameters:Dict[str, Union[str, int]]) -> None:
 
         # Evaluate the learner on the test set
         preds_test = learner.predict(X_test)
-        report_test = classification_report(
-            y_test, preds_test, zero_division=1, output_dict=True
-        )
+        report_test = classification_report(y_test, preds_test, zero_division=1, output_dict=True)
         report_to_json(report_test, oh.container.raw_test_set_path, i)
 
         # Evaluate the learner on the unlabeled pool
@@ -215,21 +215,17 @@ def main(experiment_parameters:Dict[str, Union[str, int]]) -> None:
         # Evaluate the stopping methods
         stopping_manager.check_stopped(stop_set_predictions=preds_stop_set)
         results = {
-            'annotations' : learner.y_training.shape[0],
-            'iteration' : i,
-            'accuracy' : report_test['accuracy'],
-            'macro avg f1-score' : report_test['macro avg']['f1-score'],
-            'weighted avg f1-score' : report_test['weighted avg']['f1-score']
+            "annotations": learner.y_training.shape[0],
+            "iteration": i,
+            "accuracy": report_test["accuracy"],
+            "macro avg f1-score": report_test["macro avg"]["f1-score"],
+            "weighted avg f1-score": report_test["weighted avg"]["f1-score"],
         }
         stopping_manager.update_results(**results)
 
         # Print a status update and increment the iteration counter
         print_update(
-            start,
-            unlabeled_pool_initial_size,
-            y_unlabeled_pool,
-            i,
-            report_test['accuracy']
+            start, unlabeled_pool_initial_size, y_unlabeled_pool, i, report_test["accuracy"]
         )
 
         i += 1
@@ -238,20 +234,21 @@ def main(experiment_parameters:Dict[str, Union[str, int]]) -> None:
     # Save as both csv and json file
     stopping_manager.results_to_dataframe().to_csv(oh.container.stopping_results_csv_file)
     results = stopping_manager.results_to_dict()
-    with open(oh.container.stopping_results_json_file, 'w', encoding="utf8") as f:
-        json.dump(results, f, sort_keys=True, indent=4, separators=(',', ': '))
+    with open(oh.container.stopping_results_json_file, "w", encoding="utf8") as f:
+        json.dump(results, f, sort_keys=True, indent=4, separators=(",", ": "))
 
-    pd.DataFrame({'training_data' : training_data}).to_csv(oh.container.training_data_file)
+    pd.DataFrame({"training_data": training_data}).to_csv(oh.container.training_data_file)
 
     end = time.time()
     print(f"{str(datetime.timedelta(seconds=(round(end - start))))} -- Ending Active Learning")
+
 
 if __name__ == "__main__":
 
     with warnings.catch_warnings():
         warnings.filterwarnings("ignore", category=ConvergenceWarning)
-        main(experiment_parameters=
-            {
+        main(
+            experiment_parameters={
                 "output_root": "../output",
                 "task": "cls",
                 "stop_set_size": 1000,

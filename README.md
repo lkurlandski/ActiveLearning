@@ -16,7 +16,7 @@ Currently, the system uses a slurm_template.sh file to create slurm scripts and 
 
 Users are advised to familiarize themselves with the engineering aspects of the Python language and execution evironment.
 
-## Codebase Documentation
+## Codebase Usage
 
 The main components of this system are:
 - active_learner.py - runs active learning experiments
@@ -41,3 +41,17 @@ Additional assets include:
 - stopping_methods.py - (prototype) assets for a future iteration of stopping criterion research
 - vectorizers.py - (prototype) assets to handle processing raw text into numerical format
 - verify.py - (depreciated) assets to check if all files are present in the output path
+
+## Contributing
+
+Using a uniform coding style across all team members can improve the readability of the codebase and greatly improve diff tool performance.
+
+- Use the highly readable numpy-style docstring (suggest using an IDE extension to automatically produce docstring)
+- Use type hints in function arguments (suggest using an IDE extension to support type hinting)
+- Limit the number of characters per line to 100 (suggest using an IDE extension to put vertical line at this position)
+
+Before committing changes, use black's auto formatter to enforce a uniform coding style
+> black --line-length myfile.py
+
+and consider implementing some of the suggestions from pylint
+> pylint myfile.py

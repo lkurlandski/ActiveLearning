@@ -2,20 +2,20 @@
 """
 
 from abc import ABC, abstractmethod
-from pprint import pprint                                           # pylint: disable=unused-import
+from pprint import pprint  # pylint: disable=unused-import
 import statistics
-import sys                                                          # pylint: disable=unused-import
+import sys  # pylint: disable=unused-import
 from typing import Any, Dict, List
 
 import pandas as pd
 import numpy as np
 from sklearn.metrics import cohen_kappa_score
 
-class StoppingMethod(ABC):
-    """Abstract stopping method to provide uniform behavior for different stopping criterion.
-    """
 
-    def __init__(self, name:str):
+class StoppingMethod(ABC):
+    """Abstract stopping method to provide uniform behavior for different stopping criterion."""
+
+    def __init__(self, name: str):
         """Abstract stopping method to provide uniform behavior for different stopping criterion.
 
         Parameters
@@ -24,20 +24,25 @@ class StoppingMethod(ABC):
             Name of the subclass stopping criterion
         """
 
-        self.stopped:bool = False
-        self.results:Dict[str, Any] = None
+        self.stopped: bool = False
+        self.results: Dict[str, Any] = None
         self.name = name
 
     def __str__(self) -> str:
 
-        return self.name \
-            + '\n' + ''.join('-' for _ in range(len(self.name))) + '\n' \
+        return (
+            self.name
+            + "\n"
+            + "".join("-" for _ in range(len(self.name)))
+            + "\n"
             + str(self.get_hyperparameters_dict())
+        )
 
     def __repr__(self) -> str:
 
-        return self.name.replace(' ', '') + str(self.get_hyperparameters_dict())\
-            .replace(' ', '').replace("'","").replace(':','=').replace('{', '(').replace('}', ')')
+        return self.name.replace(" ", "") + str(self.get_hyperparameters_dict()).replace(
+            " ", ""
+        ).replace("'", "").replace(":", "=").replace("{", "(").replace("}", ")")
 
     @abstractmethod
     def get_hyperparameters_dict(self) -> Dict[str, Any]:
@@ -51,8 +56,7 @@ class StoppingMethod(ABC):
 
     @abstractmethod
     def check_stopped(self, **kwargs) -> None:
-        """Determine if this StoppingMethod instance has stopped and update its stopped attribute.
-        """
+        """Determine if this StoppingMethod instance has stopped and update its stopped attribute."""
 
     def update_results(self, **results) -> None:
         """Update this StoppingMethod instance with the current status of the AL experiment.
@@ -64,17 +68,18 @@ class StoppingMethod(ABC):
         if not self.stopped:
             self.results = dict(results)
 
+
 class StabilizingPredictions(StoppingMethod):
-    """Stablizing Predictions stopping method.
-    """
+    """Stablizing Predictions stopping method."""
 
-    stop_set_predictions:np.ndarray
+    stop_set_predictions: np.ndarray
 
-    def __init__(self,
-            windows : int = 3,
-            threshold : float = 0.99,
-            initial_stop_set_predictions:np.ndarray = None
-        ):
+    def __init__(
+        self,
+        windows: int = 3,
+        threshold: float = 0.99,
+        initial_stop_set_predictions: np.ndarray = None,
+    ):
         """Stablizing Predictions stopping method.
 
         Parameters
@@ -102,11 +107,11 @@ class StabilizingPredictions(StoppingMethod):
     def get_hyperparameters_dict(self) -> Dict[str, float]:
 
         return {
-            'threshold': self.threshold,
-            'windows': self.windows,
+            "threshold": self.threshold,
+            "windows": self.windows,
         }
 
-    def check_stopped(self, stop_set_predictions:np.ndarray, **kwargs) -> None:
+    def check_stopped(self, stop_set_predictions: np.ndarray, **kwargs) -> None:
         """Determine if this instance has stopped and update its stopped attribute.
 
         Parameters
@@ -121,36 +126,39 @@ class StabilizingPredictions(StoppingMethod):
         if len(self.kappas[1:]) < self.windows:
             return
 
-        if statistics.mean(self.kappas[-self.windows:]) > self.threshold:
+        if statistics.mean(self.kappas[-self.windows :]) > self.threshold:
             self.stopped = True
 
     def update_kappas(self) -> None:
-        """Update this instances' kappa list by computing agreement between the sets of predictions.
-        """
+        """Update this instances' kappa list by computing agreement between the sets of predictions."""
 
-        kappa = np.NaN if self.previous_stop_set_predictions is None else \
-            cohen_kappa_score(self.previous_stop_set_predictions, self.stop_set_predictions)
+        kappa = (
+            np.NaN
+            if self.previous_stop_set_predictions is None
+            else cohen_kappa_score(self.previous_stop_set_predictions, self.stop_set_predictions)
+        )
         self.kappas.append(kappa)
         self.previous_stop_set_predictions = self.stop_set_predictions
 
+
 # TODO: implement
-#class ClassificationChange:
+# class ClassificationChange:
 #    pass
 
-#class OverallUncertainty:
+# class OverallUncertainty:
 #    pass
 
-#class OracleAccuracyMCS:
+# class OracleAccuracyMCS:
 #    pass
 
-#class PerformanceConvergence:
+# class PerformanceConvergence:
 #    pass
+
 
 class Manager:
-    """Manage multiple instances of the StoppingMethod class.
-    """
+    """Manage multiple instances of the StoppingMethod class."""
 
-    def __init__(self, stopping_methods:List[StoppingMethod]):
+    def __init__(self, stopping_methods: List[StoppingMethod]):
         """Manage multiple instances of the StoppingMethod class.
 
         Parameters
@@ -161,7 +169,7 @@ class Manager:
 
         self.stopping_methods = stopping_methods
 
-    def stopping_condition_met(self, stopping_condition:StoppingMethod) -> bool:
+    def stopping_condition_met(self, stopping_condition: StoppingMethod) -> bool:
         """Determine if a particular StoppingMethod's stopping_condition has been met.
 
         Parameters
@@ -213,9 +221,7 @@ class Manager:
             Representation of data
         """
 
-        return pd.DataFrame(
-            {repr(m) : pd.Series(m.results) for m in self.stopping_methods}
-        )
+        return pd.DataFrame({repr(m): pd.Series(m.results) for m in self.stopping_methods})
 
     def results_to_dict(self) -> Dict[str, Any]:
         """Return the results of every StoppingMethod instance formatted as a dict.
@@ -226,15 +232,16 @@ class Manager:
             Representation of data
         """
 
-        return {repr(m) : m.results for m in self.stopping_methods}
+        return {repr(m): m.results for m in self.stopping_methods}
+
 
 def test():
-    """Testing.
-    """
+    """Testing."""
 
     stopping_method = StabilizingPredictions(windows=3, threshold=0.99)
     print(str(stopping_method))
     print(repr(stopping_method))
+
 
 if __name__ == "__main__":
     test()

@@ -11,8 +11,7 @@ from utils import DisplayablePath
 # TODO: modify some of the function is graphing to operate upon these containers
 # TODO: separate the average OutputDataContainer (has no raw) from the indivudal OutputDataContainer
 class OutputDataContainer:
-    """Results from one set of experiments or an everage across many sets.
-    """
+    """Results from one set of experiments or an everage across many sets."""
 
     stop_set_str = "stop_set"
     test_set_str = "test_set"
@@ -22,7 +21,7 @@ class OutputDataContainer:
     ind_cat_str = "ind"
     overall_str = "overall"
 
-    def __init__(self, root:Path):
+    def __init__(self, root: Path):
         """Results from one set of experiments or an everage across many sets.
 
         Parameters
@@ -76,7 +75,7 @@ class OutputDataContainer:
 
         return "\n".join(ret)
 
-    def setup(self, remove_existing : bool = False, exist_ok : bool = True) -> None:
+    def setup(self, remove_existing: bool = False, exist_ok: bool = True) -> None:
         """Create, remove, and set up the output paths for this experiment.
 
         Parameters
@@ -120,17 +119,16 @@ class OutputDataContainer:
         self.processed_train_set_all.mkdir(exist_ok=exist_ok)
 
     def teardown(self):
-        """Remove everything this object represents.
-        """
+        """Remove everything this object represents."""
 
         for p in self.root.glob("*"):
             shutil.rmtree(p)
 
-class OutputHelper:
-    """Manage the paths for a particular set of AL parameters.
-    """
 
-    def __init__(self, experiment_parameters:Dict[str, Union[str, int]]):
+class OutputHelper:
+    """Manage the paths for a particular set of AL parameters."""
+
+    def __init__(self, experiment_parameters: Dict[str, Union[str, int]]):
         """Manage the paths for a particular set of AL parameters.
 
         Parameters
@@ -143,16 +141,16 @@ class OutputHelper:
         self.experiment_parameters = experiment_parameters
 
         # Base paths
-        self.root = Path(experiment_parameters['output_root'])
-        self.task_path = self.root / experiment_parameters['task']
-        self.stop_set_size_path = self.task_path / str(experiment_parameters['stop_set_size'])
-        self.batch_size_path = self.stop_set_size_path / str(experiment_parameters['batch_size'])
-        self.estimator_path = self.batch_size_path / experiment_parameters['estimator']
-        self.dataset_path = self.estimator_path / experiment_parameters['dataset']
+        self.root = Path(experiment_parameters["output_root"])
+        self.task_path = self.root / experiment_parameters["task"]
+        self.stop_set_size_path = self.task_path / str(experiment_parameters["stop_set_size"])
+        self.batch_size_path = self.stop_set_size_path / str(experiment_parameters["batch_size"])
+        self.estimator_path = self.batch_size_path / experiment_parameters["estimator"]
+        self.dataset_path = self.estimator_path / experiment_parameters["dataset"]
 
         # Data container for this individual rstates output
         self.ind_rstates_path = self.dataset_path / "ind_rstates"
-        self.output_path = self.ind_rstates_path / str(experiment_parameters['random_state'])
+        self.output_path = self.ind_rstates_path / str(experiment_parameters["random_state"])
         self.container = OutputDataContainer(self.output_path)
 
         # Data container for the average rstates output
@@ -178,7 +176,7 @@ class OutputHelper:
 
         return "\n".join(ret)
 
-    def setup(self, remove_existing : bool = False, exist_ok : bool = True) -> None:
+    def setup(self, remove_existing: bool = False, exist_ok: bool = True) -> None:
         """Create, remove, and set up the output paths for this experiment.
 
         Parameters
@@ -216,17 +214,16 @@ class OutputHelper:
         self.avg_container.setup(remove_existing, exist_ok)
 
     def teardown(self):
-        """Remove everything this object represents.
-        """
+        """Remove everything this object represents."""
 
         for p in self.root.glob("*"):
             shutil.rmtree(p)
 
-class RStatesOutputHelper:
-    """Manage the many possible random states for a particular set experiments.
-    """
 
-    def __init__(self, oh:OutputHelper, rstates : List[int] = None):
+class RStatesOutputHelper:
+    """Manage the many possible random states for a particular set experiments."""
+
+    def __init__(self, oh: OutputHelper, rstates: List[int] = None):
         """Manage the many possible random states for a particular set experiments.
 
         Parameters
@@ -267,17 +264,17 @@ class RStatesOutputHelper:
 
         return "\n".join(ret)
 
+
 def test():
-    """Test.
-    """
+    """Test."""
 
     odc = OutputDataContainer("./tmp")
     odc.setup()
     print(odc)
     odc.teardown()
 
-    oh = OutputHelper(experiment_parameters=
-        {
+    oh = OutputHelper(
+        experiment_parameters={
             "output_root": "./tmp",
             "task": "cls",
             "stop_set_size": 1000,
@@ -291,8 +288,8 @@ def test():
     print(oh)
     oh.teardown()
 
-    oh1 = OutputHelper(experiment_parameters=
-        {
+    oh1 = OutputHelper(
+        experiment_parameters={
             "output_root": "./tmp",
             "task": "cls",
             "stop_set_size": 1000,
@@ -303,8 +300,8 @@ def test():
         }
     )
     oh1.setup()
-    oh2 = OutputHelper(experiment_parameters=
-        {
+    oh2 = OutputHelper(
+        experiment_parameters={
             "output_root": "./tmp",
             "task": "cls",
             "stop_set_size": 1000,
@@ -319,6 +316,7 @@ def test():
     print(orsc)
     oh1.teardown()
     oh2.teardown()
+
 
 if __name__ == "__main__":
     test()

@@ -1,8 +1,8 @@
 """Average the data across multiple sampling versions.
 """
 
-from pprint import pprint                                           # pylint: disable=unused-import
-import sys                                                          # pylint: disable=unused-import
+from pprint import pprint  # pylint: disable=unused-import
+import sys  # pylint: disable=unused-import
 from typing import Dict, List, Union
 
 import pandas as pd
@@ -12,10 +12,10 @@ import output
 import stat_helper
 import stopping_methods
 
+
 def average_processed(
-        in_containers:List[output.OutputDataContainer],
-        out_container:output.OutputDataContainer
-    ):
+    in_containers: List[output.OutputDataContainer], out_container: output.OutputDataContainer
+):
     """Average the contents from multiple experiments that have been processed.
 
     Parameters
@@ -39,10 +39,10 @@ def average_processed(
         mean_df = stat_helper.mean_dataframes_from_files(files, index_col=0)
         mean_df.to_csv(out_container.processed_test_set_all / filename)
 
+
 def average_stopping(
-        in_containers:List[output.OutputDataContainer],
-        out_container:output.OutputDataContainer
-    ):
+    in_containers: List[output.OutputDataContainer], out_container: output.OutputDataContainer
+):
     """Average the stopping results from multiple experiments.
 
     Parameters
@@ -57,10 +57,10 @@ def average_stopping(
     mean_stopping_df = stat_helper.mean_dataframes(stopping_dfs)
     mean_stopping_df.to_csv(out_container.stopping_results_csv_file)
 
+
 def average_container(
-        in_containers:List[output.OutputDataContainer],
-        out_container:output.OutputDataContainer
-    ):
+    in_containers: List[output.OutputDataContainer], out_container: output.OutputDataContainer
+):
     """Average the results from multiple experiments.
 
     Parameters
@@ -74,7 +74,8 @@ def average_container(
     average_stopping(in_containers, out_container)
     average_processed(in_containers, out_container)
 
-def main(experiment_parameters:Dict[str, Union[str, int]]) -> None:
+
+def main(experiment_parameters: Dict[str, Union[str, int]]) -> None:
     """Run the averaging algorithm for a set of experiment parmameters.
 
     Parameters
@@ -88,16 +89,16 @@ def main(experiment_parameters:Dict[str, Union[str, int]]) -> None:
     roh = output.RStatesOutputHelper(output.OutputHelper(experiment_parameters))
     average_container(roh.ind_rstates_containers, roh.avg_rstates_container)
     graphing.create_graphs_for_container(
-        roh.avg_rstates_container,
-        [repr(stopping_methods.StabilizingPredictions())]
+        roh.avg_rstates_container, [repr(stopping_methods.StabilizingPredictions())]
     )
 
     print("Ending Averaging", flush=True)
 
+
 if __name__ == "__main__":
 
-    main(experiment_parameters=
-        {
+    main(
+        experiment_parameters={
             "output_root": "./output",
             "task": "cls",
             "stop_set_size": 1000,

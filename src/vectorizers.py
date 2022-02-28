@@ -1,8 +1,8 @@
 """Functionality to vectorize text into numeric output.
 """
 
-from pprint import pprint                                           # pylint: disable=unused-import
-import sys                                                          # pylint: disable=unused-import
+from pprint import pprint  # pylint: disable=unused-import
+import sys  # pylint: disable=unused-import
 from typing import Callable, List, Optional, Tuple
 
 import pandas as pd
@@ -10,14 +10,14 @@ from sklearn.base import TransformerMixin, BaseEstimator
 import torch
 
 # Used to create bert vectors. TODO: review this code to make sure it is reliable.
-    # Copied from: https://towardsdatascience.com/build-a-bert-sci-kit-transformer-59d60ddd54a5
+# Copied from: https://towardsdatascience.com/build-a-bert-sci-kit-transformer-59d60ddd54a5
 class BertTransformer(BaseEstimator, TransformerMixin):
     def __init__(
-            self,
-            bert_tokenizer,
-            bert_model,
-            max_length: int = 60,
-            embedding_func: Optional[Callable[[torch.tensor], torch.tensor]] = None,
+        self,
+        bert_tokenizer,
+        bert_model,
+        max_length: int = 60,
+        embedding_func: Optional[Callable[[torch.tensor], torch.tensor]] = None,
     ):
         self.tokenizer = bert_tokenizer
         self.model = bert_model
@@ -30,10 +30,9 @@ class BertTransformer(BaseEstimator, TransformerMixin):
 
     def _tokenize(self, text: str) -> Tuple[torch.tensor, torch.tensor]:
         # Tokenize the text with the provided tokenizer
-        tokenized_text = self.tokenizer.encode_plus(text,
-                                                    add_special_tokens=True,
-                                                    max_length=self.max_length
-                                                    )["input_ids"]
+        tokenized_text = self.tokenizer.encode_plus(
+            text, add_special_tokens=True, max_length=self.max_length
+        )["input_ids"]
 
         # Create an attention mask telling BERT to use all words
         attention_mask = [1] * len(tokenized_text)

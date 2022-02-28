@@ -2,12 +2,13 @@
 """
 
 import argparse
-from pprint import pprint                                           # pylint: disable=unused-import
-import sys                                                          # pylint: disable=unused-import
+from pprint import pprint  # pylint: disable=unused-import
+import sys  # pylint: disable=unused-import
 
 import driver
 
-def main(local:bool) -> None:
+
+def main(local: bool) -> None:
     """Run the wrapper program to perform experiments in bulk.
 
     Parameters
@@ -38,6 +39,7 @@ def main(local:bool) -> None:
 
     flags = flags_phase2
     driver.main(experiment_parameters_lists, flags, local)
+
 
 if __name__ == "__main__":
 

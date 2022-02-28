@@ -2,8 +2,8 @@
 """
 
 import json
-from pprint import pprint                                           # pylint: disable=unused-import
-import sys                                                          # pylint: disable=unused-import
+from pprint import pprint  # pylint: disable=unused-import
+import sys  # pylint: disable=unused-import
 import subprocess
 from typing import Dict, List, Set, Union
 
@@ -11,7 +11,7 @@ import config
 import runner
 
 # TODO: SLURM overhaul (remove this temp_name garbage)
-def sbatch_config_files(flags:Set[str], job_names:List[str]) -> None:
+def sbatch_config_files(flags: Set[str], job_names: List[str]) -> None:
     """Launch confiuration files using sbatch.
 
     Parameters
@@ -29,35 +29,35 @@ def sbatch_config_files(flags:Set[str], job_names:List[str]) -> None:
     else:
         config.slurm_scripts_path.mkdir()
 
-    with open(config.slurm_template_path, 'r', encoding="utf8") as f:
+    with open(config.slurm_template_path, "r", encoding="utf8") as f:
         slurm_lines = f.readlines()
 
     for i, (p, n) in enumerate(zip(sorted(config.config_file_path.glob("*.json")), job_names)):
 
         # Replace specific lines with what we need
         for j in range(len(slurm_lines)):
-            if '--job-name' in slurm_lines[i]:
+            if "--job-name" in slurm_lines[i]:
                 slurm_lines[j] = f"#SBATCH --job-name={n}\n"
-            elif 'runner.main' in slurm_lines[i]:
+            elif "runner.main" in slurm_lines[i]:
                 slurm_lines[j] = f"runner.main(config_file='{p.as_posix()}', flags={flags})\n"
-            elif '--chdir' in slurm_lines[i]:
+            elif "--chdir" in slurm_lines[i]:
                 slurm_lines[j] = f"#SBATCH --chdir={config.location_of_ActiveLearning_dir}\n"
-            elif 'sys.path.append' in slurm_lines[i]:
+            elif "sys.path.append" in slurm_lines[i]:
                 slurm_lines[j] = f"sys.path.append('{config.location_of_ActiveLearning_dir}/src')\n"
             else:
                 pass
 
         slurm_script_file = config.slurm_scripts_path / f"{i}.sh"
-        with open(slurm_script_file, 'w', encoding="utf8") as f:
+        with open(slurm_script_file, "w", encoding="utf8") as f:
             f.writelines(slurm_lines)
 
         result = subprocess.run(
-            ["sbatch", slurm_script_file.as_posix()],
-            capture_output=True, check=True
+            ["sbatch", slurm_script_file.as_posix()], capture_output=True, check=True
         )
         print(result.stdout)
 
-def create_config_file(experiment_parameters:Dict[str, Union[str, int]], i:int):
+
+def create_config_file(experiment_parameters: Dict[str, Union[str, int]], i: int):
     """Create the configuration file for a particular set of hyperparameters.
 
     Parameters
@@ -69,14 +69,13 @@ def create_config_file(experiment_parameters:Dict[str, Union[str, int]], i:int):
     """
 
     config_file = config.config_file_path / f"{i}.json"
-    with open(config_file, 'w', encoding="utf8") as f:
-        json.dump(experiment_parameters, f, sort_keys=True, indent=4, separators=(',', ': '))
+    with open(config_file, "w", encoding="utf8") as f:
+        json.dump(experiment_parameters, f, sort_keys=True, indent=4, separators=(",", ": "))
+
 
 def main(
-        experiment_parameters_lists:Dict[str, List[Union[str, int]]],
-        flags:Set[str],
-        local:bool
-    ) -> None:
+    experiment_parameters_lists: Dict[str, List[Union[str, int]]], flags: Set[str], local: bool
+) -> None:
     """Create configuration files or run the AL pipeline with a set of hyperparameters.
 
     Parameters
@@ -112,10 +111,10 @@ def main(
                             "batch_size": batch_size,
                             "estimator": estimator,
                             "dataset": dataset,
-                            "random_state": random_state
+                            "random_state": random_state,
                         }
                         experiment_parameters = {
-                            k : str(v) for k, v in experiment_parameters.items()
+                            k: str(v) for k, v in experiment_parameters.items()
                         }
 
                         if local:

@@ -14,11 +14,12 @@ import processor
 import averager
 import graphing
 
+
 def main(
-        config_file : Path = None,
-        experiment_parameters : Dict[str, Union[str, int]]=None,
-        flags : Set[str] = None
-    ):
+    config_file: Path = None,
+    experiment_parameters: Dict[str, Union[str, int]] = None,
+    flags: Set[str] = None,
+):
     """Run the AL pipeline from a configuration file or from a set of experiment parameters.
 
     Parameters
@@ -40,11 +41,11 @@ def main(
         raise ValueError("One of config_file or experiment_parameters must not be None")
 
     if experiment_parameters is None:
-        with open(config_file, 'r', encoding="utf8") as f:
+        with open(config_file, "r", encoding="utf8") as f:
             experiment_parameters = json.load(f)
 
     print(
-        f'runner.main\nflags:\n{flags},\nexperiment_parameters:\n{pformat(experiment_parameters)}'
+        f"runner.main\nflags:\n{flags},\nexperiment_parameters:\n{pformat(experiment_parameters)}"
     )
 
     with warnings.catch_warnings():
@@ -60,10 +61,11 @@ def main(
         if "averaging" in flags or flags is None:
             averager.main(experiment_parameters)
 
+
 if __name__ == "__main__":
 
-    main(experiment_parameters=
-        {
+    main(
+        experiment_parameters={
             "output_root": "./output",
             "task": "cls",
             "stop_set_size": 1000,

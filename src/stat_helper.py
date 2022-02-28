@@ -2,8 +2,8 @@
 """
 
 from pathlib import Path
-from pprint import pprint                                           # pylint: disable=unused-import
-import sys                                                          # pylint: disable=unused-import
+from pprint import pprint  # pylint: disable=unused-import
+import sys  # pylint: disable=unused-import
 from typing import Any, List
 
 import numpy as np
@@ -11,9 +11,9 @@ import pandas as pd
 import scipy
 
 # TODO: if a column of the original dataframe was integer type and the corresponding column in
-    # the new dataframe is also integer, but represented by a floating point (eg 1.000),
-    # change the new column's type to the same type as the orignal column
-def mean_dataframes(dfs:List[pd.DataFrame]) -> pd.DataFrame:
+# the new dataframe is also integer, but represented by a floating point (eg 1.000),
+# change the new column's type to the same type as the orignal column
+def mean_dataframes(dfs: List[pd.DataFrame]) -> pd.DataFrame:
     """Return the ``mean'' of a dataframe, taken in an element-wise fashion.
 
     Parameters
@@ -27,14 +27,15 @@ def mean_dataframes(dfs:List[pd.DataFrame]) -> pd.DataFrame:
         Meaned dataframe.
     """
 
-    mean_df = (pd.concat(dfs, keys=list(range(len(dfs))))    # concat with specific keys
-        .groupby(level=1)                                           # group on first level
-        .mean()                                                     # take mean
-        .reindex(dfs[0].index)                                      # use index order of first arg
+    mean_df = (
+        pd.concat(dfs, keys=list(range(len(dfs))))  # concat with specific keys
+        .groupby(level=1)  # group on first level
+        .mean()  # take mean
+        .reindex(dfs[0].index)  # use index order of first arg
     )
 
     # Coherce certain types of the mean dataframe to be same as the original dataframe, if possible
-    #for c in mean_df.columns.tolist():
+    # for c in mean_df.columns.tolist():
     #    org_dtype = dfs[0][c].dtype
     #    new_dtype = mean_df[c].dtype
 
@@ -44,7 +45,8 @@ def mean_dataframes(dfs:List[pd.DataFrame]) -> pd.DataFrame:
 
     return mean_df
 
-def mean_dataframes_from_files(paths:List[Path], **read_csv_kwargs) -> pd.DataFrame:
+
+def mean_dataframes_from_files(paths: List[Path], **read_csv_kwargs) -> pd.DataFrame:
     """Return the ``mean'' of a dataframe, taken in an element-wise fashion, from csv files.
 
     Parameters
@@ -66,6 +68,7 @@ def mean_dataframes_from_files(paths:List[Path], **read_csv_kwargs) -> pd.DataFr
     dfs = [pd.read_csv(p, **read_csv_kwargs) for p in paths]
     return mean_dataframes(dfs)
 
+
 # TODO: test and document this function
 def delete_rows_csr(mat, idx):
 
@@ -77,6 +80,7 @@ def delete_rows_csr(mat, idx):
     mask[idx] = False
     return mat[mask]
 
+
 # TODO: test and document this function
 def delete_row_csr(mat, i):
 
@@ -86,18 +90,19 @@ def delete_row_csr(mat, i):
     if not isinstance(i, int):
         raise ValueError(f"Works only for a single integer index, not {type(i)}")
 
-    n = mat.indptr[i+1] - mat.indptr[i]
+    n = mat.indptr[i + 1] - mat.indptr[i]
     if n > 0:
-        mat.data[mat.indptr[i]:-n] = mat.data[mat.indptr[i+1]:]
+        mat.data[mat.indptr[i] : -n] = mat.data[mat.indptr[i + 1] :]
         mat.data = mat.data[:-n]
-        mat.indices[mat.indptr[i]:-n] = mat.indices[mat.indptr[i+1]:]
+        mat.indices[mat.indptr[i] : -n] = mat.indices[mat.indptr[i + 1] :]
         mat.indices = mat.indices[:-n]
-    mat.indptr[i:-1] = mat.indptr[i+1:]
+    mat.indptr[i:-1] = mat.indptr[i + 1 :]
     mat.indptr[i:] -= n
     mat.indptr = mat.indptr[:-1]
-    mat._shape = (mat._shape[0]-1, mat._shape[1])
+    mat._shape = (mat._shape[0] - 1, mat._shape[1])
 
     return mat
+
 
 # TODO: test and document this function
 def delete_row_lil(mat, i):
@@ -114,8 +119,9 @@ def delete_row_lil(mat, i):
 
     return mat
 
+
 # TODO: test and document this function
-def remove_ids_from_array(a:Any, idx:np.ndarray) -> Any:
+def remove_ids_from_array(a: Any, idx: np.ndarray) -> Any:
     """Remove certain elements from several types of contiguous data structures.
 
     Parameters
@@ -144,6 +150,7 @@ def remove_ids_from_array(a:Any, idx:np.ndarray) -> Any:
         return delete_row_lil(a, idx)
 
     raise ValueError(f"Unknown matrix passed to remove_ids_from_array: {type(a)}")
+
 
 if __name__ == "__main__":
     pass
