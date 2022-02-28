@@ -51,7 +51,7 @@ Using a uniform coding style across all team members can improve the readability
 - Limit the number of characters per line to 100 (suggest using an IDE extension to put vertical line at this position)
 
 Before committing changes, use black's auto formatter to enforce a uniform coding style
-> black --line-length myfile.py
+> black --line-length 100 myfile.py
 
 and consider implementing some of the suggestions from pylint
 > pylint myfile.py
