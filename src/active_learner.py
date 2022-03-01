@@ -23,6 +23,7 @@ import input_helper
 import output
 import stat_helper
 import stopping_methods
+import vectorize
 
 
 def print_update(
@@ -154,6 +155,7 @@ def main(experiment_parameters: Dict[str, Union[str, int]]) -> None:
     X_unlabeled_pool, X_test, y_unlabeled_pool, y_test, labels = input_helper.get_dataset(
         experiment_parameters["dataset"], random_state
     )
+    X_test, X_unlabeled_pool = vectorize.w2v_vectorize(X_test, X_unlabeled_pool)
     unlabeled_pool_initial_size = y_unlabeled_pool.shape[0]
 
     # Select a stop set for stabilizing predictions
@@ -176,9 +178,6 @@ def main(experiment_parameters: Dict[str, Union[str, int]]) -> None:
     while y_unlabeled_pool.shape[0] > 0 and not (
         stopping_manager.stopping_condition_met(stopping_condition) and early_stopping_enabled
     ):
-
-        #teach is fit
-        #predict is predict
 
         # Setup the learner and stabilizing predictions in the 0th iteration.
         # Setup the learner and stabilizing predictions in the 0th iteration
@@ -243,15 +242,6 @@ def main(experiment_parameters: Dict[str, Union[str, int]]) -> None:
 
     pd.DataFrame({"training_data": training_data}).to_csv(oh.container.training_data_file)
 
-    experiment_parameters = {
-        "output_root": "./output2",
-        "task": "preprocessedClassification",
-        "stop_set_size": 1000,
-        "batch_size": 800,
-        "estimator": "svm-ova",
-        "dataset": "Emotions",
-        "random_state": 0,
-    }
     end = time.time()
     print(f"{str(datetime.timedelta(seconds=(round(end - start))))} -- Ending Active Learning")
 
@@ -262,12 +252,12 @@ if __name__ == "__main__":
         warnings.filterwarnings("ignore", category=ConvergenceWarning)
         main(
             experiment_parameters={
-                "output_root": "../output",
+                "output_root": "/home/hpc/elphicb1/ActiveLearning/ActiveLearning/output3",
                 "task": "cls",
                 "stop_set_size": 1000,
                 "batch_size": 10,
                 "estimator": "mlp",
-                "dataset": "Iris",
+                "dataset": "Emotions",
                 "random_state": 0,
             }
         )
