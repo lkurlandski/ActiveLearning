@@ -9,6 +9,7 @@ import sys  # pylint: disable=unused-import
 import time
 from typing import Dict, Union
 import warnings
+import os
 
 import numpy as np
 import pandas as pd
@@ -125,6 +126,9 @@ def main(experiment_parameters: Dict[str, Union[str, int]]) -> None:
 
     start = time.time()
     print(f"{str(datetime.timedelta(seconds=(round(start - start))))} -- Beginning Active Learning")
+
+    print(experiment_parameters["output_root"])
+    print(os.environ["SLURM_JOB_ID"])
 
     # Extract hyperparameters from the experiment parameters
     stop_set_size = int(experiment_parameters["stop_set_size"])

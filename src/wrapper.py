@@ -18,7 +18,7 @@ def main(local: bool) -> None:
     """
 
     experiment_parameters_lists = {
-        "output_root": "./output",
+        "output_root": "/home/hpc/elphicb1/ActiveLearning/ActiveLearning/output3",
         "task": "cls",
         "stop_set_size": [1000],
         "batch_size": [10],
@@ -37,7 +37,7 @@ def main(local: bool) -> None:
         "averaging",
     }
 
-    flags = flags_phase2
+    flags = flags_phase1
     driver.main(experiment_parameters_lists, flags, local)
 
 
