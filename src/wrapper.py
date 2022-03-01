@@ -2,15 +2,13 @@
 """
 
 import argparse
-from pprint import pprint
+from pprint import pprint  # pylint: disable=unused-import
+import sys  # pylint: disable=unused-import
 
 import driver
 
-# TODO: at the moment, the phase2 flags are run for every possible configuration, which is 
-    # completely unnessecary. It only needs to average for one configuration because that will
-    # include all configurations.
 
-def main(local:bool) -> None:
+def main(local: bool) -> None:
     """Run the wrapper program to perform experiments in bulk.
 
     Parameters
@@ -20,35 +18,28 @@ def main(local:bool) -> None:
     """
 
     experiment_parameters_lists = {
-        # Only one value permitted
-        "output_root": "./output2",
-        "task": "preprocessedClassification",
-        # Iterable of values required
+        "output_root": "./output",
+        "task": "cls",
         "stop_set_size": [1000],
         "batch_size": [10],
-        "estimator": ["svm-ova", "mlp", "rf"],
-        "dataset": ["Avila"],
-        "random_state": [i for i in range(30)]
+        "estimator": ["mlp"],
+        "dataset": ["Iris"],
+        "random_state": list(range(5)),
     }
 
     # Change the flags to run different parts of the ALL program.
     flags_phase1 = {
         "active_learning",
         "processor",
-        "stopping",
         "graphing",
     }
     flags_phase2 = {
         "averaging",
-        #"verify",
     }
 
-    flags = flags_phase1
+    flags = flags_phase2
+    driver.main(experiment_parameters_lists, flags, local)
 
-    driver.create_config_files(experiment_parameters_lists, flags, local)
-    if not local:
-        # TODO: refactor the slurm process to be allow for more elegant naming of jobs
-        driver.sbatch_config_files(flags, temp_name=experiment_parameters_lists["dataset"][0])
 
 if __name__ == "__main__":
 

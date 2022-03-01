@@ -3,16 +3,18 @@
 
 import json
 from pathlib import Path
-from pprint import pprint
+from pprint import pprint  # pylint: disable=unused-import
+import sys  # pylint: disable=unused-import
 from typing import Dict, List, Union
 
 import pandas as pd
 
-import output_helper
+import output
+
 
 def report_jsons_to_dicts(
-        paths:List[Path]
-    ) -> Dict[str, Union[List[float], Dict[str, List[float]]]]:
+    paths: List[Path],
+) -> Dict[str, Union[List[float], Dict[str, List[float]]]]:
     """Convert sroted report.json files into a dictionary strcuture.
 
     Parameters
@@ -28,7 +30,7 @@ def report_jsons_to_dicts(
 
     data = {}
     for p in sorted(paths, key=lambda x: int(x.name.replace("report", "").replace(".json", ""))):
-        with open(p, 'r') as f:
+        with open(p, "r", encoding="utf8") as f:
             d = json.load(f)
         for k, v in d.items():
             if isinstance(v, float):
@@ -43,37 +45,12 @@ def report_jsons_to_dicts(
                     if k2 in data[k]:
                         data[k][k2].append(v2)
                     else:
-                        data[k][k2] = [v2]  
+                        data[k][k2] = [v2]
 
     return data
 
-def report_dicts_to_dfs(
-        data:Dict[str, Union[List[float], Dict[str, List[float]]]]
-    ) -> Dict[str, pd.DataFrame]:
-    """Convert the report.json dictionary representations into dataframe form.
 
-    Parameters
-    ----------
-    data : Dict[str, Union[List[float], Dict[str, List[float]]]]
-        report.json dictionary representation
-
-    Returns
-    -------
-    Dict[str, pd.DataFrame]
-        Named dataframes of data
-    """
-
-    dfs = {}
-    for k in list(data.keys()):
-        dfs[k] = pd.DataFrame(data[k])
-
-    return dfs
-
-def dict_of_dfs_to_csvs(
-        oh:output_helper.OutputHelper, 
-        dfs:Dict[str, pd.DataFrame], 
-        subset:str
-    ) -> None:
+def dict_of_dfs_to_csvs(dfs: Dict[str, pd.DataFrame], processed_path: Path) -> None:
     """Convert the processed dataframes into csv files.
 
     Parameters
@@ -87,17 +64,41 @@ def dict_of_dfs_to_csvs(
     """
 
     for k, df in dfs.items():
-        if k not in {"accuracy", "macro avg", "weighted avg"}:
-            path = oh.ind_rstates_paths[f"processed_{subset}_ind_path"] / f"{k}.csv"
-        elif k == "accuracy":
-            df.rename(columns={0:"accuracy"}, inplace=True)
-            path = oh.ind_rstates_paths[f"processed_{subset}_avg_path"] / f"{k}.csv"
+        if k in {"accuracy", "macro_avg", "weighted_avg"}:
+            path = processed_path / output.OutputDataContainer.overall_str / f"{k}.csv"
         else:
-            path = \
-                oh.ind_rstates_paths[f"processed_{subset}_avg_path"] / f"{k.replace(' ', '_')}.csv"
+            path = processed_path / output.OutputDataContainer.ind_cat_str / f"{k}.csv"
         df.to_csv(path)
 
-def main(experiment_parameters:Dict[str, Union[str, int]]):
+
+def process_container(container: output.OutputDataContainer):
+    """Process the raw data in a particular container.
+
+    Parameters
+    ----------
+    container : output.OutputDataContainer
+        The container where the raw data is located and where the processed data should go
+    """
+
+    # Keeping this as a pd.Series allows for seemless application to dataframe with different length
+    num_training_data = pd.read_csv(container.training_data_file)["training_data"]
+
+    paths = (
+        (container.raw_stop_set_path, container.processed_stop_set_path),
+        (container.raw_test_set_path, container.processed_test_set_path),
+        (container.raw_train_set_path, container.processed_train_set_path),
+    )
+    for raw_path, processed_path in paths:
+        reports = list(raw_path.iterdir())
+        data = report_jsons_to_dicts(reports)
+        dfs = {k.replace(" ", "_"): pd.DataFrame(v) for k, v in data.items()}
+        for df in dfs.values():
+            df.insert(0, "training_data", num_training_data)
+        dfs["accuracy"] = dfs["accuracy"].rename(columns={0: "accuracy"})
+        dict_of_dfs_to_csvs(dfs, processed_path)
+
+
+def main(experiment_parameters: Dict[str, Union[str, int]]):
     """Process the raw data from an AL experiment for a set of experiment parmameters.
 
     Parameters
@@ -106,28 +107,24 @@ def main(experiment_parameters:Dict[str, Union[str, int]]):
         A single set of hyperparmaters and for the active learning experiment.
     """
 
-    oh = output_helper.OutputHelper(experiment_parameters)
+    print("Beginning Processing", flush=True)
 
-    num_training_data = pd.read_csv(oh.ind_rstates_paths["num_training_data_file"])['training_data']
+    oh = output.OutputHelper(experiment_parameters)
+    process_container(oh.container)
 
-    for subset in ("test", "train", "stop_set"):
-        report_paths = list(oh.ind_rstates_paths[f'report_{subset}_path'].iterdir())
-        data = report_jsons_to_dicts(report_paths)
-        dfs = report_dicts_to_dfs(data)
-        for df in dfs.values():
-            df.insert(0, 'training_data', num_training_data)
-        dict_of_dfs_to_csvs(oh, dfs, subset)
+    print("Ending Processing", flush=True)
+
 
 if __name__ == "__main__":
 
-    experiment_parameters = {
-        "output_root": "./output",
-        "task": "preprocessedClassification",
-        "stop_set_size": 1000,
-        "batch_size": 50,
-        "estimator": "svm-ova",
-        "dataset": "20NewsGroups",
-        "random_state": 0,
-    }
-
-    main(experiment_parameters)
+    main(
+        experiment_parameters={
+            "output_root": "./output",
+            "task": "cls",
+            "stop_set_size": 1000,
+            "batch_size": 10,
+            "estimator": "mlp",
+            "dataset": "Iris",
+            "random_state": 0,
+        }
+    )
