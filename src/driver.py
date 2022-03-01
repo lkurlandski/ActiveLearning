@@ -36,13 +36,13 @@ def sbatch_config_files(flags: Set[str], job_names: List[str]) -> None:
 
         # Replace specific lines with what we need
         for j in range(len(slurm_lines)):
-            if "--job-name" in slurm_lines[i]:
+            if "--job-name" in slurm_lines[j]:
                 slurm_lines[j] = f"#SBATCH --job-name={n}\n"
-            elif "runner.main" in slurm_lines[i]:
+            elif "runner.main" in slurm_lines[j]:
                 slurm_lines[j] = f"runner.main(config_file='{p.as_posix()}', flags={flags})\n"
-            elif "--chdir" in slurm_lines[i]:
+            elif "--chdir" in slurm_lines[j]:
                 slurm_lines[j] = f"#SBATCH --chdir={config.location_of_ActiveLearning_dir}\n"
-            elif "sys.path.append" in slurm_lines[i]:
+            elif "sys.path.append" in slurm_lines[j]:
                 slurm_lines[j] = f"sys.path.append('{config.location_of_ActiveLearning_dir}/src')\n"
             else:
                 pass
