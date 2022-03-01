@@ -6,7 +6,7 @@
 #SBATCH --signal=B:INT@600
 #SBATCH --constraint="skylake|broadwell"
 #SBATCH --partition=long
-
+#SBATCH --mem=16G
 
 
 import os
