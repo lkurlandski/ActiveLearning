@@ -11,6 +11,7 @@ from matplotlib.figure import Figure
 import matplotlib.pyplot as plt
 import pandas as pd
 
+import config
 import output
 import stopping_methods
 
@@ -261,14 +262,4 @@ def main(experiment_parameters: Dict[str, Union[str, int]]) -> None:
 
 if __name__ == "__main__":
 
-    main(
-        experiment_parameters={
-            "output_root": "./output",
-            "task": "cls",
-            "stop_set_size": 1000,
-            "batch_size": 10,
-            "estimator": "mlp",
-            "dataset": "Iris",
-            "random_state": 0,
-        }
-    )
+    main(config.experiment_parameters)

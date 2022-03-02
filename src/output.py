@@ -146,6 +146,9 @@ class OutputHelper:
         self.stop_set_size_path = self.task_path / str(experiment_parameters["stop_set_size"])
         self.batch_size_path = self.stop_set_size_path / str(experiment_parameters["batch_size"])
         self.estimator_path = self.batch_size_path / experiment_parameters["estimator"]
+        self.feature_representation_path = (
+            self.estimator_path / experiment_parameters["feature_representation"]
+        )
         self.dataset_path = self.estimator_path / experiment_parameters["dataset"]
 
         # Data container for this individual rstates output
@@ -158,13 +161,6 @@ class OutputHelper:
         self.avg_container = OutputDataContainer(self.avg_rstates_path)
 
     def __str__(self) -> str:
-        """Return a unix tree-like representation of this instance.
-
-        Returns
-        -------
-        str
-            str representation
-        """
 
         if not self.root.exists():
             raise FileNotFoundError(f"Root directory does not exist: {self.root.as_posix()}")
@@ -246,13 +242,6 @@ class RStatesOutputHelper:
         self.ind_rstates_containers = [OutputDataContainer(p) for p in rstates]
 
     def __str__(self):
-        """Return a unix tree-like representation of this instance.
-
-        Returns
-        -------
-        str
-            str representation
-        """
 
         if not self.root.exists():
             raise FileNotFoundError(f"Root directory does not exist: {self.root.as_posix()}")
