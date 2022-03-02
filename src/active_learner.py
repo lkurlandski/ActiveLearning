@@ -166,6 +166,7 @@ def main(experiment_parameters: Dict[str, Union[str, int]]) -> None:
     job_id_list = []
     user_path = experiment_parameters["output_root"]
     #abstract this  part
+    #also need to have some variable to check if active_learner is being run locally
     experiment_parameters["output_root"] = "/local/scratch"
     job_id_list.append(os.environ["SLURM_JOB_ID"])
     oh = output.OutputHelper(experiment_parameters)
@@ -173,6 +174,7 @@ def main(experiment_parameters: Dict[str, Union[str, int]]) -> None:
 
     # Get ids of one instance of each class
     idx = get_index_for_each_class(y_unlabeled_pool, labels)
+    print(idx)
 
     # Track the number of training data in the labeled pool
     training_data = []
@@ -257,11 +259,11 @@ if __name__ == "__main__":
         warnings.filterwarnings("ignore", category=ConvergenceWarning)
         main(
             experiment_parameters={
-                "output_root": "../output",
+                "output_root": "/home/hpc/elphicb1/ActiveLearning/ActiveLearning/output4",
                 "task": "cls",
                 "stop_set_size": 1000,
                 "batch_size": 10,
-                "estimator": "mlp",
+                "estimator": "svm-ova",
                 "dataset": "Iris",
                 "random_state": 0,
             }
