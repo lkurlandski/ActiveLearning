@@ -3,6 +3,7 @@
 
 from pathlib import Path
 import shutil
+import os
 from typing import Dict, List, Union
 
 from utils import DisplayablePath
@@ -140,9 +141,12 @@ class OutputHelper:
         # Shorthand for the experiment parameters
         self.experiment_parameters = experiment_parameters
 
+        #self.user_path = Path(experiment_parameters["output_root"])
+
         # Base paths
         self.root = Path(experiment_parameters["output_root"])
-        self.task_path = self.root / experiment_parameters["task"]
+        self.slurm_path = self.root / os.environ['SLURM_JOB_ID']
+        self.task_path = self.slurm_path / experiment_parameters["task"]
         self.stop_set_size_path = self.task_path / str(experiment_parameters["stop_set_size"])
         self.batch_size_path = self.stop_set_size_path / str(experiment_parameters["batch_size"])
         self.estimator_path = self.batch_size_path / experiment_parameters["estimator"]
@@ -200,6 +204,7 @@ class OutputHelper:
             self.root.mkdir()
 
         self.root.mkdir(exist_ok=exist_ok)
+        self.slurm_path.mkdir(exist_ok=exist_ok)
         self.task_path.mkdir(exist_ok=exist_ok)
         self.stop_set_size_path.mkdir(exist_ok=exist_ok)
         self.batch_size_path.mkdir(exist_ok=exist_ok)
@@ -218,6 +223,18 @@ class OutputHelper:
 
         for p in self.root.glob("*"):
             shutil.rmtree(p)
+
+    def move_output_(self, user_path, job_id_list):
+        #print(user_path)
+        #local_node_path = "/local/scratch/output"
+        #shutil.move(local_node_path, user_path)
+
+        source_dir = "/local/scratch/"
+    
+        for job_id in job_id_list:
+            shutil.move(source_dir + job_id, user_path)
+        
+        self.experiment_parameters["output_root"] = user_path
 
 
 class RStatesOutputHelper:
@@ -316,6 +333,19 @@ def test():
     print(orsc)
     oh1.teardown()
     oh2.teardown()
+
+def move_output(user_path):
+    #print(user_path)
+    #local_node_path = "/local/scratch/output"
+    #shutil.move(local_node_path, user_path)
+
+    source_dir = "/local/scratch/output"
+    target_dir = user_path
+    
+    file_names = os.listdir(source_dir)
+    
+    for file_name in file_names:
+        shutil.move(os.path.join(source_dir, file_name), target_dir)
 
 
 if __name__ == "__main__":
