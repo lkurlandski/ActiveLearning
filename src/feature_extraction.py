@@ -142,7 +142,7 @@ def get_features(X, feature_representation=None):
         vectorizer = ScikitLearnTextFeatureExtractor(
             make_pipeline(HashingVectorizer(), TfidfTransformer())
         )
-    elif feature_representation in "bert":
+    elif feature_representation == "bert":
         vectorizer = HuggingFaceFeatureExtractor("bert-base-uncased")
     elif feature_representation == "roberta":
         vectorizer = HuggingFaceFeatureExtractor("roberta-base")
