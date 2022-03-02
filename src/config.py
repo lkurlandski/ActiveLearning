@@ -23,12 +23,12 @@ dataset_paths = {
 
 # A convienient set of experiment paramaters for testing individual aspects of the system
 experiment_parameters = {
-    "output_root": "./output4",
+    "output_root": "./output3",
     "task": "cls",
     "stop_set_size": 1000,
     "batch_size": 10,
-    "estimator": "mlp",
-    "feature_representation": "count",
+    "estimator": "svm-ova",
+    "feature_representation": "bert",
     "dataset": "20NewsGroups",
     "random_state": 0,
 }
