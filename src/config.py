@@ -27,8 +27,8 @@ experiment_parameters = {
     "task": "cls",
     "stop_set_size": 1000,
     "batch_size": 10,
-    "estimator": "mlp",
-    "feature_representation": "count",
+    "estimator": "svm",
+    "feature_representation": "bert",
     "dataset": "20NewsGroups",
     "random_state": 0,
 }
