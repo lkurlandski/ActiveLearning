@@ -4,7 +4,7 @@
 from pathlib import Path
 from pprint import pprint  # pylint: disable=unused-import
 import sys  # pylint: disable=unused-import
-from typing import Any, List
+from typing import Any, List, Tuple
 
 import numpy as np
 import pandas as pd
@@ -67,6 +67,41 @@ def mean_dataframes_from_files(paths: List[Path], **read_csv_kwargs) -> pd.DataF
 
     dfs = [pd.read_csv(p, **read_csv_kwargs) for p in paths]
     return mean_dataframes(dfs)
+
+
+def shuffle_corresponding_arrays(
+    a1: np.ndarray, a2: np.ndarray, random_state: int
+) -> Tuple[np.ndarray, np.ndarray]:
+    """Shuffle two arrays with the exact same ordering applied to each array.
+
+    Parameters
+    ----------
+    a1 : np.ndarray
+        First array
+    a2 : np.ndarray
+        Second array
+    random_state : int
+        _description_
+
+    Returns
+    -------
+    Tuple[np.ndarray, np.ndarray]
+        Integer used for reproducible randomization
+
+    Raises
+    ------
+    ValueError
+        If the arrays have different shapes along the first axis
+    """
+
+    if a1.shape[0] != a2.shape[0]:
+        raise ValueError("Arrays are different lengths along first axis.")
+
+    rng = np.random.default_rng(random_state)
+    idx = np.arange(a1.shape[0])
+    rng.shuffle(idx)
+
+    return a1[idx], a2[idx]
 
 
 # TODO: test and document this function

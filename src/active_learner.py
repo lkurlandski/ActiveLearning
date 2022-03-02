@@ -18,6 +18,7 @@ from sklearn.metrics import classification_report
 from modAL.batch import uncertainty_batch_sampling
 from modAL.models import ActiveLearner
 
+import config
 import estimators
 import input_helper
 import output
@@ -82,15 +83,15 @@ def report_to_json(report: Dict[str, Union[float, Dict[str, float]]], report_pat
 
 
 # TODO: come up with a better label-encoding strategy
-def get_index_for_each_class(y: np.ndarray, labels: np.ndarray) -> np.ndarray:
+def get_index_for_each_class(y: np.ndarray, target_names: np.ndarray) -> np.ndarray:
     """Return indices that contain location of one element per class.
 
     Parameters
     ----------
     y : np.ndarray
-        Array of train/test class labels that corresponds to an array of train/test data.
-    labels : np.ndarray
-        Array of all available classes in the labels.
+        Array of train/test class target_names that corresponds to an array of train/test data.
+    target_names : np.ndarray
+        Array of all available classes in the target_names.
 
     Returns
     -------
@@ -98,11 +99,11 @@ def get_index_for_each_class(y: np.ndarray, labels: np.ndarray) -> np.ndarray:
         Indices that contain location of one element per class from y.
     """
 
-    # If the data is label-encoded (as it should be) but the labels are raw strings
+    # If the data is label-encoded (as it should be) but the target_names are raw strings
     # (as they perhaps should be) this ensures one of every encoded label is captured
-    labels = list(range(len(labels))) if y[0] not in labels else labels
+    target_names = list(range(len(target_names))) if y[0] not in set(target_names) else target_names
 
-    idx = {l: None for l in labels}
+    idx = {l: None for l in target_names}
     for i, l in enumerate(y):
         if idx[l] is None:
             idx[l] = i
@@ -129,8 +130,8 @@ def main(experiment_parameters: Dict[str, Union[str, int]]) -> None:
     # Extract hyperparameters from the experiment parameters
     stop_set_size = int(experiment_parameters["stop_set_size"])
     batch_size = int(experiment_parameters["batch_size"])
-    estimator = estimators.get_estimator_from_code(experiment_parameters["estimator"])
     random_state = int(experiment_parameters["random_state"])
+    estimator = estimators.get_estimator_from_code(experiment_parameters["estimator"])
 
     # Determine a stopping condition to wait upon
     stopping_condition = stopping_methods.StabilizingPredictions(windows=3, threshold=0.99)
@@ -151,8 +152,10 @@ def main(experiment_parameters: Dict[str, Union[str, int]]) -> None:
     rng = np.random.default_rng(random_state)
 
     # Get the dataset and select a stop set from it
-    X_unlabeled_pool, X_test, y_unlabeled_pool, y_test, labels = input_helper.get_dataset(
-        experiment_parameters["dataset"], random_state
+    X_unlabeled_pool, X_test, y_unlabeled_pool, y_test, target_names = input_helper.get_data(
+        experiment_parameters["dataset"],
+        experiment_parameters["feature_representation"],
+        random_state,
     )
     unlabeled_pool_initial_size = y_unlabeled_pool.shape[0]
 
@@ -166,7 +169,7 @@ def main(experiment_parameters: Dict[str, Union[str, int]]) -> None:
     oh.setup()
 
     # Get ids of one instance of each class
-    idx = get_index_for_each_class(y_unlabeled_pool, labels)
+    idx = get_index_for_each_class(y_unlabeled_pool, target_names)
 
     # Track the number of training data in the labeled pool
     training_data = []
@@ -247,14 +250,4 @@ if __name__ == "__main__":
 
     with warnings.catch_warnings():
         warnings.filterwarnings("ignore", category=ConvergenceWarning)
-        main(
-            experiment_parameters={
-                "output_root": "../output",
-                "task": "cls",
-                "stop_set_size": 1000,
-                "batch_size": 10,
-                "estimator": "mlp",
-                "dataset": "Iris",
-                "random_state": 0,
-            }
-        )
+        main(config.experiment_parameters)

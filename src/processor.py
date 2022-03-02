@@ -9,6 +9,7 @@ from typing import Dict, List, Union
 
 import pandas as pd
 
+import config
 import output
 
 
@@ -117,14 +118,4 @@ def main(experiment_parameters: Dict[str, Union[str, int]]):
 
 if __name__ == "__main__":
 
-    main(
-        experiment_parameters={
-            "output_root": "./output",
-            "task": "cls",
-            "stop_set_size": 1000,
-            "batch_size": 10,
-            "estimator": "mlp",
-            "dataset": "Iris",
-            "random_state": 0,
-        }
-    )
+    main(config.experiment_parameters)
