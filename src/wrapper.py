@@ -18,10 +18,10 @@ def main(local: bool) -> None:
     """
 
     experiment_parameters_lists = {
-        "output_root": "/home/hpc/elphicb1/ActiveLearning/ActiveLearning/output3",
+        "output_root": "/home/hpc/elphicb1/ActiveLearning/ActiveLearning/output4/",
         "task": "cls",
         "stop_set_size": [1000],
-        "batch_size": [10],
+        "batch_size": [12],
         "estimator": ["mlp"],
         "dataset": ["Iris"],
         "random_state": list(range(5)),
