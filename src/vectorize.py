@@ -4,16 +4,17 @@ import numpy as np
 
 def w2v_vectorize(X_test, X_train):
     #create the vectors using boff
+
     X_test = [sentence.split() for sentence in X_test]
     X_train = [sentence.split() for sentence in X_train]
     X_combined = X_test + X_train
 
     #X_combined_numpy = np.asarray(X_combined)
     #print(X_combined_numpy.shape[0])
-    
-    vectors = Word2Vec(X_combined)
-    #print(vectors.wv['face'])
     #print(X_test)
+    
+    vectors = Word2Vec(sentences=X_combined, min_count=1, window=15, epochs=50)
+    #print(vectors.wv['integrity'])
 
     X_test_vectors = []
     X_train_vectors = []
@@ -23,11 +24,12 @@ def w2v_vectorize(X_test, X_train):
     for sentence in X_test:
         for token in sentence[:300]:
             try:
-                X_test_vectors_iter.append(vectors[token.strip()])
+                X_test_vectors_iter.append(vectors.wv[token])
                 #look at the function in sequencer, add zeros and flatten
             except:
-                #print("Could not find token", token)
+                print("Could not find token", token)
                 pass
+
         last_pieces = 300 - len(X_test_vectors_iter)
         for i in range(last_pieces):
             X_test_vectors_iter.append(np.zeros(100,))
@@ -37,10 +39,10 @@ def w2v_vectorize(X_test, X_train):
     for sentence in X_train:
         for token in sentence[:300]:
             try:
-                X_train_vectors_iter.append(vectors[token])
+                X_train_vectors_iter.append(vectors.wv[token])
                 #look at the function in sequencer, add zeros and flatten
             except:
-                #print("Could not find token", token, ".")
+                print("Could not find token", token)
                 pass
 
         last_pieces = 300 - len(X_train_vectors_iter)

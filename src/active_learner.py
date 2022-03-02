@@ -169,6 +169,9 @@ def main(experiment_parameters: Dict[str, Union[str, int]]) -> None:
 
     # Get ids of one instance of each class
     idx = get_index_for_each_class(y_unlabeled_pool, labels)
+    #print("this is idx", idx)
+    #print(y_unlabeled_pool[idx])
+    #print(X_unlabeled_pool[idx])
 
     # Track the number of training data in the labeled pool
     training_data = []
@@ -252,11 +255,11 @@ if __name__ == "__main__":
         warnings.filterwarnings("ignore", category=ConvergenceWarning)
         main(
             experiment_parameters={
-                "output_root": "/home/hpc/elphicb1/ActiveLearning/ActiveLearning/output3",
+                "output_root": "/home/hpc/elphicb1/ActiveLearning/ActiveLearning/output4",
                 "task": "cls",
                 "stop_set_size": 1000,
                 "batch_size": 10,
-                "estimator": "mlp",
+                "estimator": "svm-ova",
                 "dataset": "Emotions",
                 "random_state": 0,
             }
