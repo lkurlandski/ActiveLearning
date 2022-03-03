@@ -101,30 +101,36 @@ def main(
     for random_state in experiment_parameters_lists["random_state"]:
         for stop_set_size in experiment_parameters_lists["stop_set_size"]:
             for batch_size in experiment_parameters_lists["batch_size"]:
-                for estimator in experiment_parameters_lists["estimator"]:
-                    for dataset in experiment_parameters_lists["dataset"]:
+                for base_learner in experiment_parameters_lists["base_learner"]:
+                    for multiclass in experiment_parameters_lists["multiclass"]:
                         for feature_representation in experiment_parameters_lists["feature_representation"]:
-                            experiment_parameters = {
-                                "output_root": experiment_parameters_lists["output_root"],
-                                "task": experiment_parameters_lists["task"],
-                                "stop_set_size": stop_set_size,
-                                "batch_size": batch_size,
-                                "estimator": estimator,
-                                "dataset": dataset,
-                                "random_state": random_state,
-                                "feature_representation" : feature_representation,
-                            }
-                            experiment_parameters = {
-                                k: str(v) for k, v in experiment_parameters.items()
-                            }
+                            for dataset in experiment_parameters_lists["dataset"]:
 
-                            if local:
-                                runner.main(experiment_parameters=experiment_parameters, flags=flags)
-                            else:
-                                create_config_file(experiment_parameters, i)
+                                experiment_parameters = {
+                                    "output_root": experiment_parameters_lists["output_root"],
+                                    "task": experiment_parameters_lists["task"],
+                                    "stop_set_size": stop_set_size,
+                                    "batch_size": batch_size,
+                                    "feature_representation": feature_representation,
+                                    "base_learner": base_learner,
+                                    "multiclass": multiclass,
+                                    "dataset": dataset,
+                                    "random_state": random_state,
+                                }
+                                experiment_parameters = {
+                                    k: str(v) for k, v in experiment_parameters.items()
+                                }
 
-                            job_names.append(dataset)
-                            i += 1
+                                if local:
+                                    runner.main(
+                                        experiment_parameters=experiment_parameters, 
+                                        flags=flags
+                                    )
+                                else:
+                                    create_config_file(experiment_parameters, i)
+
+                                job_names.append(dataset)
+                                i += 1
 
         # Averaging across random states only needs to be run once
         if "averaging" in flags:
