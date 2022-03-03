@@ -8,7 +8,7 @@ import sys  # pylint: disable=unused-import
 import driver
 
 
-def main(averager:bool, local: bool) -> None:
+def main(averager: bool, local: bool) -> None:
     """Run the wrapper program to perform experiments in bulk.
 
     Parameters
@@ -40,8 +40,9 @@ def main(averager:bool, local: bool) -> None:
 if __name__ == "__main__":
 
     parser = argparse.ArgumentParser()
-    parser.add_argument("--averager", help="Run the averager program instead of pipeline", 
-        action="store_true")
+    parser.add_argument(
+        "--averager", help="Run the averager program instead of pipeline", action="store_true"
+    )
     parser.add_argument("--local", help="Run locally, not through SLURM", action="store_true")
     args = parser.parse_args()
 

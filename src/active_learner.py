@@ -8,16 +8,14 @@ from pprint import pprint  # pylint: disable=unused-import
 import sys  # pylint: disable=unused-import
 import time
 from typing import Dict, Union
-import utils
 import warnings
 
+from modAL.batch import uncertainty_batch_sampling
+from modAL.models import ActiveLearner
 import numpy as np
 import pandas as pd
 from sklearn.exceptions import ConvergenceWarning
 from sklearn.metrics import classification_report
-
-from modAL.batch import uncertainty_batch_sampling
-from modAL.models import ActiveLearner
 
 import config
 import estimators
@@ -84,7 +82,9 @@ def report_to_json(report: Dict[str, Union[float, Dict[str, float]]], report_pat
 
 
 # TODO: come up with a better label-encoding strategy
-def get_index_for_each_class(y: np.ndarray, target_names: np.ndarray, n_each : int = 1) -> np.ndarray:
+def get_index_for_each_class(
+    y: np.ndarray, target_names: np.ndarray, n_each: int = 1
+) -> np.ndarray:
     """Return indices that contain location of one element per class.
 
     Parameters
@@ -166,7 +166,7 @@ def main(experiment_parameters: Dict[str, Union[str, int]]) -> None:
         base_learner_code=experiment_parameters["base_learner"],
         multiclass_code=experiment_parameters["multiclass"],
         n_targets=target_names.shape[0],
-        probabalistic_required=True
+        probabalistic_required=True,
     )
 
     # Select a stop set for stabilizing predictions

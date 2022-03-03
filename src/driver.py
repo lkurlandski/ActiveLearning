@@ -103,7 +103,9 @@ def main(
             for batch_size in experiment_parameters_lists["batch_size"]:
                 for base_learner in experiment_parameters_lists["base_learner"]:
                     for multiclass in experiment_parameters_lists["multiclass"]:
-                        for feature_representation in experiment_parameters_lists["feature_representation"]:
+                        for feature_representation in experiment_parameters_lists[
+                            "feature_representation"
+                        ]:
                             for dataset in experiment_parameters_lists["dataset"]:
 
                                 experiment_parameters = {
@@ -123,8 +125,7 @@ def main(
 
                                 if local:
                                     runner.main(
-                                        experiment_parameters=experiment_parameters, 
-                                        flags=flags
+                                        experiment_parameters=experiment_parameters, flags=flags
                                     )
                                 else:
                                     create_config_file(experiment_parameters, i)

@@ -132,7 +132,26 @@ class HuggingFaceFeatureExtractor(FeatureExtractor):
         return np.array(array)
 
 
-def get_features(X, feature_representation):
+def get_features(X:np.ndarray, feature_representation:str) -> np.ndarray:
+    """Get numerical features from raw data; vectorize the data.
+
+    Parameters
+    ----------
+    X : np.ndarray
+        Raw data to be vectorized
+    feature_representation : str
+        Code to refer to a feature representation
+
+    Returns
+    -------
+    np.ndarray
+        Numeric representation of the data
+
+    Raises
+    ------
+    ValueError
+        If the feature representation is not recognized
+    """
 
     if feature_representation == "preprocessed":
         vectorizer = PreprocessedFeatureExtractor()
@@ -149,7 +168,9 @@ def get_features(X, feature_representation):
     elif feature_representation == "roberta":
         vectorizer = HuggingFaceFeatureExtractor("roberta-base")
     else:
-        raise ValueError(f"Feature representation was not recongized: {feature_representation}")
+        valid_feature_representations = {"preprocessed", "count", "tfidf", "bert", "roberta"}
+        raise ValueError(f"Feature representation was not recongized: {feature_representation}."
+            f"Valid feature representations include: {valid_feature_representations}")
 
     features = vectorizer.extract_features(X)
 

@@ -1,12 +1,11 @@
 """Acquire a scikit-learn estimator from a string code.
 
 This module is heavily reliant upon scikit-learn. Users are advised to refer to the following docs:
-    1.12. Multiclass and multioutput algorithms 
+    1.12. Multiclass and multioutput algorithms
         https://scikit-learn.org/stable/modules/multiclass.html
 """
 from dataclasses import dataclass, field
 from enum import Enum
-from multiprocessing.sharedctypes import Value
 from pprint import pformat, pprint  # pylint: disable=unused-import
 import sys  # pylint: disable=unused-import
 from typing import Any, Callable, Dict, Set, Union
@@ -15,7 +14,6 @@ import numpy as np
 import sklearn
 from sklearn.calibration import CalibratedClassifierCV
 from sklearn.ensemble import RandomForestClassifier
-from sklearn.model_selection import KFold
 from sklearn.multiclass import (
     OneVsOneClassifier,
     OneVsRestClassifier,
@@ -70,13 +68,13 @@ def get_multiclass_estimator_map() -> Dict[str, MultiClassEstimator]:
         Mapping of keyword arguments to BaseLearner instances
     """
 
-    map = {
+    mapper = {
         MCOpts.occ: MultiClassEstimator(OutputCodeClassifier, {"n_jobs": -1, "random_state": 0}),
         MCOpts.ovo: MultiClassEstimator(OneVsOneClassifier),
         MCOpts.ovr: MultiClassEstimator(OneVsRestClassifier),
     }
 
-    return map
+    return mapper
 
 
 @dataclass
@@ -117,9 +115,9 @@ def get_base_learner_map(probabalistic_required: bool) -> Dict[str, BaseLearner]
         Mapping of keyword arguments to BaseLearner instances
     """
 
-    # TODO: determine if the MLPClassifier should have early_stopping=True or not
+    # TODO: Investigate MLPClassifier with early_stopping=True destroyed performance on Iris dataset
     # Add learners alphabeically, by the name of their parent package
-    map = {
+    mapper = {
         "RandomForestClassifier": BaseLearner(RandomForestClassifier, MCOpts.base),
         "MLPClassifier": BaseLearner(MLPClassifier, MCOpts.base, {"early_stopping": False}),
         "LinearSVC": BaseLearner(
@@ -131,7 +129,7 @@ def get_base_learner_map(probabalistic_required: bool) -> Dict[str, BaseLearner]
         ),
     }
 
-    return map
+    return mapper
 
 
 def extract_estimator(base_learner: BaseLearner) -> sklearn.base.BaseEstimator:
@@ -202,14 +200,13 @@ def change_estimator_parameters_for_multiclass(
         base_learner.kwargs["multi_class"] = multiclass_code.value
         return extract_estimator(base_learner)
     # Use the alternative string for this multiclass method
-    elif (
+    if (
         multiclass_code in synonyms and synonyms[multiclass_code] in base_learner.multiclass_options
     ):
         base_learner.kwargs["multi_class"] = synonyms[multiclass_code]
         return extract_estimator(base_learner)
     # Requested protocal was invalid
-    else:
-        return wrap_estimator_for_multiclass(base_learner, multiclass_estimator)
+    return wrap_estimator_for_multiclass(base_learner, multiclass_estimator)
 
 
 def is_multiclass_trivial(
@@ -272,10 +269,10 @@ def get_estimator(
     Returns
     -------
     Union[
-        sklearn.base.BaseEstimator, 
-        OneVsOneClassifier, 
-        OneVsRestClassifier, 
-        OutputCodeClassifier, 
+        sklearn.base.BaseEstimator,
+        OneVsOneClassifier,
+        OneVsRestClassifier,
+        OutputCodeClassifier,
         CalibratedClassifierCV
     ]
         A scikit learn estimator that can be used for multiclass classification
@@ -293,8 +290,10 @@ def get_estimator(
     # Attain data about the base learner requested
     learner_map = get_base_learner_map(probabalistic_required)
     if base_learner_code not in learner_map:
-        raise ValueError(f"{base_learner_code} not recognized as a valid base learner."
-            f"Valid options are: {set(learner_map.keys())}")
+        raise ValueError(
+            f"{base_learner_code} not recognized as a valid base learner."
+            f"Valid options are: {set(learner_map.keys())}"
+        )
     base_learner = learner_map[base_learner_code]
 
     # Attain data about the multiclass mode requested
@@ -309,7 +308,7 @@ def get_estimator(
         if multiclass_code == MCOpts.crammer_singer and not isinstance(
             base_learner.learner, LinearSVC
         ):
-            raise ValueError(f"crammer_singer multiclass mode is only implemented for LinearSVC.")
+            raise ValueError("crammer_singer multiclass mode is only implemented for LinearSVC.")
 
         if multiclass_code == MCOpts.occ and probabalistic_required:
             raise ValueError(f"{OutputCodeClassifier} does not support probablistic outputs.")
@@ -334,7 +333,6 @@ def get_estimator(
 def test():
     """Test."""
     import warnings
-
     from sklearn.datasets import make_classification
     from sklearn.exceptions import ConvergenceWarning
 
