@@ -93,7 +93,7 @@ class HuggingFaceFeatureExtractor(FeatureExtractor):
 
         self.vectorizer = pipeline(task="feature-extraction", model=model)
 
-    def extract_features(self, X: Union[np.ndarray, List[str]]):
+    def extract_features(self, X: Union[np.ndarray, List[str]]) -> np.ndarray:
         """Extract the features from a text dataset.
 
         Parameters
@@ -105,7 +105,9 @@ class HuggingFaceFeatureExtractor(FeatureExtractor):
         if isinstance(X, np.ndarray):
             X = X.tolist()
         embeddings = self.vectorizer(X, padding=True, truncation=True)
-        self.mean_text_embeddings(embeddings)
+        features = self.mean_text_embeddings(embeddings)
+
+        return features
 
     @staticmethod
     def mean_text_embeddings(embeddings: List[List[List[float]]]) -> np.ndarray:
@@ -142,7 +144,7 @@ def get_features(X, feature_representation):
         vectorizer = ScikitLearnTextFeatureExtractor(
             make_pipeline(HashingVectorizer(), TfidfTransformer())
         )
-    elif feature_representation in "bert":
+    elif feature_representation == "bert":
         vectorizer = HuggingFaceFeatureExtractor("bert-base-uncased")
     elif feature_representation == "roberta":
         vectorizer = HuggingFaceFeatureExtractor("roberta-base")
