@@ -84,7 +84,7 @@ def report_to_json(report: Dict[str, Union[float, Dict[str, float]]], report_pat
 
 
 # TODO: come up with a better label-encoding strategy
-def get_index_for_each_class(y: np.ndarray, target_names: np.ndarray) -> np.ndarray:
+def get_index_for_each_class(y: np.ndarray, target_names: np.ndarray, n_each : int = 1) -> np.ndarray:
     """Return indices that contain location of one element per class.
 
     Parameters
@@ -93,6 +93,8 @@ def get_index_for_each_class(y: np.ndarray, target_names: np.ndarray) -> np.ndar
         Array of train/test class target_names that corresponds to an array of train/test data.
     target_names : np.ndarray
         Array of all available classes in the target_names.
+    n_each : int
+        Number of samples for each class to seed with
 
     Returns
     -------
@@ -104,12 +106,13 @@ def get_index_for_each_class(y: np.ndarray, target_names: np.ndarray) -> np.ndar
     # (as they perhaps should be) this ensures one of every encoded label is captured
     target_names = list(range(len(target_names))) if y[0] not in set(target_names) else target_names
 
-    idx = {l: None for l in target_names}
+    idx = {l: [] for l in target_names}
     for i, l in enumerate(y):
-        if idx[l] is None:
-            idx[l] = i
+        if len(idx[l]) < n_each:
+            idx[l].append(i)
 
     idx = list(idx.values())
+    idx = np.array(idx).flatten()
 
     return idx
 
@@ -132,7 +135,6 @@ def main(experiment_parameters: Dict[str, Union[str, int]]) -> None:
     stop_set_size = int(experiment_parameters["stop_set_size"])
     batch_size = int(experiment_parameters["batch_size"])
     random_state = int(experiment_parameters["random_state"])
-    estimator = estimators.get_estimator_from_code(experiment_parameters["estimator"])
 
     # Determine a stopping condition to wait upon
     stopping_condition = stopping_methods.StabilizingPredictions(windows=3, threshold=0.99)
@@ -160,6 +162,13 @@ def main(experiment_parameters: Dict[str, Union[str, int]]) -> None:
     )
     unlabeled_pool_initial_size = y_unlabeled_pool.shape[0]
 
+    estimator = estimators.get_estimator(
+        base_learner_code=experiment_parameters["base_learner"],
+        multiclass_code=experiment_parameters["multiclass"],
+        n_targets=target_names.shape[0],
+        probabalistic_required=True
+    )
+
     # Select a stop set for stabilizing predictions
     stop_set_size = min(stop_set_size, unlabeled_pool_initial_size)
     stop_set_idx = rng.choice(unlabeled_pool_initial_size, size=stop_set_size, replace=False)
@@ -170,7 +179,7 @@ def main(experiment_parameters: Dict[str, Union[str, int]]) -> None:
     oh.setup()
 
     # Get ids of one instance of each class
-    idx = get_index_for_each_class(y_unlabeled_pool, target_names)
+    idx = get_index_for_each_class(y_unlabeled_pool, target_names, n_each=2)
 
     # Track the number of training data in the labeled pool
     training_data = []
