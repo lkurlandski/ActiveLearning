@@ -8,43 +8,41 @@ import sys  # pylint: disable=unused-import
 import driver
 
 
-def main(local: bool) -> None:
+def main(averager:bool, local: bool) -> None:
     """Run the wrapper program to perform experiments in bulk.
 
     Parameters
     ----------
+    averager : bool
+        If True, the averager program is executed, instead of the main pipeline
     local : bool
-        If True, the experiments should be run locally, not on TCNJ's nodes.
+        If True, the experiments should be run locally, not on TCNJ's nodes
     """
 
     experiment_parameters_lists = {
-        "output_root": "./output4",
+        "output_root": "./output5",
         "task": "cls",
         "stop_set_size": [1000],
         "batch_size": [7],
-        "estimator": ["mlp"],
+        "base_learner": ["SVC", "MLPClassifier"],
+        "multiclass": ["ovr", "ovo"],
+        "feature_representation": ["preprocessed"],
         "dataset": ["Iris"],
-        "random_state": list(range(1)),
+        "random_state": list(range(3)),
     }
 
-    # Change the flags to run different parts of the ALL program.
-    flags_phase1 = {
-        "active_learning",
-        "processor",
-        "graphing",
-    }
-    flags_phase2 = {
-        "averaging",
-    }
+    # Controls which part of the program is run
+    flags = {"averaging"} if averager else {"active_learning", "processor", "graphing"}
 
-    flags = flags_phase1
     driver.main(experiment_parameters_lists, flags, local)
 
 
 if __name__ == "__main__":
 
     parser = argparse.ArgumentParser()
+    parser.add_argument("--averager", help="Run the averager program instead of pipeline", 
+        action="store_true")
     parser.add_argument("--local", help="Run locally, not through SLURM", action="store_true")
     args = parser.parse_args()
 
-    main(args.local)
+    main(args.averager, args.local)

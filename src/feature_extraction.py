@@ -132,9 +132,9 @@ class HuggingFaceFeatureExtractor(FeatureExtractor):
         return np.array(array)
 
 
-def get_features(X, feature_representation=None):
+def get_features(X, feature_representation):
 
-    if feature_representation is None:
+    if feature_representation == "preprocessed":
         vectorizer = PreprocessedFeatureExtractor()
     elif feature_representation == "count":
         # HashingVectorizer is essentially a more optimized CountVectorizer

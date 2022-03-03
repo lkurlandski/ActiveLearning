@@ -145,11 +145,12 @@ class OutputHelper:
         self.task_path = self.root / experiment_parameters["task"]
         self.stop_set_size_path = self.task_path / str(experiment_parameters["stop_set_size"])
         self.batch_size_path = self.stop_set_size_path / str(experiment_parameters["batch_size"])
-        self.estimator_path = self.batch_size_path / experiment_parameters["estimator"]
+        self.base_learner_path = self.batch_size_path / experiment_parameters["base_learner"]
+        self.multiclass_path = self.base_learner_path / experiment_parameters["multiclass"]
         self.feature_representation_path = (
-            self.estimator_path / experiment_parameters["feature_representation"]
+            self.multiclass_path / experiment_parameters["feature_representation"]
         )
-        self.dataset_path = self.estimator_path / experiment_parameters["dataset"]
+        self.dataset_path = self.feature_representation_path / experiment_parameters["dataset"]
 
         # Data container for this individual rstates output
         self.ind_rstates_path = self.dataset_path / "ind_rstates"
@@ -199,7 +200,9 @@ class OutputHelper:
         self.task_path.mkdir(exist_ok=exist_ok)
         self.stop_set_size_path.mkdir(exist_ok=exist_ok)
         self.batch_size_path.mkdir(exist_ok=exist_ok)
-        self.estimator_path.mkdir(exist_ok=exist_ok)
+        self.base_learner_path.mkdir(exist_ok=exist_ok)
+        self.multiclass_path.mkdir(exist_ok=exist_ok)
+        self.feature_representation_path.mkdir(exist_ok=exist_ok)
         self.dataset_path.mkdir(exist_ok=exist_ok)
 
         self.ind_rstates_path.mkdir(exist_ok=exist_ok)
@@ -268,7 +271,7 @@ def test():
             "task": "cls",
             "stop_set_size": 1000,
             "batch_size": 10,
-            "estimator": "mlp",
+            "base_learner": "mlp",
             "dataset": "Iris",
             "random_state": 1,
         }
@@ -283,7 +286,7 @@ def test():
             "task": "cls",
             "stop_set_size": 1000,
             "batch_size": 10,
-            "estimator": "mlp",
+            "base_learner": "mlp",
             "dataset": "Iris",
             "random_state": 0,
         }
@@ -295,7 +298,7 @@ def test():
             "task": "cls",
             "stop_set_size": 1000,
             "batch_size": 10,
-            "estimator": "mlp",
+            "base_learner": "mlp",
             "dataset": "Iris",
             "random_state": 1,
         }

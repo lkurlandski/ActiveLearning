@@ -1,9 +1,34 @@
 """Random useful things unrelated to active learning, machine learning, or even mathematics.
 """
 
+import inspect
+import math
 from pathlib import Path
 from pprint import pprint  # pylint: disable=unused-import
 import sys  # pylint: disable=unused-import
+from typing import Any, Callable
+
+def check_callable_has_parameter(callable:Callable[..., Any], parameter:str) -> bool:
+    """Determine if a callable object, such as a function or class, has a particular parameter.
+
+    Parameters
+    ----------
+    callable : Callable[..., Any]
+        Callable object, e.g., a function
+    parameter : str
+        parameter to check for the presence of
+
+    Returns
+    -------
+    bool
+        If the paramater is present or not
+    """
+    
+    argspec = inspect.getfullargspec(callable)
+    args = set(argspec.args + argspec.kwonlyargs)
+    if parameter in args:
+        return True
+    return False
 
 # Used to display a pathlib.Path object in a human-readable way.
 # Copied from: https://stackoverflow.com/questions/9727673/list-directory-tree-structure-in-python
@@ -83,3 +108,12 @@ class DisplayablePath(object):
             parent = parent.parent
 
         return "".join(reversed(parts))
+
+def convert_size(size_bytes):
+    if size_bytes == 0:
+        return "0B"
+    size_name = ("B", "KB", "MB", "GB", "TB", "PB", "EB", "ZB", "YB")
+    i = int(math.floor(math.log(size_bytes, 1024)))
+    p = math.pow(1024, i)
+    s = round(size_bytes / p, 2)
+    return "%s %s" % (s, size_name[i])
