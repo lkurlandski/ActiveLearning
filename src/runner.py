@@ -9,11 +9,12 @@ import warnings
 
 from sklearn.exceptions import ConvergenceWarning
 
-import config
 import active_learner
-import processor
+import config
 import averager
 import graphing
+import processor
+import utils
 
 
 def main(
@@ -48,6 +49,8 @@ def main(
     print(
         f"runner.main\nflags:\n{flags},\nexperiment_parameters:\n{pformat(experiment_parameters)}"
     )
+
+    utils.print_memory_stats(True)
 
     with warnings.catch_warnings():
         warnings.filterwarnings("ignore", category=ConvergenceWarning)

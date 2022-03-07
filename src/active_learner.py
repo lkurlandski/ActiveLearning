@@ -129,7 +129,7 @@ def main(experiment_parameters: Dict[str, Union[str, int]]) -> None:
     """
 
     start = time.time()
-    print(f"{str(datetime.timedelta(seconds=(round(start - start))))} -- Beginning Active Learning")
+    print(f"{str(datetime.timedelta(seconds=(round(start - start))))} -- Preparing AL")
 
     # Extract hyperparameters from the experiment parameters
     stop_set_size = int(experiment_parameters["stop_set_size"])
@@ -186,6 +186,7 @@ def main(experiment_parameters: Dict[str, Union[str, int]]) -> None:
 
     # Guard had some complex boolean algebra, but is correct
     i = 0
+    print(f"{str(datetime.timedelta(seconds=(round(time.time() - start))))} -- Starting AL Loop")
     while y_unlabeled_pool.shape[0] > 0 and not (
         stopping_manager.stopping_condition_met(stopping_condition) and early_stopping_enabled
     ):

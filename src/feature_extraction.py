@@ -1,10 +1,18 @@
 """Extract features from complex data objects, such as text documents.
+
+# 20Newsgroups memory data, lowest --mem success:
+    count       16G
+    hash        16G
+    tfidf       16G
+    hash-tfidf  16G
+    bert        16G?
+    roberta     16G?
 """
 
 from abc import ABC, abstractmethod
 from pprint import pprint  # pylint: disable=unused-import
 import sys  # pylint: disable=unused-import
-from typing import Any, List, Union
+from typing import Any, List, Tuple, Union
 
 import numpy as np
 from sklearn.feature_extraction.text import (
@@ -16,34 +24,50 @@ from sklearn.feature_extraction.text import (
 from sklearn.pipeline import make_pipeline, Pipeline
 from transformers import pipeline
 
+import utils
+
 
 class FeatureExtractor(ABC):
     """Tool for extracting features from complex data objects."""
 
     @abstractmethod
-    def extract_features(self, X: Any):
-        """Extract the features from a collection of data objects.
+    def extract_features(self, X_train: Any, X_test: Any) -> Tuple[Any, Any]:
+        """Extract the features from a dataset.
 
         Parameters
         ----------
-        X : Any
-            A dataset of complex objects
+        X_train : Any
+            Training data
+        X_test : Any
+            Testing data
+
+        Returns
+        -------
+        Tuple[Any, Any]
+            Two dimensional feature representations of the input train and test data
         """
 
 
 class PreprocessedFeatureExtractor(FeatureExtractor):
     """Feature extractor for datasets which are already preprocessed and require no extraction."""
 
-    def extract_features(self, X: Any):
+    def extract_features(self, X_train: Any, X_test: Any) -> Tuple[Any, Any]:
         """Return the input data object.
 
         Parameters
         ----------
-        X : Any
-            A dataset of preprocessed examples, ready for learning
+        X_train : Any
+            Training data
+        X_test : Any
+            Testing data
+
+        Returns
+        -------
+        Tuple[Any, Any]
+            Two dimensional feature representations of the input train and test data
         """
 
-        return X
+        return X_train, X_test
 
 
 class ScikitLearnTextFeatureExtractor(FeatureExtractor):
@@ -67,50 +91,93 @@ class ScikitLearnTextFeatureExtractor(FeatureExtractor):
 
         self.vectorizer = vectorizer
 
-    def extract_features(self, X: np.ndarray):
+    def extract_features(self, X_train: np.ndarray, X_test: np.ndarray):
         """Extract the features from a text dataset.
 
         Parameters
         ----------
-        X : np.ndarray
-            A one dimensional array containing strings of text
+        X_train : np.ndarray
+            A one dimensional array of textual training data
+        X_test : np.ndarray
+            A one dimensional array of textual training data
+
+        Returns
+        -------
+        Tuple[np.ndarray, np.ndarray]
+            Two dimensional feature representations of the input corpora
         """
 
-        return self.vectorizer.fit_transform(X)
+        X_train = self.vectorizer.fit_transform(X_train)
+        X_test = self.vectorizer.transform(X_test)
+        return X_train, X_test
 
 
 class HuggingFaceFeatureExtractor(FeatureExtractor):
     """Feature extractor using huggingface utilities."""
 
-    def __init__(self, model: str):
+    def __init__(self, model: str, chunk_size: int = 256) -> None:
         """Create instance with a specific pretrained transformer.
 
         Parameters
         ----------
         model : str
             Name of a model from huggingface's collection of pretrained models
+        chunk_size : int, optional
+            Number of transformer embeddings to take the mean of at a time, by default 3. Larger
+                chunks require more memory but are more computationally efficient.
         """
 
+        self.chunk_size = chunk_size
         self.vectorizer = pipeline(task="feature-extraction", model=model)
 
-    def extract_features(self, X: Union[np.ndarray, List[str]]) -> np.ndarray:
+    def extract_features(
+        self, X_train: np.ndarray, X_test: np.ndarray
+    ) -> Tuple[np.ndarray, np.ndarray]:
         """Extract the features from a text dataset.
 
         Parameters
         ----------
-        X : np.ndarray
-            A one dimensional array containing strings of text
+        X_train : np.ndarray
+            A one dimensional array of textual training data
+        X_test : np.ndarray
+            A one dimensional array of textual training data
+
+        Returns
+        -------
+        Tuple[np.ndarray, np.ndarray]
+            Two dimensional feature representations of the input corpora
         """
 
-        if isinstance(X, np.ndarray):
-            X = X.tolist()
-        embeddings = self.vectorizer(X, padding=True, truncation=True)
-        features = self.mean_text_embeddings(embeddings)
+        X_train = self._extract_features(X_train)
+        X_test = self._extract_features(X_test)
 
-        return features
+        return X_train, X_test
+
+    def _extract_features(self, corpus: np.ndarray) -> np.ndarray:
+        """Extract the features from a corpus of textual data.
+
+        Parameters
+        ----------
+        corpus : np.ndarray
+            Corpus of text to extract features from
+
+        Returns
+        -------
+        np.ndarray
+            Two dimensional feature representation of the corpus
+        """
+
+        X = []
+        for doc_chunk in utils.grouper(corpus, self.chunk_size, None):
+            nanless_doc_chunk = [j for j in doc_chunk if j is not None]
+            embeddings = self.vectorizer(nanless_doc_chunk, padding=True, truncation=True)
+            processed_doc_embeddings = self.mean_text_embeddings(embeddings)
+            X.extend(processed_doc_embeddings)
+
+        return np.array(X)
 
     @staticmethod
-    def mean_text_embeddings(embeddings: List[List[List[float]]]) -> np.ndarray:
+    def mean_text_embeddings(embeddings: List[List[List[float]]]) -> List[np.ndarray]:
         """Generate a mean embedding for a single document, suitable for representing as 1D array.
 
         Parameters
@@ -120,7 +187,7 @@ class HuggingFaceFeatureExtractor(FeatureExtractor):
 
         Returns
         -------
-        np.ndarray
+        List[np.ndarray]
            A one dimensional numeric array which is the mean of the individual token emebddings.
         """
 
@@ -129,16 +196,32 @@ class HuggingFaceFeatureExtractor(FeatureExtractor):
             embedding = np.array(x[0])
             mean_embedding = np.mean(embedding, axis=0)
             array.append(mean_embedding)
-        return np.array(array)
+
+        return array
 
 
-def get_features(X:np.ndarray, feature_representation:str) -> np.ndarray:
+valid_feature_representations = {
+    "preprocessed",
+    "count",
+    "hash",
+    "tfidf",
+    "hash-tfidf",
+    "bert",
+    "roberta",
+}
+
+
+def get_features(
+    X_train: np.ndarray, X_test: np.ndarray, feature_representation: str
+) -> np.ndarray:
     """Get numerical features from raw data; vectorize the data.
 
     Parameters
     ----------
-    X : np.ndarray
-        Raw data to be vectorized
+    X_train : np.ndarray
+        Raw training data to be vectorized
+    X_train : np.ndarray
+        Raw testing data to be vectorized
     feature_representation : str
         Code to refer to a feature representation
 
@@ -156,10 +239,12 @@ def get_features(X:np.ndarray, feature_representation:str) -> np.ndarray:
     if feature_representation == "preprocessed":
         vectorizer = PreprocessedFeatureExtractor()
     elif feature_representation == "count":
-        # HashingVectorizer is essentially a more optimized CountVectorizer
+        vectorizer = ScikitLearnTextFeatureExtractor(CountVectorizer())
+    elif feature_representation == "hash":
         vectorizer = ScikitLearnTextFeatureExtractor(HashingVectorizer())
     elif feature_representation == "tfidf":
-        # HashingVectorizer + TfidfTransformer is essentially an optimized TfidfVectorizer
+        vectorizer = ScikitLearnTextFeatureExtractor(HashingVectorizer())
+    elif feature_representation == "hash-tfidf":
         vectorizer = ScikitLearnTextFeatureExtractor(
             make_pipeline(HashingVectorizer(), TfidfTransformer())
         )
@@ -168,19 +253,20 @@ def get_features(X:np.ndarray, feature_representation:str) -> np.ndarray:
     elif feature_representation == "roberta":
         vectorizer = HuggingFaceFeatureExtractor("roberta-base")
     else:
-        valid_feature_representations = {"preprocessed", "count", "tfidf", "bert", "roberta"}
-        raise ValueError(f"Feature representation was not recongized: {feature_representation}."
-            f"Valid feature representations include: {valid_feature_representations}")
+        raise ValueError(
+            f"Feature representation was not recongized: {feature_representation}."
+            f"Valid feature representations include: {valid_feature_representations}"
+        )
 
-    features = vectorizer.extract_features(X)
+    X_train, X_test = vectorizer.extract_features(X_train, X_test)
 
-    return features
+    return X_train, X_test
 
 
 def test() -> None:
     """Test."""
 
-    X = [
+    X_train = [
         "Hi there!",
         "How are you?",
         "I'm clinically insane, how are you?",
@@ -189,11 +275,12 @@ def test() -> None:
         "What?",
         "No. You will not be going. You will never be going.",
     ]
+    X_test = ["This is some random test data.", "This data is for test set.", "This is some data"]
 
-    for feature_representation in ("count", "tfidf", "bert", "roberta"):
+    for feature_representation in valid_feature_representations:
         print(f"Extracting features with {feature_representation}")
-        features = get_features(X, feature_representation)
-        print(f"{type(features)}")
+        _X_train, _X_test = get_features(X_train, X_test, feature_representation)
+        print(f"{type(_X_train)}, {type(_X_test)}")
     print("Done.")
 
 

@@ -250,7 +250,7 @@ def test():
     print(odc)
     odc.teardown()
 
-    experiment_parameters={
+    experiment_parameters = {
         "output_root": "./tmp",
         "task": "cls",
         "stop_set_size": 1000,
