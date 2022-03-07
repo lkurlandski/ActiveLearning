@@ -7,6 +7,7 @@ import numpy as np
 
 import datasets
 import feature_extraction
+import utils
 
 
 def get_data(
@@ -34,10 +35,14 @@ def get_data(
         If the dataset code is not recognized
     """
 
+    print("Loading Raw Datasets.")
+    utils.print_memory_stats(True)
     X_train, X_test, y_train, y_test, labels = datasets.get_dataset(dataset, random_state)
 
-    # It is vital that the train/test sets have features extracted separetely to avoid contamination
-    X_train = feature_extraction.get_features(X_train, feature_representation)
-    X_test = feature_extraction.get_features(X_test, feature_representation)
+    print("Performing Feature Extraction.")
+    utils.print_memory_stats(True)
+    X_train, X_test = feature_extraction.get_features(X_train, X_test, feature_representation)
 
+    print("Returning Processed Data.")
+    utils.print_memory_stats(True)
     return X_train, X_test, y_train, y_test, labels

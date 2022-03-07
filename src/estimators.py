@@ -116,6 +116,8 @@ def get_base_learner_map(probabalistic_required: bool) -> Dict[str, BaseLearner]
     """
 
     # TODO: Investigate MLPClassifier with early_stopping=True destroyed performance on Iris dataset
+    # TODO: Investigate whether the CalibratedClassifierCV(LinearSVC()) with a Platt Scaling is
+    # slower the SVC(kernel='linear')
     # Add learners alphabeically, by the name of their parent package
     mapper = {
         "RandomForestClassifier": BaseLearner(RandomForestClassifier, MCOpts.base),
@@ -123,7 +125,9 @@ def get_base_learner_map(probabalistic_required: bool) -> Dict[str, BaseLearner]
         "LinearSVC": BaseLearner(
             LinearSVC, MCOpts.ovr, multiclass_options={MCOpts.ovr, MCOpts.crammer_singer}
         ),
-        "SVC": BaseLearner(SVC, MCOpts.ovo, {"probability": probabalistic_required}),
+        "SVC": BaseLearner(
+            SVC, MCOpts.ovo, {"probability": probabalistic_required, "kernel": "linear"}
+        ),
         "NuSVC": BaseLearner(
             NuSVC, MCOpts.ovo, {"nu": 0.25, "probability": probabalistic_required}
         ),
@@ -200,9 +204,7 @@ def change_estimator_parameters_for_multiclass(
         base_learner.kwargs["multi_class"] = multiclass_code.value
         return extract_estimator(base_learner)
     # Use the alternative string for this multiclass method
-    if (
-        multiclass_code in synonyms and synonyms[multiclass_code] in base_learner.multiclass_options
-    ):
+    if multiclass_code in synonyms and synonyms[multiclass_code] in base_learner.multiclass_options:
         base_learner.kwargs["multi_class"] = synonyms[multiclass_code]
         return extract_estimator(base_learner)
     # Requested protocal was invalid
