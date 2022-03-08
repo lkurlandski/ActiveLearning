@@ -199,6 +199,27 @@ class HuggingFaceFeatureExtractor(FeatureExtractor):
 
         return array
 
+class GensimFeatureExtractor(FeatureExtractor):
+    def __init__():
+        pass
+    def extract_features(
+        self, X_train: np.ndarray, X_test: np.ndarray
+    ) -> Tuple[np.ndarray, np.ndarray]:
+        """Extract the features from a text dataset.
+
+        Parameters
+        ----------
+        X_train : np.ndarray
+            A one dimensional array of textual training data
+        X_test : np.ndarray
+            A one dimensional array of textual training data
+
+        Returns
+        -------
+        Tuple[np.ndarray, np.ndarray]
+            Two dimensional feature representations of the input corpora
+        """
+        pass
 
 valid_feature_representations = {
     "preprocessed",
