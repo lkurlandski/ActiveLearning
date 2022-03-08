@@ -60,7 +60,7 @@ def main(
         job_id_list.append(os.environ["SLURM_JOB_ID"])
         user_path = experiment_parameters["output_root"]
         experiment_parameters["output_root"] = config.node_path
-    except:
+    except Exception:
         #print("Running locally.")
         pass
 

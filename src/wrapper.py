@@ -24,11 +24,11 @@ def main(averager: bool, local: bool) -> None:
         "task": "cls",
         "stop_set_size": [1000],
         "batch_size": [7],
-        "base_learner": ["SVC", "MLPClassifier"],
-        "multiclass": ["ovr", "ovo"],
-        "feature_representation": ["preprocessed"],
-        "dataset": ["Ethos"],
-        "random_state": list(range(3)),
+        "base_learner": ["SVC"],
+        "multiclass": ["ovr"],
+        "feature_representation": ["w2v"],
+        "dataset": ["20NewsGroups"],
+        "random_state": list(range(1)),
     }
 
     # Controls which part of the program is run
