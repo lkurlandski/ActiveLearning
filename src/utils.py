@@ -1,85 +1,195 @@
 """Random useful things unrelated to active learning, machine learning, or even mathematics.
 """
 
+import inspect
+from itertools import zip_longest
+import math
 from pathlib import Path
-from pprint import pprint  # pylint: disable=unused-import
+from pprint import pprint
+from re import S  # pylint: disable=unused-import
+import psutil
 import sys  # pylint: disable=unused-import
+from typing import Any, Callable, Generator, Iterator, Iterable, Tuple, Union
 
-# Used to display a pathlib.Path object in a human-readable way.
-# Copied from: https://stackoverflow.com/questions/9727673/list-directory-tree-structure-in-python
-class DisplayablePath(object):
+import numpy as np
+import scipy.sparse
 
-    display_filename_prefix_middle = "├──"
-    display_filename_prefix_last = "└──"
-    display_parent_prefix_middle = "    "
-    display_parent_prefix_last = "│   "
 
-    def __init__(self, path, parent_path, is_last):
-        self.path = Path(str(path))
-        self.parent = parent_path
-        self.is_last = is_last
-        if self.parent:
-            self.depth = self.parent.depth + 1
-        else:
-            self.depth = 0
+def tree(
+    dir_path: Path,
+    prefix: str = "",
+    space: str = "    ",
+    branch: str = "│   ",
+    tee: str = "├── ",
+    last: str = "└── ",
+) -> Iterator[str]:
+    """Return a unix tree like representation of a path.
 
-    @property
-    def displayname(self):
-        if self.path.is_dir():
-            return self.path.name + "/"
-        return self.path.name
+    Parameters
+    ----------
+    dir_path : Path
+        Path to print structure of
+    prefix : str, optional
+        formatting, by default ''
+    space : str, optional
+        formatting, by default '    '
+    branch : str, optional
+        formatting, by default '│   '
+    tee : str, optional
+        formatting, by default '├── '
+    last : str, optional
+        formatting, by default '└── '
 
-    @classmethod
-    def make_tree(cls, root, parent=None, is_last=False, criteria=None):
-        root = Path(str(root))
-        criteria = criteria or cls._default_criteria
+    Yields
+    ------
+    Iterator[str]
+        Each element of the tree-like output
+    """
 
-        displayable_root = cls(root, parent, is_last)
-        yield displayable_root
+    contents = list(dir_path.iterdir())
+    pointers = [tee] * (len(contents) - 1) + [last]
+    for pointer, path in zip(pointers, contents):
+        yield prefix + pointer + path.name
+        if path.is_dir():
+            extension = branch if pointer == tee else space
+            yield from tree(path, prefix=prefix + extension)
 
-        children = sorted(
-            list(path for path in root.iterdir() if criteria(path)), key=lambda s: str(s).lower()
-        )
-        count = 1
-        for path in children:
-            is_last = count == len(children)
-            if path.is_dir():
-                yield from cls.make_tree(
-                    path, parent=displayable_root, is_last=is_last, criteria=criteria
-                )
-            else:
-                yield cls(path, displayable_root, is_last)
-            count += 1
 
-    @classmethod
-    def _default_criteria(cls, path):
+def check_callable_has_parameter(_callable: Callable[..., Any], parameter: str) -> bool:
+    """Determine if a callable object, such as a function or class, has a particular parameter.
+
+    Parameters
+    ----------
+    callable : Callable[..., Any]
+        Callable object, e.g., a function
+    parameter : str
+        parameter to check for the presence of
+
+    Returns
+    -------
+    bool
+        If the paramater is present or not
+    """
+
+    argspec = inspect.getfullargspec(_callable)
+    args = set(argspec.args + argspec.kwonlyargs)
+    if parameter in args:
         return True
+    return False
 
-    @property
-    def displayname(self):
-        if self.path.is_dir():
-            return self.path.name + "/"
-        return self.path.name
 
-    def displayable(self):
-        if self.parent is None:
-            return self.displayname
+def format_bytes(bytes: int) -> str:
+    """Return a string representation of an amount of bytes.
 
-        _filename_prefix = (
-            self.display_filename_prefix_last
-            if self.is_last
-            else self.display_filename_prefix_middle
-        )
+    Parameters
+    ----------
+    bytes : int
+        Number of bytes
 
-        parts = ["{!s} {!s}".format(_filename_prefix, self.displayname)]
+    Returns
+    -------
+    str
+        String representation, including a unit such as MB
+    """
 
-        parent = self.parent
-        while parent and parent.parent is not None:
-            parts.append(
-                self.display_parent_prefix_middle
-                if parent.is_last
-                else self.display_parent_prefix_last
-            )
-            parent = parent.parent
+    if bytes == 0:
+        return "0B"
+    size_name = ("B", "KB", "MB", "GB", "TB", "PB", "EB", "ZB", "YB")
+    i = int(math.floor(math.log(bytes, 1024)))
+    p = math.pow(1024, i)
+    s = round(bytes / p, 2)
+    return "%s %s" % (s, size_name[i])
 
-        return "".join(reversed(parts))
+
+def print_memory_stats(flush: bool) -> str:
+    """Print statistics about the usage of memory.
+
+    Parameters
+    ----------
+    total : bool
+        total physical memory (exclusive swap)
+    available : bool
+        the memory that can be given instantly to processes without the system going into swap
+    used : bool
+        memory used, calculated differently depending on the platform, for info purposes only
+    flush : bool
+        Passed as argument to flush in print()
+
+    Returns
+    -------
+    str
+        The formatted memory information
+    """
+
+    attrs = [
+        "total",
+        "available",
+        "percent",
+        "used",
+        "free",
+        "active",
+        "inactive",
+        "buffers",
+        "cached",
+        "shared",
+        "slab",
+    ]
+    mem = psutil.virtual_memory()
+    s = "Memory\n------"
+    for a in attrs:
+        s += f"\n\t{a}={format_bytes(getattr(mem, a))}"
+    print(s, flush=flush)
+
+    return s
+
+
+def nbytes(a: Any) -> int:
+    """Bet the number of bytes in one of several different types of data structures.
+
+    Parameters
+    ----------
+    a : Any
+        Data structure to determine number of bytes in
+
+    Returns
+    -------
+    int
+        Number of bytes in the array
+
+    Raises
+    ------
+    ValueError
+        If the type of object is not supported
+    """
+
+    if isinstance(a, np.ndarray):
+        return a.nbytes
+    if scipy.sparse.issparse(a):
+        return a.data.nbytes + a.indptr.nbytes + a.indices.nbytes
+
+    raise ValueError(f"Type not recognized: {type(a)}")
+
+
+def grouper(
+    iterable: Iterable[Any], chunk_size: int, fill_value: Any = None
+) -> Generator[Tuple[Any], None, None]:
+    """Return the elements of an interable in batches.
+
+    Parameters
+    ----------
+    iterable : Iterable[Any]
+        Iterable to return elements from
+    chunk_size : int
+        Number of elements in each batch
+    fill_value : Any, optional
+        Filler for potentially empty elements of the final batch
+
+    Returns
+    ------
+    Generator[Tuple[Any], None, None]
+        Tuples of length=chunk_size that contains the elements from the iterable
+    """
+
+    args = [iter(iterable)] * chunk_size
+
+    return zip_longest(*args, fillvalue=fill_value)

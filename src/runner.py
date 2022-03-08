@@ -10,9 +10,11 @@ import warnings
 from sklearn.exceptions import ConvergenceWarning
 
 import active_learner
-import processor
+import config
 import averager
 import graphing
+import processor
+import utils
 
 
 def main(
@@ -49,6 +51,8 @@ def main(
     )
 
     #add the code here
+    utils.print_memory_stats(True)
+
     with warnings.catch_warnings():
         warnings.filterwarnings("ignore", category=ConvergenceWarning)
 
@@ -65,14 +69,4 @@ def main(
 
 if __name__ == "__main__":
 
-    main(
-        experiment_parameters={
-            "output_root": "./output",
-            "task": "cls",
-            "stop_set_size": 1000,
-            "batch_size": 10,
-            "estimator": "mlp",
-            "dataset": "Avila",
-            "random_state": 0,
-        }
-    )
+    main(config.experiment_parameters)

@@ -6,7 +6,7 @@ import shutil
 import os
 from typing import Dict, List, Union
 
-from utils import DisplayablePath
+import utils
 
 # TODO: extract the concept of model evaluation upon a single set of examples into a container class
 # TODO: modify some of the function is graphing to operate upon these containers
@@ -69,12 +69,7 @@ class OutputDataContainer:
         if not self.root.exists():
             raise FileNotFoundError(f"Root directory does not exist: {self.root.as_posix()}")
 
-        ret = []
-        paths = DisplayablePath.make_tree(self.root)
-        for path in paths:
-            ret.append(path.displayable())
-
-        return "\n".join(ret)
+        return "\n".join(list(utils.tree(self.root)))
 
     def setup(self, remove_existing: bool = False, exist_ok: bool = True) -> None:
         """Create, remove, and set up the output paths for this experiment.
@@ -149,8 +144,12 @@ class OutputHelper:
         self.task_path = self.slurm_path / experiment_parameters["task"]
         self.stop_set_size_path = self.task_path / str(experiment_parameters["stop_set_size"])
         self.batch_size_path = self.stop_set_size_path / str(experiment_parameters["batch_size"])
-        self.estimator_path = self.batch_size_path / experiment_parameters["estimator"]
-        self.dataset_path = self.estimator_path / experiment_parameters["dataset"]
+        self.base_learner_path = self.batch_size_path / experiment_parameters["base_learner"]
+        self.multiclass_path = self.base_learner_path / experiment_parameters["multiclass"]
+        self.feature_representation_path = (
+            self.multiclass_path / experiment_parameters["feature_representation"]
+        )
+        self.dataset_path = self.feature_representation_path / experiment_parameters["dataset"]
 
         # Data container for this individual rstates output
         self.ind_rstates_path = self.dataset_path / "ind_rstates"
@@ -162,23 +161,11 @@ class OutputHelper:
         self.avg_container = OutputDataContainer(self.avg_rstates_path)
 
     def __str__(self) -> str:
-        """Return a unix tree-like representation of this instance.
-
-        Returns
-        -------
-        str
-            str representation
-        """
 
         if not self.root.exists():
             raise FileNotFoundError(f"Root directory does not exist: {self.root.as_posix()}")
 
-        ret = []
-        paths = DisplayablePath.make_tree(self.root)
-        for path in paths:
-            ret.append(path.displayable())
-
-        return "\n".join(ret)
+        return "\n".join(list(utils.tree(self.root)))
 
     def setup(self, remove_existing: bool = False, exist_ok: bool = True) -> None:
         """Create, remove, and set up the output paths for this experiment.
@@ -208,7 +195,9 @@ class OutputHelper:
         self.task_path.mkdir(exist_ok=exist_ok)
         self.stop_set_size_path.mkdir(exist_ok=exist_ok)
         self.batch_size_path.mkdir(exist_ok=exist_ok)
-        self.estimator_path.mkdir(exist_ok=exist_ok)
+        self.base_learner_path.mkdir(exist_ok=exist_ok)
+        self.multiclass_path.mkdir(exist_ok=exist_ok)
+        self.feature_representation_path.mkdir(exist_ok=exist_ok)
         self.dataset_path.mkdir(exist_ok=exist_ok)
 
         self.ind_rstates_path.mkdir(exist_ok=exist_ok)
@@ -263,23 +252,11 @@ class RStatesOutputHelper:
         self.ind_rstates_containers = [OutputDataContainer(p) for p in rstates]
 
     def __str__(self):
-        """Return a unix tree-like representation of this instance.
-
-        Returns
-        -------
-        str
-            str representation
-        """
 
         if not self.root.exists():
             raise FileNotFoundError(f"Root directory does not exist: {self.root.as_posix()}")
 
-        ret = []
-        paths = DisplayablePath.make_tree(self.root)
-        for path in paths:
-            ret.append(path.displayable())
-
-        return "\n".join(ret)
+        return "\n".join(list(utils.tree(self.root)))
 
 
 def test():
@@ -290,46 +267,28 @@ def test():
     print(odc)
     odc.teardown()
 
-    oh = OutputHelper(
-        experiment_parameters={
-            "output_root": "./tmp",
-            "task": "cls",
-            "stop_set_size": 1000,
-            "batch_size": 10,
-            "estimator": "mlp",
-            "dataset": "Iris",
-            "random_state": 1,
-        }
-    )
+    experiment_parameters = {
+        "output_root": "./tmp",
+        "task": "cls",
+        "stop_set_size": 1000,
+        "batch_size": 7,
+        "base_learner": "NuSVC",
+        "multiclass": "ovr",
+        "feature_representation": "preprocessed",
+        "dataset": "Iris",
+        "random_state": 1,
+    }
+
+    oh = OutputHelper(experiment_parameters)
     oh.setup()
     print(oh)
     oh.teardown()
 
-    oh1 = OutputHelper(
-        experiment_parameters={
-            "output_root": "./tmp",
-            "task": "cls",
-            "stop_set_size": 1000,
-            "batch_size": 10,
-            "estimator": "mlp",
-            "dataset": "Iris",
-            "random_state": 0,
-        }
-    )
+    oh1 = OutputHelper(experiment_parameters)
     oh1.setup()
-    oh2 = OutputHelper(
-        experiment_parameters={
-            "output_root": "./tmp",
-            "task": "cls",
-            "stop_set_size": 1000,
-            "batch_size": 10,
-            "estimator": "mlp",
-            "dataset": "Iris",
-            "random_state": 1,
-        }
-    )
+    oh2 = OutputHelper(experiment_parameters)
     oh2.setup()
-    orsc = RStatesOutputHelper(oh.dataset_path)
+    orsc = RStatesOutputHelper(oh)
     print(orsc)
     oh1.teardown()
     oh2.teardown()
