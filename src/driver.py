@@ -4,6 +4,7 @@
 import json
 from pprint import pprint  # pylint: disable=unused-import
 import sys  # pylint: disable=unused-import
+import os
 import subprocess
 from typing import Dict, List, Set, Union
 
@@ -98,6 +99,7 @@ def main(
 
     job_names = []
     i = 0
+
     for random_state in experiment_parameters_lists["random_state"]:
         for stop_set_size in experiment_parameters_lists["stop_set_size"]:
             for batch_size in experiment_parameters_lists["batch_size"]:

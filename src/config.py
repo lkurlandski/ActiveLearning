@@ -3,6 +3,7 @@ Global configurations.
 """
 
 from pathlib import Path
+import shutil
 
 # This codebase needs to know where the ActiveLearning directory is
 location_of_ActiveLearning_dir = Path().resolve().as_posix()
@@ -20,6 +21,9 @@ slurm_scripts_path = Path("./slurm/scripts")
 dataset_paths = {
     "Avila": Path("/projects/nlp-ml/io/input/numeric/Avila"),
 }
+
+#Location to where files are written on nodes file system
+node_path = "/local/scratch/"
 
 # A convienient set of experiment paramaters for testing individual aspects of the system
 experiment_parameters = {

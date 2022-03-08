@@ -9,6 +9,7 @@ import sys  # pylint: disable=unused-import
 import time
 from typing import Dict, Union
 import warnings
+import os
 
 from modAL.batch import uncertainty_batch_sampling
 from modAL.models import ActiveLearner
