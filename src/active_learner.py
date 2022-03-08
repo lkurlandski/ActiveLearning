@@ -165,7 +165,7 @@ def main(experiment_parameters: Dict[str, Union[str, int]]) -> None:
     # Setup output directory structure
     job_id_list = []
     user_path = experiment_parameters["output_root"]
-    #abstract this  part
+    #abstract this part
     #also need to have some variable to check if active_learner is being run locally
     experiment_parameters["output_root"] = "/local/scratch"
     job_id_list.append(os.environ["SLURM_JOB_ID"])
