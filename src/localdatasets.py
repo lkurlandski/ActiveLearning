@@ -16,6 +16,10 @@ from sklearn.model_selection import train_test_split
 import config
 import stat_helper
 
+#New
+from datasets import load_dataset
+from transformers import pipeline, AutoTokenizer
+
 
 def get_covertype(
     random_state: int,
@@ -133,6 +137,37 @@ def get_avila(
 
     return X_train, X_test, y_train, y_test, target_names
 
+#New
+#Note: cola configuration is assumed
+def get_glue(
+    random_state: int,
+) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+    """Return the glue dataset.
+
+    Parameters
+    ----------
+    random_state : int
+        Integer used for reproducible randomization
+
+    Returns
+    -------
+    Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray]
+        The arrays for X_train, y_train, X_test, and y_test, along with the set of categories
+    """
+    
+    bunch = load_dataset('glue', 'cola')
+
+    X_train = np.array(bunch['train']['sentence'])
+    y_train = np.array(bunch['train']['label'])
+
+    X_train, y_train = stat_helper.shuffle_corresponding_arrays(X_train, y_train, random_state)
+
+    X_test = np.array(bunch['test']['sentence'])
+    y_test = np.array(bunch['test']['label'])
+
+    target_names = np.array([0,1])
+
+    return X_train, X_test, y_train, y_test, target_names
 
 # TODO: attempt to access bunch['file_names'] and create a streaming approach for text datasets
 # TODO: design a better way of handling the target_names using a LabelEncoder
@@ -168,6 +203,9 @@ def get_dataset(
         X_train, X_test, y_train, y_test, target_names = get_covertype(random_state)
     elif dataset == "Iris":
         X_train, X_test, y_train, y_test, target_names = get_iris(random_state)
+    #New
+    elif dataset == "Glue":
+        X_train, X_test, y_train, y_test, target_names = get_glue(random_state)
     else:
         raise ValueError(f"Dataset not recognized: {dataset}")
 
@@ -177,7 +215,7 @@ def get_dataset(
 def test() -> None:
     """Test."""
 
-    for dataset in ("Avila", "20NewsGroups", "Covertype", "Iris"):
+    for dataset in ("Avila", "20NewsGroups", "Covertype", "Iris", "Glue"):
         print(f"Fetching {dataset}")
         X_train, X_test, y_train, y_test, target_names = get_dataset(dataset, 0)
         for d in (X_train, X_test, y_train, y_test, target_names):
