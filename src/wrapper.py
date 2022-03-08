@@ -20,13 +20,6 @@ def main(averager: bool, local: bool) -> None:
     """
 
     experiment_parameters_lists = {
-<<<<<<< HEAD
-        "output_root": "/home/hpc/elphicb1/ActiveLearning/ActiveLearning/output4/",
-        "task": "cls",
-        "stop_set_size": [1000],
-        "batch_size": [12],
-        "estimator": ["mlp"],
-=======
         "output_root": "./output5",
         "task": "cls",
         "stop_set_size": [1000],
@@ -34,7 +27,6 @@ def main(averager: bool, local: bool) -> None:
         "base_learner": ["SVC", "MLPClassifier"],
         "multiclass": ["ovr", "ovo"],
         "feature_representation": ["preprocessed"],
->>>>>>> 0a5bb74170a096210f0cf464062b5e9a25733b41
         "dataset": ["Iris"],
         "random_state": list(range(3)),
     }
@@ -42,10 +34,6 @@ def main(averager: bool, local: bool) -> None:
     # Controls which part of the program is run
     flags = {"averaging"} if averager else {"active_learning", "processor", "graphing"}
 
-<<<<<<< HEAD
-    flags = flags_phase1
-=======
->>>>>>> 0a5bb74170a096210f0cf464062b5e9a25733b41
     driver.main(experiment_parameters_lists, flags, local)
 
 
