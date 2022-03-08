@@ -1,3 +1,7 @@
+"""Tests for stopping methods.
+# TODO: move the entire stopping methods module into its own directory.
+"""
+# pylint: skip-file
 from pprint import pprint  # pylint: disable=unused-import
 import sys  # pylint: disable=unused-import
 import unittest

@@ -10,14 +10,14 @@ import time
 from typing import Dict, Union
 import warnings
 
+from modAL.batch import uncertainty_batch_sampling
+from modAL.models import ActiveLearner
 import numpy as np
 import pandas as pd
 from sklearn.exceptions import ConvergenceWarning
 from sklearn.metrics import classification_report
 
-from modAL.batch import uncertainty_batch_sampling
-from modAL.models import ActiveLearner
-
+import config
 import estimators
 import input_helper
 import output
@@ -83,15 +83,19 @@ def report_to_json(report: Dict[str, Union[float, Dict[str, float]]], report_pat
 
 
 # TODO: come up with a better label-encoding strategy
-def get_index_for_each_class(y: np.ndarray, labels: np.ndarray) -> np.ndarray:
+def get_index_for_each_class(
+    y: np.ndarray, target_names: np.ndarray, n_each: int = 1
+) -> np.ndarray:
     """Return indices that contain location of one element per class.
 
     Parameters
     ----------
     y : np.ndarray
-        Array of train/test class labels that corresponds to an array of train/test data.
-    labels : np.ndarray
-        Array of all available classes in the labels.
+        Array of train/test class target_names that corresponds to an array of train/test data.
+    target_names : np.ndarray
+        Array of all available classes in the target_names.
+    n_each : int
+        Number of samples for each class to seed with
 
     Returns
     -------
@@ -99,16 +103,17 @@ def get_index_for_each_class(y: np.ndarray, labels: np.ndarray) -> np.ndarray:
         Indices that contain location of one element per class from y.
     """
 
-    # If the data is label-encoded (as it should be) but the labels are raw strings
+    # If the data is label-encoded (as it should be) but the target_names are raw strings
     # (as they perhaps should be) this ensures one of every encoded label is captured
-    labels = list(range(len(labels))) if y[0] not in labels else labels
+    target_names = list(range(len(target_names))) if y[0] not in set(target_names) else target_names
 
-    idx = {l: None for l in labels}
+    idx = {l: [] for l in target_names}
     for i, l in enumerate(y):
-        if idx[l] is None:
-            idx[l] = i
+        if len(idx[l]) < n_each:
+            idx[l].append(i)
 
     idx = list(idx.values())
+    idx = np.array(idx).flatten()
 
     return idx
 
@@ -125,12 +130,11 @@ def main(experiment_parameters: Dict[str, Union[str, int]]) -> None:
     """
 
     start = time.time()
-    print(f"{str(datetime.timedelta(seconds=(round(start - start))))} -- Beginning Active Learning")
+    print(f"{str(datetime.timedelta(seconds=(round(start - start))))} -- Preparing AL")
 
     # Extract hyperparameters from the experiment parameters
     stop_set_size = int(experiment_parameters["stop_set_size"])
     batch_size = int(experiment_parameters["batch_size"])
-    estimator = estimators.get_estimator_from_code(experiment_parameters["estimator"])
     random_state = int(experiment_parameters["random_state"])
 
     # Determine a stopping condition to wait upon
@@ -152,11 +156,20 @@ def main(experiment_parameters: Dict[str, Union[str, int]]) -> None:
     rng = np.random.default_rng(random_state)
 
     # Get the dataset and select a stop set from it
-    X_unlabeled_pool, X_test, y_unlabeled_pool, y_test, labels = input_helper.get_dataset(
-        experiment_parameters["dataset"], random_state
+    X_unlabeled_pool, X_test, y_unlabeled_pool, y_test, target_names = input_helper.get_data(
+        experiment_parameters["dataset"],
+        experiment_parameters["feature_representation"],
+        random_state,
     )
     X_test, X_unlabeled_pool = vectorize.w2v_vectorize(X_test, X_unlabeled_pool)
     unlabeled_pool_initial_size = y_unlabeled_pool.shape[0]
+
+    estimator = estimators.get_estimator(
+        base_learner_code=experiment_parameters["base_learner"],
+        multiclass_code=experiment_parameters["multiclass"],
+        n_targets=target_names.shape[0],
+        probabalistic_required=True,
+    )
 
     # Select a stop set for stabilizing predictions
     stop_set_size = min(stop_set_size, unlabeled_pool_initial_size)
@@ -168,16 +181,14 @@ def main(experiment_parameters: Dict[str, Union[str, int]]) -> None:
     oh.setup()
 
     # Get ids of one instance of each class
-    idx = get_index_for_each_class(y_unlabeled_pool, labels)
-    #print("this is idx", idx)
-    #print(y_unlabeled_pool[idx])
-    #print(X_unlabeled_pool[idx])
+    idx = get_index_for_each_class(y_unlabeled_pool, target_names, n_each=2)
 
     # Track the number of training data in the labeled pool
     training_data = []
 
     # Guard had some complex boolean algebra, but is correct
     i = 0
+    print(f"{str(datetime.timedelta(seconds=(round(time.time() - start))))} -- Starting AL Loop")
     while y_unlabeled_pool.shape[0] > 0 and not (
         stopping_manager.stopping_condition_met(stopping_condition) and early_stopping_enabled
     ):
@@ -253,14 +264,4 @@ if __name__ == "__main__":
 
     with warnings.catch_warnings():
         warnings.filterwarnings("ignore", category=ConvergenceWarning)
-        main(
-            experiment_parameters={
-                "output_root": "/home/hpc/elphicb1/ActiveLearning/ActiveLearning/output4",
-                "task": "cls",
-                "stop_set_size": 1000,
-                "batch_size": 10,
-                "estimator": "svm-ova",
-                "dataset": "Emotions",
-                "random_state": 0,
-            }
-        )
+        main(config.experiment_parameters)
