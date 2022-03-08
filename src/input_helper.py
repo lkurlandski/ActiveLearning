@@ -5,7 +5,7 @@ from typing import Tuple
 
 import numpy as np
 
-import datasets
+import local_datasets
 import feature_extraction
 import utils
 
@@ -37,7 +37,7 @@ def get_data(
 
     print("Loading Raw Datasets.")
     utils.print_memory_stats(True)
-    X_train, X_test, y_train, y_test, labels = datasets.get_dataset(dataset, random_state)
+    X_train, X_test, y_train, y_test, labels = local_datasets.get_dataset(dataset, random_state)
 
     print("Performing Feature Extraction.")
     utils.print_memory_stats(True)

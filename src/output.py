@@ -7,6 +7,7 @@ import os
 from typing import Dict, List, Union
 
 import utils
+import config
 
 # TODO: extract the concept of model evaluation upon a single set of examples into a container class
 # TODO: modify some of the function is graphing to operate upon these containers
@@ -213,18 +214,6 @@ class OutputHelper:
         for p in self.root.glob("*"):
             shutil.rmtree(p)
 
-    def move_output_(self, user_path, job_id_list):
-        #print(user_path)
-        #local_node_path = "/local/scratch/output"
-        #shutil.move(local_node_path, user_path)
-
-        source_dir = "/local/scratch/"
-    
-        for job_id in job_id_list:
-            shutil.move(source_dir + job_id, user_path)
-        
-        self.experiment_parameters["output_root"] = user_path
-
 
 class RStatesOutputHelper:
     """Manage the many possible random states for a particular set experiments."""
@@ -293,18 +282,17 @@ def test():
     oh1.teardown()
     oh2.teardown()
 
-def move_output(user_path):
+def move_output(experiment_parameters, user_path, job_id_list):
     #print(user_path)
     #local_node_path = "/local/scratch/output"
     #shutil.move(local_node_path, user_path)
 
-    source_dir = "/local/scratch/output"
-    target_dir = user_path
+    source_dir = config.node_path
+
+    for job_id in job_id_list:
+        shutil.move(source_dir + job_id, user_path)
     
-    file_names = os.listdir(source_dir)
-    
-    for file_name in file_names:
-        shutil.move(os.path.join(source_dir, file_name), target_dir)
+    experiment_parameters["output_root"] = user_path
 
 
 if __name__ == "__main__":

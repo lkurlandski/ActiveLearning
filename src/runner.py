@@ -6,6 +6,7 @@ from pathlib import Path
 from pprint import pformat
 from typing import Dict, Set, Union
 import warnings
+import os
 
 from sklearn.exceptions import ConvergenceWarning
 
@@ -15,6 +16,7 @@ import averager
 import graphing
 import processor
 import utils
+import output
 
 
 def main(
@@ -50,14 +52,24 @@ def main(
         f"runner.main\nflags:\n{flags},\nexperiment_parameters:\n{pformat(experiment_parameters)}"
     )
 
-    #add the code here
     utils.print_memory_stats(True)
+
+    job_id_list = []
+    print(os.environ["SLURM_JOB_ID"])
+    #try:
+    job_id_list.append(os.environ["SLURM_JOB_ID"])
+    user_path = experiment_parameters["output_root"]
+    experiment_parameters["output_root"] = config.node_path
+    #except:
+        #print("Running locally.")
+        #pass
 
     with warnings.catch_warnings():
         warnings.filterwarnings("ignore", category=ConvergenceWarning)
 
         if "active_learning" in flags or flags is None:
             active_learner.main(experiment_parameters)
+            output.move_output(experiment_parameters, user_path, job_id_list)
         if "processor" in flags or flags is None:
             processor.main(experiment_parameters)
         if "graphing" in flags or flags is None:

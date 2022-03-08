@@ -176,12 +176,6 @@ def main(experiment_parameters: Dict[str, Union[str, int]]) -> None:
     X_stop_set, y_stop_set = X_unlabeled_pool[stop_set_idx], y_unlabeled_pool[stop_set_idx]
 
     # Setup output directory structure
-    job_id_list = []
-    user_path = experiment_parameters["output_root"]
-    #abstract this part
-    #also need to have some variable to check if active_learner is being run locally
-    experiment_parameters["output_root"] = "/local/scratch"
-    job_id_list.append(os.environ["SLURM_JOB_ID"])
     oh = output.OutputHelper(experiment_parameters)
     oh.setup()
 
@@ -259,8 +253,6 @@ def main(experiment_parameters: Dict[str, Union[str, int]]) -> None:
         json.dump(results, f, sort_keys=True, indent=4, separators=(",", ": "))
 
     pd.DataFrame({"training_data": training_data}).to_csv(oh.container.training_data_file)
-
-    oh.move_output_(user_path, job_id_list)
 
     end = time.time()
     print(f"{str(datetime.timedelta(seconds=(round(end - start))))} -- Ending Active Learning")
