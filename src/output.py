@@ -283,10 +283,7 @@ def test():
     oh2.teardown()
 
 def move_output(experiment_parameters, user_path, job_id_list):
-    #print(user_path)
-    #local_node_path = "/local/scratch/output"
-    #shutil.move(local_node_path, user_path)
-
+    
     source_dir = config.node_path
 
     for job_id in job_id_list:
