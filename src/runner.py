@@ -56,13 +56,13 @@ def main(
 
     job_id_list = []
     print(os.environ["SLURM_JOB_ID"])
-    #try:
-    job_id_list.append(os.environ["SLURM_JOB_ID"])
-    user_path = experiment_parameters["output_root"]
-    experiment_parameters["output_root"] = config.node_path
-    #except:
+    try:
+        job_id_list.append(os.environ["SLURM_JOB_ID"])
+        user_path = experiment_parameters["output_root"]
+        experiment_parameters["output_root"] = config.node_path
+    except:
         #print("Running locally.")
-        #pass
+        pass
 
     with warnings.catch_warnings():
         warnings.filterwarnings("ignore", category=ConvergenceWarning)
