@@ -16,8 +16,8 @@ from sklearn.model_selection import train_test_split
 import config
 import stat_helper
 
-#New
 from datasets import load_dataset
+#I think this one isnt needed
 from transformers import pipeline, AutoTokenizer
 
 
@@ -137,12 +137,10 @@ def get_avila(
 
     return X_train, X_test, y_train, y_test, target_names
 
-#New
-#Note: cola configuration is assumed
-def get_glue(
+def get_glue_cola(
     random_state: int,
 ) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
-    """Return the glue dataset.
+    """Return the cola subset of glue dataset.
 
     Parameters
     ----------
@@ -156,6 +154,36 @@ def get_glue(
     """
     
     bunch = load_dataset('glue', 'cola')
+
+    X_train = np.array(bunch['train']['sentence'])
+    y_train = np.array(bunch['train']['label'])
+
+    X_train, y_train = stat_helper.shuffle_corresponding_arrays(X_train, y_train, random_state)
+
+    X_test = np.array(bunch['test']['sentence'])
+    y_test = np.array(bunch['test']['label'])
+
+    target_names = np.array([0,1])
+
+    return X_train, X_test, y_train, y_test, target_names
+
+def get_glue_sst2(
+    random_state: int,
+) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+    """Return the sst2 subset of glue dataset.
+
+    Parameters
+    ----------
+    random_state : int
+        Integer used for reproducible randomization
+
+    Returns
+    -------
+    Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray]
+        The arrays for X_train, y_train, X_test, and y_test, along with the set of categories
+    """
+    
+    bunch = load_dataset('glue', 'sst2')
 
     X_train = np.array(bunch['train']['sentence'])
     y_train = np.array(bunch['train']['label'])
@@ -203,9 +231,10 @@ def get_dataset(
         X_train, X_test, y_train, y_test, target_names = get_covertype(random_state)
     elif dataset == "Iris":
         X_train, X_test, y_train, y_test, target_names = get_iris(random_state)
-    #New
-    elif dataset == "Glue":
-        X_train, X_test, y_train, y_test, target_names = get_glue(random_state)
+    elif dataset == "Glue_cola":
+        X_train, X_test, y_train, y_test, target_names = get_glue_cola(random_state)
+    elif dataset == "Glue_sst2":
+        X_train, X_test, y_train, y_test, target_names = get_glue_sst2(random_state)
     else:
         raise ValueError(f"Dataset not recognized: {dataset}")
 
@@ -215,7 +244,7 @@ def get_dataset(
 def test() -> None:
     """Test."""
 
-    for dataset in ("Avila", "20NewsGroups", "Covertype", "Iris", "Glue"):
+    for dataset in ("Avila", "20NewsGroups", "Covertype", "Iris", "Glue_cola", "Glue_sst2"):
         print(f"Fetching {dataset}")
         X_train, X_test, y_train, y_test, target_names = get_dataset(dataset, 0)
         for d in (X_train, X_test, y_train, y_test, target_names):
