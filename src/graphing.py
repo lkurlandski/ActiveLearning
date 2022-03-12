@@ -190,6 +190,9 @@ def create_graphs_for_overall(overall_path: Path, stopping_df: pd.DataFrame = No
 
         fig.savefig(overall_path / f"{data_file}.png", dpi=400)
         plt.close()
+        plt.clf()
+        plt.cla()
+        fig.clf()
 
 
 ####################################################################################################
@@ -219,7 +222,11 @@ def create_graphs_for_subset(subset_path: Path, stopping_df: pd.DataFrame = None
 ####################################################################################################
 
 
-def create_graphs_for_container(container: output.OutputDataContainer, stp_mthd: List[str] = None):
+def create_graphs_for_container(
+    container: output.OutputDataContainer,
+    stp_mthd: List[str] = None,
+    add_stopping_lines: bool = True,
+):
     """Create graphs for a particular data container.
 
     Parameters
@@ -230,9 +237,12 @@ def create_graphs_for_container(container: output.OutputDataContainer, stp_mthd:
         A list of stopping methods that are column names in stopping_results.csv, for plotting
     """
 
-    stopping_df = pd.read_csv(container.stopping_results_csv_file, index_col=0)
-    if stp_mthd is not None:
-        stopping_df = stopping_df[stp_mthd]
+    if add_stopping_lines:
+        stopping_df = pd.read_csv(container.stopping_results_csv_file, index_col=0)
+        if stp_mthd is not None:
+            stopping_df = stopping_df[stp_mthd]
+    else:
+        stopping_df = None
 
     paths = (
         container.processed_stop_set_path,
