@@ -125,7 +125,9 @@ def main(
 
                                 if local:
                                     runner.main(
-                                        experiment_parameters=experiment_parameters, flags=flags
+                                        experiment_parameters=experiment_parameters,
+                                        flags=flags,
+                                        hpc=False
                                     )
                                 else:
                                     create_config_file(experiment_parameters, i)
