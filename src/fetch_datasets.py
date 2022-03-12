@@ -134,6 +134,7 @@ def get_avila(
 
     return X_train, X_test, y_train, y_test, target_names
 
+# FIXME: y_train has labels of [0,1] but y_test has labels of [-1,1]
 def get_glue_cola(
     random_state: int,
 ) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
@@ -149,7 +150,7 @@ def get_glue_cola(
     Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray]
         The arrays for X_train, y_train, X_test, and y_test, along with the set of categories
     """
-    
+
     bunch = load_dataset('glue', 'cola')
 
     X_train = np.array(bunch['train']['sentence'])
@@ -164,6 +165,7 @@ def get_glue_cola(
 
     return X_train, X_test, y_train, y_test, target_names
 
+# FIXME: y_train has labels of [0,1] but y_test has labels of [-1]
 def get_glue_sst2(
     random_state: int,
 ) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
@@ -241,7 +243,7 @@ def get_dataset(
 def test() -> None:
     """Test."""
 
-    for dataset in ("Avila", "20NewsGroups", "Covertype", "Iris", "Glue_cola", "Glue_sst2"):
+    for dataset in ("Glue_cola", "Glue_sst2"):
         print(f"Fetching {dataset}")
         X_train, X_test, y_train, y_test, target_names = get_dataset(dataset, 0)
         for d in (X_train, X_test, y_train, y_test, target_names):
