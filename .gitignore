@@ -1,7 +1,7 @@
 env
 config_files/*.json
-slurm/jobs/*.out
-slurm/scripts/*.sh
+slurm/jobs/*
+slurm/scripts/*
 output*/*
 .vscode/*
 */__pycache__
