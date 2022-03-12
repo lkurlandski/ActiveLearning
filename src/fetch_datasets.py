@@ -5,6 +5,7 @@ from pprint import pprint  # pylint: disable=unused-import
 import sys  # pylint: disable=unused-import
 from typing import Tuple
 
+from datasets import load_dataset
 import numpy as np
 from sklearn.datasets import (
     fetch_20newsgroups,
@@ -15,10 +16,6 @@ from sklearn.model_selection import train_test_split
 
 import config
 import stat_helper
-
-from datasets import load_dataset
-#I think this one isnt needed
-from transformers import pipeline, AutoTokenizer
 
 
 def get_covertype(
