@@ -118,7 +118,6 @@ def get_index_for_each_class(
 
 
 # TODO: refactor this long function to improve code quality
-# TODO: instead of deleting elements from the unlabeled pool, use masked arrays for efficiency
 def main(experiment_parameters: Dict[str, Union[str, int]]) -> None:
     """Run the active learning algorithm for a set of experiment parmameters.
 
@@ -156,9 +155,10 @@ def main(experiment_parameters: Dict[str, Union[str, int]]) -> None:
 
     # Get the dataset and select a stop set from it
     X_unlabeled_pool, X_test, y_unlabeled_pool, y_test, target_names = input_helper.get_data(
-        experiment_parameters["dataset"],
-        experiment_parameters["feature_representation"],
-        random_state,
+        dataset=experiment_parameters["dataset"],
+        stream=True,
+        feature_representation=experiment_parameters["feature_representation"],
+        random_state=random_state,
     )
     unlabeled_pool_initial_size = y_unlabeled_pool.shape[0]
 

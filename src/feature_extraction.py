@@ -1,34 +1,34 @@
 """Extract features from complex data objects, such as text documents.
-
-# 20Newsgroups memory data, lowest --mem success:
-    count       16G
-    hash        16G
-    tfidf       16G
-    hash-tfidf  16G
-    bert        16G?
-    roberta     16G?
 """
 
 from abc import ABC, abstractmethod
 from pprint import pprint  # pylint: disable=unused-import
 import sys  # pylint: disable=unused-import
-from typing import Any, List, Tuple, Union
+from typing import Any, Callable, Dict, List, Tuple, Union
 
 import numpy as np
 from sklearn.feature_extraction.text import (
     CountVectorizer,
     HashingVectorizer,
-    TfidfTransformer,
     TfidfVectorizer,
 )
-from sklearn.pipeline import make_pipeline, Pipeline
 from transformers import pipeline
-
-import utils
 
 
 class FeatureExtractor(ABC):
     """Tool for extracting features from complex data objects."""
+
+    def __init__(self, stream: bool) -> None:
+        """Create instance.
+
+        Parameters
+        ----------
+        stream : bool
+            Whether or not the input data will be streamed. This may be interpretted differently at
+                the subclass level.
+        """
+
+        self.stream = stream
 
     @abstractmethod
     def extract_features(self, X_train: Any, X_test: Any) -> Tuple[Any, Any]:
@@ -75,23 +75,42 @@ class ScikitLearnTextFeatureExtractor(FeatureExtractor):
 
     def __init__(
         self,
-        vectorizer: Union[
-            CountVectorizer, HashingVectorizer, TfidfTransformer, TfidfVectorizer, Pipeline
-        ],
-    ):
+        stream: bool,
+        vectorizer: Callable[..., Union[CountVectorizer, HashingVectorizer, TfidfVectorizer]],
+        **kwargs,
+    ) -> None:
         """Create instance with a custom vectorizer.
 
         Parameters
         ----------
-        vectorizer : Union[
-            CountVectorizer, HashingVectorizer, TfidfTransformer, TfidfVectorizer, Pipeline
-        ]
-            A scikit-learn Transformer or a Pipeline containing a chain of Transformers
+        stream : bool
+            Whether or not the input data will be streamed. In the case of text documents,
+                streamed data is expected to be a numpy array of filenames containing raw text. Non-
+                streamed data is expected to be a numpy array of raw text.
+        vectorizer : Callable[..., Union[CountVectorizer, HashingVectorizer, TfidfVectorizer]]
+            A scikit-learn vectorizer to be called/instatiated
+        *kwargs : dict
+            Keyword arguments passed to the vectorizer during instantiation
+
+        Other Parameters
+        ----------------
+        input : str
+            Used by the vectorizer, one of {'filename', 'file', 'content'}, defaults to 'content'
+        encoding : str
+            Used by the vectorizer, one of {'filename', 'file', 'content'}, defaults to 'utf-8'
+        decode_error : str
+            Used by the vectorizer, one of {'strict', 'ignore', 'replace'}, defaults to 'strict'
         """
 
-        self.vectorizer = vectorizer
+        super().__init__(stream)
 
-    def extract_features(self, X_train: np.ndarray, X_test: np.ndarray):
+        kwargs["input"] = "filename" if self.stream else "content"
+        kwargs["decode_error"] = "replace"
+        self.vectorizer = vectorizer(**kwargs)
+
+    def extract_features(
+        self, X_train: np.ndarray, X_test: np.ndarray
+    ) -> Tuple[np.ndarray, np.ndarray]:
         """Extract the features from a text dataset.
 
         Parameters
@@ -115,19 +134,21 @@ class ScikitLearnTextFeatureExtractor(FeatureExtractor):
 class HuggingFaceFeatureExtractor(FeatureExtractor):
     """Feature extractor using huggingface utilities."""
 
-    def __init__(self, model: str, chunk_size: int = 256) -> None:
+    def __init__(self, stream: bool, model: str) -> None:
         """Create instance with a specific pretrained transformer.
 
         Parameters
         ----------
+        stream : bool
+            Whether or not the input data will be streamed. In the case of text documents,
+                streamed data is expected to be a numpy array of filenames containing raw text. Non-
+                streamed data is expected to be a numpy array of raw text.
         model : str
             Name of a model from huggingface's collection of pretrained models
-        chunk_size : int, optional
-            Number of transformer embeddings to take the mean of at a time, by default 3. Larger
-                chunks require more memory but are more computationally efficient.
         """
 
-        self.chunk_size = chunk_size
+        super().__init__(stream)
+
         self.vectorizer = pipeline(task="feature-extraction", model=model)
 
     def extract_features(
@@ -168,16 +189,20 @@ class HuggingFaceFeatureExtractor(FeatureExtractor):
         """
 
         X = []
-        for doc_chunk in utils.grouper(corpus, self.chunk_size, None):
-            nanless_doc_chunk = [j for j in doc_chunk if j is not None]
-            embeddings = self.vectorizer(nanless_doc_chunk, padding=True, truncation=True)
-            processed_doc_embeddings = self.mean_text_embeddings(embeddings)
-            X.extend(processed_doc_embeddings)
+        for doc in corpus:
+            text = doc
+            if self.stream:
+                with open(doc, "rb") as f:
+                    doc = f.read()
+                text = doc.decode("utf8", "replace")
+            embeddings = self.vectorizer([text], padding=True, truncation=True)
+            embedding = self._mean_embeddings(embeddings)
+            X.extend(embedding)
 
         return np.array(X)
 
     @staticmethod
-    def mean_text_embeddings(embeddings: List[List[List[float]]]) -> List[np.ndarray]:
+    def _mean_embeddings(embeddings: List[List[List[float]]]) -> List[np.ndarray]:
         """Generate a mean embedding for a single document, suitable for representing as 1D array.
 
         Parameters
@@ -200,19 +225,19 @@ class HuggingFaceFeatureExtractor(FeatureExtractor):
         return array
 
 
-valid_feature_representations = {
-    "preprocessed",
-    "count",
-    "hash",
-    "tfidf",
-    "hash-tfidf",
-    "bert",
-    "roberta",
+mapper: Dict[str, Tuple[Callable[..., FeatureExtractor], Dict[str, Any]]]
+mapper = {
+    "preprocessed": (PreprocessedFeatureExtractor, {}),
+    "count": (ScikitLearnTextFeatureExtractor, {"vectorizer": CountVectorizer}),
+    "hash": (ScikitLearnTextFeatureExtractor, {"vectorizer": HashingVectorizer}),
+    "tfidf": (ScikitLearnTextFeatureExtractor, {"vectorizer": TfidfVectorizer}),
+    "bert": (HuggingFaceFeatureExtractor, {"model": "bert-base-uncased"}),
+    "roberta": (HuggingFaceFeatureExtractor, {"model": "roberta-base"}),
 }
 
 
 def get_features(
-    X_train: np.ndarray, X_test: np.ndarray, feature_representation: str
+    X_train: np.ndarray, X_test: np.ndarray, feature_representation: str, stream: bool
 ) -> np.ndarray:
     """Get numerical features from raw data; vectorize the data.
 
@@ -224,6 +249,8 @@ def get_features(
         Raw testing data to be vectorized
     feature_representation : str
         Code to refer to a feature representation
+    stream : bool
+        Controls whether incominng data is streamed or in full
 
     Returns
     -------
@@ -236,36 +263,18 @@ def get_features(
         If the feature representation is not recognized
     """
 
-    if feature_representation == "preprocessed":
-        vectorizer = PreprocessedFeatureExtractor()
-    elif feature_representation == "count":
-        vectorizer = ScikitLearnTextFeatureExtractor(CountVectorizer())
-    elif feature_representation == "hash":
-        vectorizer = ScikitLearnTextFeatureExtractor(HashingVectorizer())
-    elif feature_representation == "tfidf":
-        vectorizer = ScikitLearnTextFeatureExtractor(HashingVectorizer())
-    elif feature_representation == "hash-tfidf":
-        vectorizer = ScikitLearnTextFeatureExtractor(
-            make_pipeline(HashingVectorizer(), TfidfTransformer())
-        )
-    elif feature_representation == "bert":
-        vectorizer = HuggingFaceFeatureExtractor("bert-base-uncased")
-    elif feature_representation == "roberta":
-        vectorizer = HuggingFaceFeatureExtractor("roberta-base")
-    else:
-        raise ValueError(
-            f"Feature representation was not recongized: {feature_representation}."
-            f"Valid feature representations include: {valid_feature_representations}"
-        )
+    if feature_representation not in mapper:
+        raise ValueError(f"{feature_representation} not recognized.")
 
+    vectorizer_callable, kwargs = mapper[feature_representation]
+    vectorizer = vectorizer_callable(stream=stream, **kwargs)
     X_train, X_test = vectorizer.extract_features(X_train, X_test)
 
     return X_train, X_test
 
 
-def test() -> None:
+def test1():
     """Test."""
-
     X_train = [
         "Hi there!",
         "How are you?",
@@ -277,11 +286,40 @@ def test() -> None:
     ]
     X_test = ["This is some random test data.", "This data is for test set.", "This is some data"]
 
-    for feature_representation in valid_feature_representations:
+    for feature_representation in mapper:
         print(f"Extracting features with {feature_representation}")
-        _X_train, _X_test = get_features(X_train, X_test, feature_representation)
+        _X_train, _X_test = get_features(X_train, X_test, feature_representation, stream=False)
         print(f"{type(_X_train)}, {type(_X_test)}")
     print("Done.")
+
+
+def test2():
+    """Test."""
+    X_train = [
+        "/projects/nlp-ml/io/input/raw/WebKB/student/texas/httpwww.cs.utexas.eduusersadams",
+        "/projects/nlp-ml/io/input/raw/WebKB/student/texas/httpwww.cs.utexas.eduuserscxh",
+        "/projects/nlp-ml/io/input/raw/WebKB/student/texas/httpwww.cs.utexas.eduusersgzhang",
+        "/projects/nlp-ml/io/input/raw/WebKB/student/texas/httpwww.cs.utexas.eduusersmarco",
+        "/projects/nlp-ml/io/input/raw/WebKB/student/texas/httpwww.cs.utexas.eduusersrtan",
+        "/projects/nlp-ml/io/input/raw/WebKB/student/texas/httpwww.cs.utexas.eduusersvbb",
+    ]
+    X_test = [
+        "/projects/nlp-ml/io/input/raw/WebKB/student/texas/httpwww.cs.utexas.eduusersagapito",
+        "/projects/nlp-ml/io/input/raw/WebKB/student/texas/httpwww.cs.utexas.eduusersdamani",
+        "/projects/nlp-ml/io/input/raw/WebKB/student/texas/httpwww.cs.utexas.eduusershaizhou",
+    ]
+
+    for feature_representation in mapper:
+        print(f"Extracting features with {feature_representation}")
+        _X_train, _X_test = get_features(X_train, X_test, feature_representation, stream=True)
+        print(f"{type(_X_train)}, {type(_X_test)}")
+    print("Done.")
+
+
+def test() -> None:
+    """Test."""
+
+    test2()
 
 
 if __name__ == "__main__":

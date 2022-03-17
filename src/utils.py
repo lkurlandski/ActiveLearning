@@ -5,13 +5,12 @@ import inspect
 from itertools import zip_longest
 import math
 from pathlib import Path
-from pprint import pprint
-from re import S  # pylint: disable=unused-import
-import psutil
+from pprint import pprint # pylint: disable=unused-import
 import sys  # pylint: disable=unused-import
-from typing import Any, Callable, Generator, Iterator, Iterable, Tuple, Union
+from typing import Any, Callable, Generator, Iterator, Iterable, Tuple
 
 import numpy as np
+import psutil
 import scipy.sparse
 
 
@@ -78,7 +77,7 @@ def check_callable_has_parameter(_callable: Callable[..., Any], parameter: str) 
     return False
 
 
-def format_bytes(bytes: int) -> str:
+def format_bytes(n_bytes: int) -> str:
     """Return a string representation of an amount of bytes.
 
     Parameters
@@ -92,13 +91,13 @@ def format_bytes(bytes: int) -> str:
         String representation, including a unit such as MB
     """
 
-    if bytes == 0:
+    if n_bytes == 0:
         return "0B"
     size_name = ("B", "KB", "MB", "GB", "TB", "PB", "EB", "ZB", "YB")
-    i = int(math.floor(math.log(bytes, 1024)))
+    i = int(math.floor(math.log(n_bytes, 1024)))
     p = math.pow(1024, i)
-    s = round(bytes / p, 2)
-    return "%s %s" % (s, size_name[i])
+    s = round(n_bytes / p, 2)
+    return f"{s}{size_name[i]}"
 
 
 def print_memory_stats(flush: bool) -> str:
