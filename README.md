@@ -10,9 +10,11 @@ Currently, the system uses a slurm_template.sh file to create slurm scripts and 
 
 > python3 -m venv env
 
+> source env/bin/activate
+
 > pip install -r requirements.txt
 
-> source env/bin/activate
+> pip install -e .
 
 Users are advised to familiarize themselves with the engineering aspects of the Python language and execution evironment.
 
