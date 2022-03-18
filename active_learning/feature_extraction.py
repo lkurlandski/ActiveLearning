@@ -1,4 +1,10 @@
 """Extract features from complex data objects, such as text documents.
+
+TODO
+----
+- Refactor the way streaming is passed to the extractors. The FeatureExtractor and 
+    HuggingFaceFeatureExtractor do not need stream in their constructor. The 
+    ScikitLearnFeatureExtractor does need stream in its constructor.
 """
 
 from abc import ABC, abstractmethod
@@ -271,56 +277,3 @@ def get_features(
     X_train, X_test = vectorizer.extract_features(X_train, X_test)
 
     return X_train, X_test
-
-
-def test1():
-    """Test."""
-    X_train = [
-        "Hi there!",
-        "How are you?",
-        "I'm clinically insane, how are you?",
-        "Oh...uh I'm fine. I guess I'll be going n--",
-        "No.",
-        "What?",
-        "No. You will not be going. You will never be going.",
-    ]
-    X_test = ["This is some random test data.", "This data is for test set.", "This is some data"]
-
-    for feature_representation in mapper:
-        print(f"Extracting features with {feature_representation}")
-        _X_train, _X_test = get_features(X_train, X_test, feature_representation, stream=False)
-        print(f"{type(_X_train)}, {type(_X_test)}")
-    print("Done.")
-
-
-def test2():
-    """Test."""
-    X_train = [
-        "/projects/nlp-ml/io/input/raw/WebKB/student/texas/httpwww.cs.utexas.eduusersadams",
-        "/projects/nlp-ml/io/input/raw/WebKB/student/texas/httpwww.cs.utexas.eduuserscxh",
-        "/projects/nlp-ml/io/input/raw/WebKB/student/texas/httpwww.cs.utexas.eduusersgzhang",
-        "/projects/nlp-ml/io/input/raw/WebKB/student/texas/httpwww.cs.utexas.eduusersmarco",
-        "/projects/nlp-ml/io/input/raw/WebKB/student/texas/httpwww.cs.utexas.eduusersrtan",
-        "/projects/nlp-ml/io/input/raw/WebKB/student/texas/httpwww.cs.utexas.eduusersvbb",
-    ]
-    X_test = [
-        "/projects/nlp-ml/io/input/raw/WebKB/student/texas/httpwww.cs.utexas.eduusersagapito",
-        "/projects/nlp-ml/io/input/raw/WebKB/student/texas/httpwww.cs.utexas.eduusersdamani",
-        "/projects/nlp-ml/io/input/raw/WebKB/student/texas/httpwww.cs.utexas.eduusershaizhou",
-    ]
-
-    for feature_representation in mapper:
-        print(f"Extracting features with {feature_representation}")
-        _X_train, _X_test = get_features(X_train, X_test, feature_representation, stream=True)
-        print(f"{type(_X_train)}, {type(_X_test)}")
-    print("Done.")
-
-
-def test() -> None:
-    """Test."""
-
-    test2()
-
-
-if __name__ == "__main__":
-    test()
