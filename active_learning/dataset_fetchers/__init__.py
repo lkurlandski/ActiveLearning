@@ -2,7 +2,8 @@
 
 TODO
 ----
--
+- RCV1, Reuters, WebKB are all multilabel classification tasks, which is currently not supported.
+- Add multilabel support!
 
 FIXME
 -----
@@ -20,7 +21,7 @@ from sklearn.model_selection import train_test_split
 from active_learning.dataset_fetchers.base import DatasetFetcher
 from active_learning.dataset_fetchers.disk import (
     PredefinedPreprocessedFileDatasetFetcher,
-	PredefinedTextFileDatasetFetcher
+    PredefinedTextFileDatasetFetcher,
 )
 from active_learning.dataset_fetchers.scikit_learn import ScikitLearnDatasetFetcher
 
@@ -32,41 +33,41 @@ mapper = {
     "Avila": (PredefinedPreprocessedFileDatasetFetcher, {"dataset": "Avila"}),
     "Covertype": (ScikitLearnDatasetFetcher, {"dataset": "Covertype"}),
     "Iris": (ScikitLearnDatasetFetcher, {"dataset": "Iris"}),
-    "RCV1_v2": (
-        PredefinedTextFileDatasetFetcher,
-        {
-            "dataset": "RCV1_v2",
-            "categories": [
-                "CCAT",
-                "GCAT",
-                "MCAT",
-                "C15",
-                "ECAT",
-                "M14",
-                "C151",
-                "C152",
-                "GPOL",
-                "M13",
-            ],
-        },
-    ),
-    "Reuters": (
-        PredefinedTextFileDatasetFetcher,
-        {
-            "dataset": "Reuters",
-            "categories": [
-                "acq",
-                "corn",
-                "earn",
-                "grain",
-                "interest",
-                "money-fx",
-                "ship",
-                "trade",
-                "wheat",
-            ],
-        },
-    ),
+    # "RCV1_v2": (
+    #     PredefinedTextFileDatasetFetcher,
+    #     {
+    #         "dataset": "RCV1_v2",
+    #         "categories": [
+    #             "CCAT",
+    #             "GCAT",
+    #             "MCAT",
+    #             "C15",
+    #             "ECAT",
+    #             "M14",
+    #             "C151",
+    #             "C152",
+    #             "GPOL",
+    #             "M13",
+    #         ],
+    #     },
+    # ),
+    # "Reuters": (
+    #     PredefinedTextFileDatasetFetcher,
+    #     {
+    #         "dataset": "Reuters",
+    #         "categories": [
+    #             "acq",
+    #             "corn",
+    #             "earn",
+    #             "grain",
+    #             "interest",
+    #             "money-fx",
+    #             "ship",
+    #             "trade",
+    #             "wheat",
+    #         ],
+    #     },
+    # ),
     # "WebKB": (
     #    RandomizedTextFileDatasetFetcher,
     #    {"dataset": "WebKB", "categories": ["student", "faculty", "course", "project"]},
