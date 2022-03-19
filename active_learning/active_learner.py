@@ -26,7 +26,6 @@ import pandas as pd
 from sklearn.exceptions import ConvergenceWarning
 from sklearn.metrics import classification_report
 
-from active_learning import config
 from active_learning import estimators
 from active_learning import output_helper
 from active_learning import stat_helper
@@ -297,6 +296,8 @@ def main(experiment_parameters: Dict[str, Union[str, int]]) -> None:
 
 if __name__ == "__main__":
 
+    from active_learning import local
+
     with warnings.catch_warnings():
         warnings.filterwarnings("ignore", category=ConvergenceWarning)
-        main(config.experiment_parameters)
+        main(local.experiment_parameters)

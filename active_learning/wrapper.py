@@ -28,7 +28,7 @@ def main(averager: bool, local: bool) -> None:
         "multiclass": ["ovr"],
         "feature_representation": ["preprocessed"],
         "dataset": ["Iris"],
-        "random_state": list(range(1, 2)),
+        "random_state": list(range(1)),
     }
 
     # Controls which part of the program is run

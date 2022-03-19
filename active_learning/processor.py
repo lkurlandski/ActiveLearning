@@ -9,7 +9,6 @@ from typing import Dict, List, Union
 
 import pandas as pd
 
-from active_learning import config
 from active_learning import output_helper
 
 
@@ -117,6 +116,7 @@ def main(experiment_parameters: Dict[str, Union[str, int]]):
 
 
 if __name__ == "__main__":
-    print("Complete.")
-    sys.exit()
-    main(config.experiment_parameters)
+
+    from active_learning import local
+
+    main(local.experiment_parameters)

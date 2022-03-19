@@ -2,15 +2,34 @@
 """
 
 import json
+from pathlib import Path
 from pprint import pprint  # pylint: disable=unused-import
 import sys  # pylint: disable=unused-import
 import subprocess
 from typing import Dict, List, Set, Union
 
-from active_learning import config
 from active_learning import runner
 
-# TODO: SLURM overhaul (remove this temp_name garbage)
+
+# Location of the ActiveLearning directory
+root_path = Path("/home/hpc/kurlanl1/bloodgood/ActiveLearning")
+
+# Interpreter path
+python_path = root_path / "env/bin/python"
+
+# Location of the template slurm path used to produce the slurm scripts
+slurm_template_file = root_path / "slurm_template.sh"
+
+# Location of where the configuration files will be written to
+config_files_path = root_path / "config_files"
+
+# Location to put the slurm scripts
+slurm_scripts_path = root_path / "slurm/scripts"
+
+# Location to put the slurm job.out files
+slurm_jobs_path = root_path / "slurm/jobs"
+
+
 def sbatch_config_files(flags: Set[str], job_names: List[str]) -> None:
     """Launch confiuration files using sbatch.
 
@@ -23,31 +42,31 @@ def sbatch_config_files(flags: Set[str], job_names: List[str]) -> None:
     """
 
     # Delete old slurm files make the directory if needed
-    if config.slurm_scripts_path.exists():
-        for p in config.slurm_scripts_path.glob("*.sh"):
+    if slurm_scripts_path.exists():
+        for p in slurm_scripts_path.glob("*.sh"):
             p.unlink()
     else:
-        config.slurm_scripts_path.mkdir()
+        slurm_scripts_path.mkdir()
 
-    with open(config.slurm_template_path, "r", encoding="utf8") as f:
+    with open(slurm_template_file, "r", encoding="utf8") as f:
         slurm_lines = f.readlines()
 
-    for i, (p, n) in enumerate(zip(sorted(config.config_file_path.glob("*.json")), job_names)):
+    for i, (cfg_pth, name) in enumerate(zip(sorted(config_files_path.glob("*.json")), job_names)):
 
         # Replace specific lines with what we need
         for j in range(len(slurm_lines)):
-            if "--job-name" in slurm_lines[j]:
-                slurm_lines[j] = f"#SBATCH --job-name={n}\n"
-            elif "runner.main" in slurm_lines[j]:
-                slurm_lines[j] = f"runner.main(config_file='{p.as_posix()}', flags={flags})\n"
+            if "bin/python" in slurm_lines[j]:
+                slurm_lines[j] = f"#!{python_path} -u"
             elif "--chdir" in slurm_lines[j]:
-                slurm_lines[j] = f"#SBATCH --chdir={config.location_of_ActiveLearning_dir}\n"
-            elif "sys.path.append" in slurm_lines[j]:
-                slurm_lines[j] = f"sys.path.append('{config.location_of_ActiveLearning_dir}/src')\n"
-            else:
-                pass
+                slurm_lines[j] = f"#SBATCH --chdir={root_path}\n"
+            elif "--job-name" in slurm_lines[j]:
+                slurm_lines[j] = f"#SBATCH --job-name={name}\n"
+            elif "--output" in slurm_lines[j]:
+                slurm_lines[j] = f"#SBATCH --output={slurm_jobs_path}/job.%A_%a.out\n"
+            elif "runner.main" in slurm_lines[j]:
+                slurm_lines[j] = f"runner.main(config_file='{cfg_pth.as_posix()}', flags={flags})\n"
 
-        slurm_script_file = config.slurm_scripts_path / f"{i}.sh"
+        slurm_script_file = slurm_scripts_path / f"{i}.sh"
         with open(slurm_script_file, "w", encoding="utf8") as f:
             f.writelines(slurm_lines)
 
@@ -68,7 +87,7 @@ def create_config_file(experiment_parameters: Dict[str, Union[str, int]], i: int
         Used to give the config file a unique name
     """
 
-    config_file = config.config_file_path / f"{i}.json"
+    config_file = config_files_path / f"{i}.json"
     with open(config_file, "w", encoding="utf8") as f:
         json.dump(experiment_parameters, f, sort_keys=True, indent=4, separators=(",", ": "))
 
@@ -90,11 +109,11 @@ def main(
 
     # Delete old configuration files if running on the cluster and make the directory if needed
     if not local:
-        if config.config_file_path.exists():
-            for p in config.config_file_path.glob("*.json"):
+        if config_files_path.exists():
+            for p in config_files_path.glob("*.json"):
                 p.unlink()
         else:
-            config.config_file_path.mkdir()
+            config_files_path.mkdir()
 
     job_names = []
     i = 0

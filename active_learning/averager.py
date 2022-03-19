@@ -7,7 +7,6 @@ from typing import Dict, List, Union
 
 import pandas as pd
 
-from active_learning import config
 from active_learning import graphing
 from active_learning import output_helper
 from active_learning import stat_helper
@@ -15,7 +14,8 @@ from active_learning import stopping_methods
 
 
 def average_processed(
-    in_containers: List[output_helper.OutputDataContainer], out_container: output_helper.OutputDataContainer
+    in_containers: List[output_helper.OutputDataContainer],
+    out_container: output_helper.OutputDataContainer,
 ):
     """Average the contents from multiple experiments that have been processed.
 
@@ -42,7 +42,8 @@ def average_processed(
 
 
 def average_stopping(
-    in_containers: List[output_helper.OutputDataContainer], out_container: output_helper.OutputDataContainer
+    in_containers: List[output_helper.OutputDataContainer],
+    out_container: output_helper.OutputDataContainer,
 ):
     """Average the stopping results from multiple experiments.
 
@@ -60,7 +61,8 @@ def average_stopping(
 
 
 def average_container(
-    in_containers: List[output_helper.OutputDataContainer], out_container: output_helper.OutputDataContainer
+    in_containers: List[output_helper.OutputDataContainer],
+    out_container: output_helper.OutputDataContainer,
 ):
     """Average the results from multiple experiments.
 
@@ -98,4 +100,6 @@ def main(experiment_parameters: Dict[str, Union[str, int]]) -> None:
 
 if __name__ == "__main__":
 
-    main(config.experiment_parameters)
+    from active_learning import local
+
+    main(local.experiment_parameters)

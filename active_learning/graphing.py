@@ -11,7 +11,6 @@ from matplotlib.figure import Figure
 import matplotlib.pyplot as plt
 import pandas as pd
 
-from active_learning import config
 from active_learning import output_helper
 from active_learning import stopping_methods
 
@@ -215,7 +214,9 @@ def create_graphs_for_subset(subset_path: Path, stopping_df: pd.DataFrame = None
         Stopping results for plotting
     """
 
-    create_graphs_for_overall(subset_path / output_helper.OutputDataContainer.overall_str, stopping_df)
+    create_graphs_for_overall(
+        subset_path / output_helper.OutputDataContainer.overall_str, stopping_df
+    )
     # create_graphs_for_ind_cat(subset_path / output_helper.OutputDataContainer.ind_cat_str, stopping_df)
 
 
@@ -272,4 +273,6 @@ def main(experiment_parameters: Dict[str, Union[str, int]]) -> None:
 
 if __name__ == "__main__":
 
-    main(config.experiment_parameters)
+    from active_learning import local
+
+    main(local.experiment_parameters)
