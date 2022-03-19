@@ -6,9 +6,11 @@ TODO
 - Add tests for the FeatureExtractor, PreprocessedFeatureExtractor.
 - If the HuggingFaceFeatureExtractor's stream method is refactored, the associated unit tests can
     be made more efficient by not re-constructing the HuggingFaceFeatureExtractor for each test.
-"""
 
-from pathlib import Path
+FIXME
+-----
+-
+"""
 
 import numpy as np
 import scipy.sparse
@@ -18,7 +20,7 @@ from sklearn.feature_extraction.text import (
     TfidfVectorizer,
 )
 
-from active_learning.feature_extraction import (
+from active_learning.feature_extractors import (
     FeatureExtractor,
     PreprocessedFeatureExtractor,
     ScikitLearnTextFeatureExtractor,

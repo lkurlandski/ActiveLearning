@@ -16,7 +16,7 @@ from pathlib import Path
 from pprint import pprint  # pylint: disable=unused-import
 import sys  # pylint: disable=unused-import
 import time
-from typing import Dict, Union
+from typing import Any, Dict, Tuple, Union
 import warnings
 
 from modAL.batch import uncertainty_batch_sampling
@@ -74,7 +74,9 @@ def print_update(
     )
 
 
-def report_to_json(report: Dict[str, Union[float, Dict[str, float]]], report_path: Path, i: int) -> None:
+def report_to_json(
+    report: Dict[str, Union[float, Dict[str, float]]], report_path: Path, i: int
+) -> None:
     """Write a report taken from active learning to a specially named json output path.
 
     Parameters
@@ -124,6 +126,41 @@ def get_index_for_each_class(
     idx = np.array(idx).flatten()
 
     return idx
+
+
+def evaluate_and_record(
+    learner: ActiveLearner, X: np.ndarray, y: np.ndarray, raw_path: Path, iteration: int
+) -> Tuple[np.ndarray, Dict[str, Any]]:
+    """Evlaluate and record the learner's performance on a particular set of data.
+
+    Parameters
+    ----------
+    learner : ActiveLearner
+        Learner to evaluate
+    X : np.ndarray
+        Features to evaluate on
+    y : np.ndarray
+        Labels for the features
+    raw_path : Path
+        Where to save the results (corresponds to report_to_json())
+    iteration : int
+        The iteration of AL
+
+    Returns
+    -------
+    Tuple[np.ndarray, Dict[str, Any]]
+        The learner's predictions on the set and the report of the learner's performance
+    """
+
+    # Evaluate the learner on the unlabeled pool
+    preds = np.array([])
+    report = {}
+    if y.shape[0] > 0:
+        preds = learner.predict(X)
+        report = classification_report(y, preds, zero_division=1, output_dict=True)
+        report_to_json(report, raw_path, iteration)
+
+    return preds, report
 
 
 def main(experiment_parameters: Dict[str, Union[str, int]]) -> None:
@@ -216,40 +253,31 @@ def main(experiment_parameters: Dict[str, Union[str, int]]) -> None:
         X_unlabeled_pool = stat_helper.remove_ids_from_array(X_unlabeled_pool, idx)
         y_unlabeled_pool = stat_helper.remove_ids_from_array(y_unlabeled_pool, idx)
 
-        # Evaluate the learner on the test set
-        preds_test = learner.predict(X_test)
-        report_test = classification_report(y_test, preds_test, zero_division=1, output_dict=True)
-        report_to_json(report_test, oh.container.raw_test_set_path, i)
-
-        # Evaluate the learner on the unlabeled pool
-        if y_unlabeled_pool.shape[0] > 0:
-            preds_unlabeled_pool = learner.predict(X_unlabeled_pool)
-            report_unlabeled_pool = classification_report(
-                y_unlabeled_pool, preds_unlabeled_pool, zero_division=1, output_dict=True
-            )
-            report_to_json(report_unlabeled_pool, oh.container.raw_train_set_path, i)
-
-        # Evaluate the learner on the stop set
-        preds_stop_set = learner.predict(X_stop_set)
-        report_stop_set = classification_report(
-            y_stop_set, preds_stop_set, zero_division=1, output_dict=True
+        _, _ = evaluate_and_record(
+            learner, X_unlabeled_pool, y_unlabeled_pool, oh.container.raw_train_set_path, i
         )
-        report_to_json(report_stop_set, oh.container.raw_stop_set_path, i)
+        preds_stop_set, _ = evaluate_and_record(
+            learner, X_stop_set, y_stop_set, oh.container.raw_stop_set_path, i
+        )
+        _, report_test_set = evaluate_and_record(
+            learner, X_test, y_test, oh.container.raw_test_set_path, i
+        )
 
         # Evaluate the stopping methods
         stopping_manager.check_stopped(stop_set_predictions=preds_stop_set)
-        results = {
-            "annotations": learner.y_training.shape[0],
-            "iteration": i,
-            "accuracy": report_test["accuracy"],
-            "macro avg f1-score": report_test["macro avg"]["f1-score"],
-            "weighted avg f1-score": report_test["weighted avg"]["f1-score"],
-        }
-        stopping_manager.update_results(**results)
+        stopping_manager.update_results(
+            **{
+                "annotations": learner.y_training.shape[0],
+                "iteration": i,
+                "accuracy": report_test_set["accuracy"],
+                "macro avg f1-score": report_test_set["macro avg"]["f1-score"],
+                "weighted avg f1-score": report_test_set["weighted avg"]["f1-score"],
+            }
+        )
 
         # Print a status update and increment the iteration counter
         print_update(
-            start, unlabeled_pool_initial_size, y_unlabeled_pool, i, report_test["accuracy"]
+            start, unlabeled_pool_initial_size, y_unlabeled_pool, i, report_test_set["accuracy"]
         )
 
         i += 1
