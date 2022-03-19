@@ -254,7 +254,8 @@ class TextFileDatasetFetcher(FileDatasetFetcher):
         X = []
         y = []
         target_names = []
-        for i, p in enumerate(sorted(path.iterdir())):
+        i = 0
+        for p in sorted(path.iterdir()):
             if categories is not None and p.name not in categories:
                 continue
 
@@ -263,6 +264,7 @@ class TextFileDatasetFetcher(FileDatasetFetcher):
             X.extend(X_)
             y.extend(y_)
             target_names.append(p.name)
+            i += 1
 
         return X, y, target_names
 

@@ -22,11 +22,11 @@ from active_learning.dataset_fetchers.base import DatasetFetcher
 from active_learning.dataset_fetchers.disk import (
     PredefinedPreprocessedFileDatasetFetcher,
     PredefinedTextFileDatasetFetcher,
+    RandomizedTextFileDatasetFetcher,
 )
 from active_learning.dataset_fetchers.scikit_learn import ScikitLearnDatasetFetcher
 
 
-# FIXME: the data in WebKB's raw directory is not formatted correctly
 mapper: Dict[str, Tuple[DatasetFetcher, Dict[str, Any]]]
 mapper = {
     "20NewsGroups": (PredefinedTextFileDatasetFetcher, {"dataset": "20NewsGroups"}),
@@ -43,11 +43,11 @@ mapper = {
     #             "MCAT",
     #             "C15",
     #             "ECAT",
-    #             "M14",
-    #             "C151",
-    #             "C152",
-    #             "GPOL",
-    #             "M13",
+    #             # "M14",
+    #             # "C151",
+    #             # "C152",
+    #             # "GPOL",
+    #             # "M13",
     #         ],
     #     },
     # ),
