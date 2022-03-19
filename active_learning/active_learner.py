@@ -1,4 +1,13 @@
 """Run the active learning process.
+
+TODO
+----
+- Refector the main method to reduce its length and complexity.
+- Implement a label-encoding strategy for the target array.
+
+FIXME
+-----
+-
 """
 
 import datetime
@@ -19,10 +28,11 @@ from sklearn.metrics import classification_report
 
 from active_learning import config
 from active_learning import estimators
-from active_learning import input_helper
 from active_learning import output_helper
 from active_learning import stat_helper
 from active_learning import stopping_methods
+from active_learning import dataset_fetchers
+from active_learning import feature_extractors
 
 
 def print_update(
@@ -64,7 +74,7 @@ def print_update(
     )
 
 
-def report_to_json(report: Dict[str, Union[float, Dict[str, float]]], report_path: Path, i: int):
+def report_to_json(report: Dict[str, Union[float, Dict[str, float]]], report_path: Path, i: int) -> None:
     """Write a report taken from active learning to a specially named json output path.
 
     Parameters
@@ -81,7 +91,6 @@ def report_to_json(report: Dict[str, Union[float, Dict[str, float]]], report_pat
         json.dump(report, f, sort_keys=True, indent=4, separators=(",", ": "))
 
 
-# TODO: come up with a better label-encoding strategy
 def get_index_for_each_class(
     y: np.ndarray, target_names: np.ndarray, n_each: int = 1
 ) -> np.ndarray:
@@ -117,7 +126,6 @@ def get_index_for_each_class(
     return idx
 
 
-# TODO: refactor this long function to improve code quality
 def main(experiment_parameters: Dict[str, Union[str, int]]) -> None:
     """Run the active learning algorithm for a set of experiment parmameters.
 
@@ -153,13 +161,15 @@ def main(experiment_parameters: Dict[str, Union[str, int]]) -> None:
     # Otherwise, we use the most up-to-date methods provided by numpy
     rng = np.random.default_rng(random_state)
 
-    # Get the dataset and select a stop set from it
-    X_unlabeled_pool, X_test, y_unlabeled_pool, y_test, target_names = input_helper.get_data(
-        dataset=experiment_parameters["dataset"],
-        stream=True,
-        feature_representation=experiment_parameters["feature_representation"],
-        random_state=random_state,
+    # Get the dataset
+    X_unlabeled_pool, X_test, y_unlabeled_pool, y_test, target_names = dataset_fetchers.get_dataset(
+        experiment_parameters["dataset"], stream=True, random_state=random_state
     )
+    # Perform the feature extraction
+    X_unlabeled_pool, X_test = feature_extractors.get_features(
+        X_unlabeled_pool, X_test, experiment_parameters["feature_representation"], stream=True
+    )
+    # Select a stop set
     unlabeled_pool_initial_size = y_unlabeled_pool.shape[0]
 
     estimator = estimators.get_estimator(
