@@ -51,7 +51,9 @@ def sbatch_config_files(flags: Set[str], job_names: List[str]) -> None:
     with open(slurm_template_file, "r", encoding="utf8") as f:
         slurm_lines = f.readlines()
 
-    for i, (cfg_pth, name) in enumerate(zip(sorted(config_files_path.glob("*.json")), job_names)):
+    config_files = sorted(config_files_path.glob("*.json"), key=lambda x: int(x.stem))
+
+    for i, (cfg_pth, name) in enumerate(zip(config_files, job_names)):
 
         # Replace specific lines with what we need
         for j in range(len(slurm_lines)):
