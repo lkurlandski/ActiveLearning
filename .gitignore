@@ -4,5 +4,8 @@ slurm/jobs/*
 slurm/scripts/*
 output*/*
 .vscode/*
-*/__pycache__
+**/__pycache__
 *.ipynb
+active_learning.egg-info/
+build/
+dist/

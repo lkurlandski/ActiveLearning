@@ -5,9 +5,9 @@ import inspect
 from itertools import zip_longest
 import math
 from pathlib import Path
-from pprint import pprint # pylint: disable=unused-import
+from pprint import pprint  # pylint: disable=unused-import
 import sys  # pylint: disable=unused-import
-from typing import Any, Callable, Generator, Iterator, Iterable, Tuple
+from typing import Any, Callable, Generator, Iterator, Iterable, List, Tuple
 
 import numpy as np
 import psutil
@@ -100,19 +100,20 @@ def format_bytes(n_bytes: int) -> str:
     return f"{s}{size_name[i]}"
 
 
-def print_memory_stats(flush: bool) -> str:
+def print_memory_stats(flush: bool = True, attrs: List[str] = None) -> str:
     """Print statistics about the usage of memory.
 
     Parameters
     ----------
-    total : bool
-        total physical memory (exclusive swap)
-    available : bool
-        the memory that can be given instantly to processes without the system going into swap
-    used : bool
-        memory used, calculated differently depending on the platform, for info purposes only
     flush : bool
         Passed as argument to flush in print()
+    attrs : List[str]
+        Attributes of memory to print, any of
+            {
+                "total", "available", "percent", "used", "free", "active",
+                "inactive", "buffers", "cached", "shared", "slab"
+            }
+            Defaults to None, which will print all attributes of memory
 
     Returns
     -------
@@ -120,26 +121,32 @@ def print_memory_stats(flush: bool) -> str:
         The formatted memory information
     """
 
-    attrs = [
-        "total",
-        "available",
-        "percent",
-        "used",
-        "free",
-        "active",
-        "inactive",
-        "buffers",
-        "cached",
-        "shared",
-        "slab",
-    ]
+    attrs = (
+        [
+            "total",
+            "available",
+            "percent",
+            "used",
+            "free",
+            "active",
+            "inactive",
+            "buffers",
+            "cached",
+            "shared",
+            "slab",
+        ]
+        if attrs is None
+        else attrs
+    )
+
     mem = psutil.virtual_memory()
     s = "Memory\n------"
     for a in attrs:
-        s += f"\n\t{a}={format_bytes(getattr(mem, a))}"
+        data = format_bytes(getattr(mem, a)) if a != "percent" else f"{getattr(mem, a)}%"
+        s += f"\n\t{a}={data}"
     print(s, flush=flush)
 
-    return s
+    # return s
 
 
 def nbytes(a: Any) -> int:
@@ -192,3 +199,27 @@ def grouper(
     args = [iter(iterable)] * chunk_size
 
     return zip_longest(*args, fillvalue=fill_value)
+
+
+def init(cls: type, *args, **kwargs) -> Callable[..., Any]:
+    """Return a lambda function that constructs an instance of cls with the args and kwargs.
+
+    Parameters
+    ----------
+    cls : type
+        A class to construct and instance of
+
+    Other Parameters
+    ----------------
+    *args : Any
+        Positional arguments to pass to the __init__ method of cls
+    **kwargs : Any
+        Keyword arguments to pass to the __init__ method of cls
+
+    Returns
+    -------
+    Callable[..., Any]
+        A lambda function that initializes the instance
+    """
+
+    return lambda: cls(*args, **kwargs)

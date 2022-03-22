@@ -41,35 +41,22 @@ ts_corpus = [
     "***. ### ???.",
 ]
 
-tr_files = [
-    "/projects/nlp-ml/io/input/raw/WebKB/student/texas/httpwww.cs.utexas.eduusersadams",
-    "/projects/nlp-ml/io/input/raw/WebKB/student/texas/httpwww.cs.utexas.eduuserscxh",
-    "/projects/nlp-ml/io/input/raw/WebKB/student/texas/httpwww.cs.utexas.eduusersgzhang",
-    "/projects/nlp-ml/io/input/raw/WebKB/student/texas/httpwww.cs.utexas.eduusersmarco",
-]
-
-ts_files = [
-    "/projects/nlp-ml/io/input/raw/WebKB/student/texas/httpwww.cs.utexas.eduusersagapito",
-    "/projects/nlp-ml/io/input/raw/WebKB/student/texas/httpwww.cs.utexas.eduusersdamani",
-    "/projects/nlp-ml/io/input/raw/WebKB/student/texas/httpwww.cs.utexas.eduusershaizhou",
-]
-
 
 class TestScikitLearnTextFeatureExtractor:
     def test1(self):
-        vectorizer = ScikitLearnTextFeatureExtractor(stream=False, vectorizer=CountVectorizer)
+        vectorizer = ScikitLearnTextFeatureExtractor(vectorizer=CountVectorizer)
         tr, ts = vectorizer.extract_features(tr_corpus, ts_corpus)
         assert scipy.sparse.issparse(tr)
         assert scipy.sparse.issparse(ts)
 
     def test2(self):
-        vectorizer = ScikitLearnTextFeatureExtractor(stream=False, vectorizer=HashingVectorizer)
+        vectorizer = ScikitLearnTextFeatureExtractor(vectorizer=HashingVectorizer)
         tr, ts = vectorizer.extract_features(iter(tr_corpus), iter(ts_corpus))
         assert scipy.sparse.issparse(tr)
         assert scipy.sparse.issparse(ts)
 
     def test3(self):
-        vectorizer = ScikitLearnTextFeatureExtractor(stream=False, vectorizer=TfidfVectorizer)
+        vectorizer = ScikitLearnTextFeatureExtractor(vectorizer=TfidfVectorizer)
         tr, ts = vectorizer.extract_features(tr_corpus, ts_corpus)
         assert scipy.sparse.issparse(tr)
         assert scipy.sparse.issparse(ts)
@@ -77,41 +64,35 @@ class TestScikitLearnTextFeatureExtractor:
 
 class TestScikitLearnTextFeatureExtractorStreaming:
     def test1(self):
-        vectorizer = ScikitLearnTextFeatureExtractor(stream=True, vectorizer=CountVectorizer)
-        tr, ts = vectorizer.extract_features(tr_files, ts_files)
+        vectorizer = ScikitLearnTextFeatureExtractor(vectorizer=CountVectorizer)
+        tr, ts = vectorizer.extract_features((x for x in tr_corpus), (x for x in ts_corpus))
         assert scipy.sparse.issparse(tr)
         assert scipy.sparse.issparse(ts)
 
     def test2(self):
-        vectorizer = ScikitLearnTextFeatureExtractor(stream=True, vectorizer=HashingVectorizer)
-        tr, ts = vectorizer.extract_features(tr_files, ts_files)
+        vectorizer = ScikitLearnTextFeatureExtractor(vectorizer=HashingVectorizer)
+        tr, ts = vectorizer.extract_features((x for x in tr_corpus), (x for x in ts_corpus))
         assert scipy.sparse.issparse(tr)
         assert scipy.sparse.issparse(ts)
 
     def test3(self):
-        vectorizer = ScikitLearnTextFeatureExtractor(stream=True, vectorizer=TfidfVectorizer)
-        tr, ts = vectorizer.extract_features(iter(tr_files), iter(ts_files))
+        vectorizer = ScikitLearnTextFeatureExtractor(vectorizer=TfidfVectorizer)
+        tr, ts = vectorizer.extract_features(
+            iter((x for x in tr_corpus)), iter((x for x in ts_corpus))
+        )
         assert scipy.sparse.issparse(tr)
         assert scipy.sparse.issparse(ts)
-
-    def test_not_vectorizing_the_paths_themselves(self):
-        vectorizer = ScikitLearnTextFeatureExtractor(stream=False, vectorizer=CountVectorizer)
-        vectorizer_stream = ScikitLearnTextFeatureExtractor(stream=True, vectorizer=CountVectorizer)
-        tr, ts = vectorizer.extract_features(tr_files, ts_files)
-        tr_streamed, ts_streamed = vectorizer_stream.extract_features(tr_files, ts_files)
-        assert tr.shape != tr_streamed.shape
-        assert ts.shape != ts_streamed.shape
 
 
 class TestHuggingFaceFeatureExtractor:
     def test1(self):
-        vectorizer = HuggingFaceFeatureExtractor(stream=False, model="bert-base-uncased")
+        vectorizer = HuggingFaceFeatureExtractor(model="bert-base-uncased")
         tr, ts = vectorizer.extract_features(tr_corpus, ts_corpus)
         assert tr.shape == (4, 768)
         assert ts.shape == (3, 768)
 
     def test2(self):
-        vectorizer = HuggingFaceFeatureExtractor(stream=False, model="roberta-base")
+        vectorizer = HuggingFaceFeatureExtractor(model="roberta-base")
         tr, ts = vectorizer.extract_features(tr_corpus, ts_corpus)
         assert tr.shape == (4, 768)
         assert ts.shape == (3, 768)
@@ -119,21 +100,13 @@ class TestHuggingFaceFeatureExtractor:
 
 class TestHuggingFaceFeatureExtractorStreaming:
     def test1(self):
-        vectorizer = HuggingFaceFeatureExtractor(stream=True, model="bert-base-uncased")
-        tr, ts = vectorizer.extract_features(tr_files, ts_files)
+        vectorizer = HuggingFaceFeatureExtractor(model="bert-base-uncased")
+        tr, ts = vectorizer.extract_features((x for x in tr_corpus), (x for x in ts_corpus))
         assert tr.shape == (4, 768)
         assert ts.shape == (3, 768)
 
     def test2(self):
-        vectorizer = HuggingFaceFeatureExtractor(stream=True, model="roberta-base")
-        tr, ts = vectorizer.extract_features(tr_files, ts_files)
+        vectorizer = HuggingFaceFeatureExtractor(model="roberta-base")
+        tr, ts = vectorizer.extract_features((x for x in tr_corpus), (x for x in ts_corpus))
         assert tr.shape == (4, 768)
         assert ts.shape == (3, 768)
-
-    def test_not_vectorizing_the_paths_themselves(self):
-        vectorizer = HuggingFaceFeatureExtractor(stream=False, model="bert-base-uncased")
-        vectorizer_stream = HuggingFaceFeatureExtractor(stream=True, model="bert-base-uncased")
-        tr, ts = vectorizer.extract_features(tr_files, ts_files)
-        tr_streamed, ts_streamed = vectorizer_stream.extract_features(tr_files, ts_files)
-        assert not np.array_equal(tr, tr_streamed)
-        assert not np.array_equal(ts, ts_streamed)

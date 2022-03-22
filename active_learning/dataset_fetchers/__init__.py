@@ -2,8 +2,7 @@
 
 TODO
 ----
-- RCV1, Reuters, WebKB are all multilabel classification tasks, which is currently not supported.
-- Add multilabel support!
+- Add multilabel support for RCV1, Reuters, and WebKB
 
 FIXME
 -----
@@ -12,67 +11,112 @@ FIXME
 
 from pprint import pprint  # pylint: disable=unused-import
 import sys  # pylint: disable=unused-import
-from typing import Any, Dict, Tuple
+from typing import Any, Callable, Dict, Tuple
 
-from datasets import load_dataset
 import numpy as np
-from sklearn.model_selection import train_test_split
 
-from active_learning.dataset_fetchers.base import DatasetFetcher
-from active_learning.dataset_fetchers.disk import (
-    PredefinedPreprocessedFileDatasetFetcher,
-    PredefinedTextFileDatasetFetcher,
-    RandomizedTextFileDatasetFetcher,
-)
-from active_learning.dataset_fetchers.scikit_learn import ScikitLearnDatasetFetcher
+from active_learning.dataset_fetchers import base, disk, scikit_learn, huggingface
+from active_learning import utils
 
 
-mapper: Dict[str, Tuple[DatasetFetcher, Dict[str, Any]]]
-mapper = {
-    "20NewsGroups": (PredefinedTextFileDatasetFetcher, {"dataset": "20NewsGroups"}),
-    "Avila": (PredefinedPreprocessedFileDatasetFetcher, {"dataset": "Avila"}),
-    "Covertype": (ScikitLearnDatasetFetcher, {"dataset": "Covertype"}),
-    "Iris": (ScikitLearnDatasetFetcher, {"dataset": "Iris"}),
-    # "RCV1_v2": (
-    #     PredefinedTextFileDatasetFetcher,
-    #     {
-    #         "dataset": "RCV1_v2",
-    #         "categories": [
-    #             "CCAT",
-    #             "GCAT",
-    #             "MCAT",
-    #             "C15",
-    #             "ECAT",
-    #             # "M14",
-    #             # "C151",
-    #             # "C152",
-    #             # "GPOL",
-    #             # "M13",
-    #         ],
-    #     },
-    # ),
-    # "Reuters": (
-    #     PredefinedTextFileDatasetFetcher,
-    #     {
-    #         "dataset": "Reuters",
-    #         "categories": [
-    #             "acq",
-    #             "corn",
-    #             "earn",
-    #             "grain",
-    #             "interest",
-    #             "money-fx",
-    #             "ship",
-    #             "trade",
-    #             "wheat",
-    #         ],
-    #     },
-    # ),
-    # "WebKB": (
-    #    RandomizedTextFileDatasetFetcher,
-    #    {"dataset": "WebKB", "categories": ["student", "faculty", "course", "project"]},
-    # ),
-}
+def get_mapper(random_state: int = 0) -> Callable[..., base.DatasetFetcher]:
+    """Get the mapper to assist with instantiating the correct DatasetFetcher.
+
+    Parameters
+    ----------
+    random_state : int, optional
+        Random state for reporducible results, by default 0.
+
+    Returns
+    -------
+    Callable[..., base.DatasetFetcher]
+        A lambda function to instantiate the DatasetFetcher instance.
+    """
+
+    mapper = {
+        "20NewsGroups": utils.init(
+            disk.PredefinedTextFileDatasetFetcher,
+            random_state=random_state,
+            dataset="20NewsGroups",
+        ),
+        "Avila": utils.init(
+            disk.PredefinedPreprocessedFileDatasetFetcher,
+            random_state=random_state,
+            dataset="Avila",
+        ),
+        "Covertype": utils.init(
+            scikit_learn.ScikitLearnDatasetFetcher,
+            random_state=random_state,
+            dataset="Covertype",
+        ),
+        "Iris": utils.init(
+            scikit_learn.ScikitLearnDatasetFetcher,
+            random_state=random_state,
+            dataset="Iris",
+        ),
+        "RCV1_v2": utils.init(
+            disk.PredefinedTextFileDatasetFetcher,
+            random_state=random_state,
+            dataset="RCV1_v2",
+            categories=[
+                "CCAT",
+                "GCAT",
+                "MCAT",
+                "C15",
+                "ECAT",
+                "M14",
+                "C151",
+                "C152",
+                "GPOL",
+                "M13",
+            ],
+        ),
+        "Reuters": utils.init(
+            disk.PredefinedTextFileDatasetFetcher,
+            random_state=random_state,
+            dataset="Reuters",
+            categories=[
+                "acq",
+                "corn",
+                "earn",
+                "grain",
+                "interest",
+                "money-fx",
+                "ship",
+                "trade",
+                "wheat",
+            ],
+        ),
+        "WebKB": utils.init(
+            disk.RandomizedTextFileDatasetFetcher,
+            random_state=random_state,
+            dataset="WebKB",
+            categories=["student", "faculty", "course", "project"],
+        ),
+        "glue": utils.init(
+            huggingface.PredefinedClassificationFetcher,
+            random_state=random_state,
+            path="glue",
+            name="sst2",
+        ),
+        "ag_news": utils.init(
+            huggingface.PredefinedClassificationFetcher,
+            random_state=random_state,
+            path="ag_news",
+        ),
+        "amazon_polarity": utils.init(
+            huggingface.PredefinedClassificationFetcher,
+            random_state=random_state,
+            path="amazon_polarity",
+        ),
+        "emotion": utils.init(
+            huggingface.PredefinedClassificationFetcher,
+            random_state=random_state,
+            path="emotion",
+        ),
+    }
+
+    return mapper
 
 
 def get_dataset(
@@ -84,10 +128,10 @@ def get_dataset(
     ----------
     dataset : str
         Code to refer to a particular dataset
-    random_state : int, optional
-        Integer used for reproducible randomization
     stream : bool
         Controls whether data is streamed or returned in full
+    random_state : int, optional
+        Integer used for reproducible randomization
 
     Returns
     -------
@@ -100,13 +144,12 @@ def get_dataset(
         If the dataset code is not recognized
     """
 
+    mapper = get_mapper(random_state)
+
     if dataset not in mapper:
         raise ValueError(f"Dataset not recognized: {dataset}")
 
-    fetcher_callable, kwargs = mapper[dataset]
-    kwargs["random_state"] = random_state
-    kwargs["dataset"] = dataset
-    fetcher: DatasetFetcher = fetcher_callable(**kwargs)
+    fetcher = mapper[dataset]()
 
     if stream:
         X_train, X_test, y_train, y_test, target_names = fetcher.stream()

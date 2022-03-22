@@ -3,7 +3,11 @@
 TODO
 ----
 - Determine if data should be extracted from raw or normalized then change dataset_path accordingly.
-- Add support for multilabel classification in the TextDatasetFetchers
+- Add support for multilabel classification in the TextDatasetFetchers.
+- If a subset of categories is selected, documents that do not belong in any of those selected
+    categories are completely ignored. Is this the desired behavior? If not, should be ammended.
+- Add a feature to control the size of the test set for datasets with predefined train test splits,
+    eg, RCV1 has an enormous test set which is needlessly large and we do not need to use all of it.
 
 FIXME
 -----
@@ -14,7 +18,7 @@ from abc import abstractmethod
 from pathlib import Path
 from pprint import pprint  # pylint: disable=unused-import
 import sys  # pylint: disable=unused-import
-from typing import List, Tuple, Union
+from typing import Any, Generator, List, Tuple, Union
 import warnings
 
 import numpy as np
@@ -37,26 +41,14 @@ class FileDatasetFetcher(DatasetFetcher):
         Parameters
         ----------
         random_state : int
-            Random state for reproducible results, when randomization needed
+            Random state for reproducible results, when randomization needed.
         dataset : str
             Name of dataset to retrieve. Should be the same as code used throughout codebase and
-                stored in datasets_path
+                stored in datasets_path.
         """
 
         super().__init__(random_state)
         self.path = self.datasets_path / dataset
-
-    @abstractmethod
-    def fetch(
-        self,
-    ) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
-        ...
-
-    @abstractmethod
-    def stream(
-        self,
-    ) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
-        ...
 
 
 class PreprocessedFileDatasetFetcher(FileDatasetFetcher):
@@ -65,23 +57,27 @@ class PreprocessedFileDatasetFetcher(FileDatasetFetcher):
     features = "X.csv"
     target = "y.csv"
 
-    @abstractmethod
-    def fetch(
-        self,
-    ) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
-        ...
-
     def stream(
         self,
-    ) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+    ) -> Tuple[
+        Generator[Any, None, None],
+        Generator[Any, None, None],
+        Generator[Any, None, None],
+        Generator[Any, None, None],
+        np.ndarray,
+    ]:
 
-        warnings.warn(
-            "PreprocessedFileBasedFetcher does not offer native streaming support. "
-            "This request will not be serviced by streaming."
-        )
+        warnings.warn("Performing pseudo-streaming instead of true streaming.")
+
         X_train, X_test, y_train, y_test, target_names = self.fetch()
 
-        return X_train, X_test, y_train, y_test, target_names
+        return (
+            (x for x in X_train),
+            (x for x in X_test),
+            (y for y in y_train),
+            (y for y in y_test),
+            target_names,
+        )
 
 
 class PredefinedPreprocessedFileDatasetFetcher(PreprocessedFileDatasetFetcher):
@@ -120,13 +116,13 @@ class RandomizedPreprocessedFileDatasetFetcher(PreprocessedFileDatasetFetcher):
         Parameters
         ----------
         random_state : int
-            Random state for reproducible results, when randomization needed
+            Random state for reproducible results, when randomization needed.
         dataset : str
-            Name of dataset to retrieve
+            Name of dataset to retrieve.
         test_size : Union[float, int], optional
             The size of the test set, which is either a floating point percentage of the total
                 dataset size, or an integer number of examples to allocate to the test set,
-                by default None, which uses 25% of the dataset as test data
+                by default None, which uses 25% of the dataset as test data.
         """
 
         super().__init__(random_state, dataset)
@@ -155,11 +151,11 @@ class TextFileDatasetFetcher(FileDatasetFetcher):
         Parameters
         ----------
         random_state : int
-            Random state for reproducible results, when randomization needed
+            Random state for reproducible results, when randomization needed.
         dataset : str
-            Name of dataset to retrieve
+            Name of dataset to retrieve.
         categories : List[str], optional
-            Subset of ctegories to use, by default None, which indicates all categories used
+            Subset of ctegories to use, by default None, which indicates all categories used.
         """
 
         super().__init__(random_state, dataset)
@@ -167,70 +163,68 @@ class TextFileDatasetFetcher(FileDatasetFetcher):
 
     def fetch(
         self,
-    ) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+    ) -> Tuple[List[str], List[str], np.ndarray, np.ndarray, np.ndarray]:
 
-        X_train, X_test, y_train, y_test, target_names = self.load_dataset(load_content=True)
+        X_train, X_test, y_train, y_test, target_names = self.load_dataset()
 
-        return X_train, X_test, y_train, y_test, target_names
+        return (
+            list(X_train),
+            list(X_test),
+            np.array(list(y_train)),
+            np.array(list(y_test)),
+            np.array(target_names),
+        )
 
     def stream(
         self,
-    ) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+    ) -> Tuple[
+        Generator[str, None, None],
+        Generator[str, None, None],
+        Generator[Any, None, None],
+        Generator[Any, None, None],
+        np.ndarray,
+    ]:
 
-        X_train, X_test, y_train, y_test, target_names = self.load_dataset(load_content=False)
+        X_train, X_test, y_train, y_test, target_names = self.load_dataset()
 
-        return X_train, X_test, y_train, y_test, target_names
+        return X_train, X_test, y_train, y_test, np.array(target_names)
 
-    @abstractmethod
-    def load_dataset(
-        self, load_content: bool
-    ) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
-        """Load a classification dataset from files on disk.
-
-        Parameters
-        ----------
-        load_content : bool
-            Indicates if the content should be loaded into memory or not
-        """
-        ...
-
-    def _load_files(
-        self, path: Path, categories: Union[List[str], None], load_content: bool
+    def recursively_load_files(
+        self, path: Path, categories: Union[List[str], None]
     ) -> Tuple[List[str], List[int], List[str]]:
         """Handle the process of actually extracting the files from their structure.
 
-        The path must contain data in the correct format, which can be recursively structured.
+        The path must contain data in the correct format, which can be recursively structured. This
+            function is essentially a recursive version of sklearn.datasets.load_files.
 
         Parameters
         ----------
         path : Path
-            Location of files on disk
+            Location of files on disk.
         categories : Union[List[str], None]
-            Subset of categories to select. If None, uses all categories found
-        load_content : bool
-            Whether or not to bring the contents of the files into memory or use path names
+            Subset of categories to select. If None, uses all categories found.
 
         Returns
         -------
         Tuple[List[str], List[int], List[str]]
-            Features, labels, and target names found in the supplied path
+            Files of document, labels of the documents, and target names found in the supplied path
         """
 
-        def contains_directories(_path: Path) -> bool:
+        def contains_directories(path_: Path) -> bool:
             """Determine if a directory's subdirectories contain only files (no directories) or not.
 
             Parameters
             ----------
-            _path : Path
+            path_ : Path
                 Directory to check for this format
 
             Returns
             -------
             bool
-                True if the _path contains subdirectories that contain directories
+                True if the path_ contains subdirectories that contain directories.
             """
 
-            for subdir in _path.iterdir():
+            for subdir in path_.iterdir():
                 for p in subdir.iterdir():
                     if p.is_dir():
                         return True
@@ -241,15 +235,11 @@ class TextFileDatasetFetcher(FileDatasetFetcher):
             bunch = sklearn.datasets.load_files(
                 path,
                 categories=categories,
-                load_content=load_content,
+                load_content=False,
                 random_state=self.random_state,
             )
 
-            X = bunch["data"] if load_content else bunch["filenames"]
-            y = bunch["target"]
-            target_names = bunch["target_names"]
-
-            return X, y, target_names
+            return bunch["filenames"], bunch["target"], bunch["target_names"]
 
         X = []
         y = []
@@ -259,7 +249,7 @@ class TextFileDatasetFetcher(FileDatasetFetcher):
             if categories is not None and p.name not in categories:
                 continue
 
-            X_, _, _ = self._load_files(p, None, load_content)
+            X_, _, _ = self.recursively_load_files(p, None)
             y_ = [i for _ in range(len(X_))]
             X.extend(X_)
             y.extend(y_)
@@ -268,51 +258,86 @@ class TextFileDatasetFetcher(FileDatasetFetcher):
 
         return X, y, target_names
 
-    def load_files(
-        self, path: Path, categories: Union[List[str], None], load_content: bool
-    ) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
-        """Handle the process of actually extracting the files from their structure.
-
-        The path must contain data in the correct format.
+    def X_y_to_generators(
+        self, X: List[str], y: List[Any]
+    ) -> Tuple[Generator[str, None, None], Generator[Any, None, None]]:
+        """Convert a training corpus of filenames and its corresponding format to documents.
 
         Parameters
         ----------
-        path : Path
-            Location of files on disk
-        categories : Union[List[str], None]
-            Subset of categories to select. If None, uses all categories found
-        load_content : bool
-            Whether or not to bring the contents of the files into memory or use path names
+        X : List[str]
+            Filenames to read and return as generator.
+        y : List[Any]
+            Labels for the filenames.
 
         Returns
         -------
-        Tuple[np.ndarray, np.ndarray, np.ndarray]
-            Features, labels, and target names found in the supplied path
+        Tuple[Generator[str, None, None], Generator[Any, None, None]]
+            A generator of documents and a generator of labels.
         """
 
-        X, y, target_names = self._load_files(path, categories, load_content)
+        return (open(f, "rb").read().decode("utf8", "replace") for f in X), (i for i in y)
 
-        return np.array(X), np.array(y), np.array(target_names)
+    @abstractmethod
+    def load_dataset(
+        self,
+    ) -> Tuple[
+        Generator[Any, None, None],
+        Generator[Any, None, None],
+        Generator[Any, None, None],
+        Generator[Any, None, None],
+        np.ndarray,
+    ]:
+        """Load a classification dataset from files on disk.
+
+        Parameters
+        ----------
+        load_content : bool
+            Indicates if the content should be loaded into memory or not.
+
+        Returns
+        -------
+        Tuple[
+                Generator[Any, None, None],
+                Generator[Any, None, None],
+                Generator[Any, None, None],
+                Generator[Any, None, None],
+                np.ndarray,
+            ]
+            Train data, test data, train labels, test labels, and target names.
+        """
+        ...
 
 
 class PredefinedTextFileDatasetFetcher(TextFileDatasetFetcher):
     """Retrieve data from text files located on disk for datasets with train/test splits."""
 
-    def __init__(self, random_state: int, dataset: str, categories: List[str] = None):
+    def __init__(self, random_state: int, dataset: str, categories: List[str] = None) -> None:
 
         super().__init__(random_state, dataset, categories)
         self.train_path = self.path / "train"
         self.test_path = self.path / "test"
 
-    def load_dataset(self, load_content: bool):
+    def load_dataset(
+        self,
+    ) -> Tuple[
+        Generator[str, None, None],
+        Generator[str, None, None],
+        Generator[Any, None, None],
+        Generator[Any, None, None],
+        np.ndarray,
+    ]:
 
-        X_train, y_train, target_names_train = self.load_files(
-            self.train_path, self.categories, load_content
+        X_train, y_train, target_names_train = self.recursively_load_files(
+            self.train_path, self.categories
         )
-        X_test, y_test, target_names_test = self.load_files(
-            self.test_path, self.categories, load_content
+        X_test, y_test, target_names_test = self.recursively_load_files(
+            self.test_path, self.categories
         )
         target_names = np.unique(np.concatenate((target_names_train, target_names_test)))
+
+        X_train, y_train = self.X_y_to_generators(X_train, y_train)
+        X_test, y_test = self.X_y_to_generators(X_test, y_test)
 
         return X_train, X_test, y_train, y_test, target_names
 
@@ -346,11 +371,22 @@ class RandomizedTextFileDatasetFetcher(TextFileDatasetFetcher):
         super().__init__(random_state, dataset, categories)
         self.test_size = test_size
 
-    def load_dataset(self, load_content: bool):
+    def load_dataset(
+        self,
+    ) -> Tuple[
+        Generator[str, None, None],
+        Generator[str, None, None],
+        Generator[Any, None, None],
+        Generator[Any, None, None],
+        np.ndarray,
+    ]:
 
-        X, y, target_names = self.load_files(self.path, self.categories, load_content)
+        X, y, target_names = self.recursively_load_files(self.path, self.categories)
         X_train, X_test, y_train, y_test = train_test_split(
             X, y, random_state=self.random_state, test_size=self.test_size
         )
+
+        X_train, y_train = self.X_y_to_generators(X_train, y_train)
+        X_test, y_test = self.X_y_to_generators(X_test, y_test)
 
         return X_train, X_test, y_train, y_test, target_names

@@ -3,6 +3,7 @@
 from pprint import pformat
 import subprocess
 
+
 def get_our_nodes(cpu=True, gpu=True):
 
     nodes = []
@@ -19,16 +20,22 @@ def get_our_nodes(cpu=True, gpu=True):
 
     return nodes
 
+
 def analyze_disk_space(nodes):
 
     for n in nodes:
-        report = subprocess.run(["ssh", n, "df", "-h", "/local/scratch"], check=True, stdout=subprocess.PIPE)
+        report = subprocess.run(
+            ["ssh", n, "df", "-h", "/local/scratch"], check=True, stdout=subprocess.PIPE
+        )
         report = str(report.stdout.decode("utf-8"))
         print(f"Node {n}:\n{report}")
+
 
 def detect_files(nodes):
 
     for n in nodes:
-        dirs = subprocess.run(["ssh", n, "ls", "/local/scratch"], check=True, stdout=subprocess.PIPE)
+        dirs = subprocess.run(
+            ["ssh", n, "ls", "/local/scratch"], check=True, stdout=subprocess.PIPE
+        )
         dirs = str(dirs.stdout.decode("utf-8")).split()
         print(f"Node {n}:\n{pformat(sorted(dirs))}\n-------------------------\n")

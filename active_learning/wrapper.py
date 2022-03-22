@@ -20,15 +20,15 @@ def main(averager: bool, local: bool) -> None:
     """
 
     experiment_parameters_lists = {
-        "output_root": "./outputGarbage",
+        "output_root": "./outputFeatures",
         "task": "cls",
         "stop_set_size": [1000],
-        "batch_size": [7],
+        "batch_size": [500],
         "base_learner": ["SVC"],
         "multiclass": ["ovr"],
-        "feature_representation": ["preprocessed"],
-        "dataset": ["Iris"],
-        "random_state": list(range(1)),
+        "feature_representation": ["count", "bert"],
+        "dataset": ["RCV1_v2", "WebKB", "Reuters"],
+        "random_state": list(range(2)),
     }
 
     # Controls which part of the program is run

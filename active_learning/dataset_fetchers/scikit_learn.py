@@ -1,8 +1,8 @@
-"""Get training and test data.
+"""Fetch datasets using the scikit-learn API.
 
 TODO
 ----
--
+- Add support for fetching datasets from OpenML.org, which can be done through scikit-learn.
 
 FIXME
 -----
@@ -14,7 +14,6 @@ import sys  # pylint: disable=unused-import
 from typing import Any, Callable, Dict, Tuple, Union
 import warnings
 
-from datasets import load_dataset
 import numpy as np
 import sklearn.datasets
 import sklearn.utils
@@ -50,9 +49,9 @@ class ScikitLearnDatasetFetcher(DatasetFetcher):
 
         loader, kwargs = self.get_dataset_loader_and_kwargs()
 
-        if utils.check_callable_has_parameter(load_dataset, "random_state"):
+        if utils.check_callable_has_parameter(loader, "random_state"):
             kwargs["random_state"] = self.random_state
-        if utils.check_callable_has_parameter(load_dataset, "shuffle"):
+        if utils.check_callable_has_parameter(loader, "shuffle"):
             kwargs["shuffle"] = True
 
         if utils.check_callable_has_parameter(loader, "subset"):

@@ -22,7 +22,7 @@ from active_learning.feature_extractors.base import FeatureExtractor
 class HuggingFaceFeatureExtractor(FeatureExtractor):
     """Feature extractor using huggingface utilities."""
 
-    def __init__(self, stream: bool, model: str) -> None:
+    def __init__(self, model: str) -> None:
         """Create instance with a specific pretrained transformer.
 
         Parameters
@@ -34,8 +34,6 @@ class HuggingFaceFeatureExtractor(FeatureExtractor):
         model : str
             Name of a model from huggingface's collection of pretrained models
         """
-
-        super().__init__(stream)
 
         self.vectorizer = pipeline(task="feature-extraction", model=model)
 
@@ -78,12 +76,7 @@ class HuggingFaceFeatureExtractor(FeatureExtractor):
 
         X = []
         for doc in corpus:
-            text = doc
-            if self.stream:
-                with open(doc, "rb") as f:
-                    doc = f.read()
-                text = doc.decode("utf8", "replace")
-            embeddings = self.vectorizer([text], padding=True, truncation=True)
+            embeddings = self.vectorizer([doc], padding=True, truncation=True)
             embedding = self._mean_embeddings(embeddings)
             X.extend(embedding)
 

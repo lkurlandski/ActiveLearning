@@ -11,10 +11,9 @@ FIXME
 -
 """
 
-from abc import ABC, abstractmethod
 from pprint import pprint  # pylint: disable=unused-import
 import sys  # pylint: disable=unused-import
-from typing import Any, Callable, Dict, List, Tuple, Union
+from typing import Any, Callable, Dict, Tuple, Union
 
 import numpy as np
 from sklearn.feature_extraction.text import (
@@ -22,7 +21,6 @@ from sklearn.feature_extraction.text import (
     HashingVectorizer,
     TfidfVectorizer,
 )
-from transformers import pipeline
 
 from active_learning.feature_extractors.base import FeatureExtractor
 from active_learning.feature_extractors.huggingface import HuggingFaceFeatureExtractor
@@ -42,7 +40,7 @@ mapper = {
 
 
 def get_features(
-    X_train: np.ndarray, X_test: np.ndarray, feature_representation: str, stream: bool
+    X_train: np.ndarray, X_test: np.ndarray, feature_representation: str
 ) -> np.ndarray:
     """Get numerical features from raw data; vectorize the data.
 
@@ -72,7 +70,7 @@ def get_features(
         raise ValueError(f"{feature_representation} not recognized.")
 
     vectorizer_callable, kwargs = mapper[feature_representation]
-    vectorizer = vectorizer_callable(stream=stream, **kwargs)
+    vectorizer = vectorizer_callable(**kwargs)
     X_train, X_test = vectorizer.extract_features(X_train, X_test)
 
     return X_train, X_test

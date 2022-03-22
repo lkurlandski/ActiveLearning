@@ -1,4 +1,4 @@
-"""Get training and test data.
+"""Base classes for fetching datasets from several different sources.
 
 TODO
 ----
@@ -12,7 +12,7 @@ FIXME
 from abc import ABC, abstractmethod
 from pprint import pprint  # pylint: disable=unused-import
 import sys  # pylint: disable=unused-import
-from typing import Any, Tuple
+from typing import Any, Generator, Iterable, Tuple
 
 import numpy as np
 
@@ -26,29 +26,45 @@ class DatasetFetcher(ABC):
         Parameters
         ----------
         random_state : int
-            Random state for reproducible results, when randomization needed
+            Random state for reproducible results, when randomization needed.
         """
 
         self.random_state = random_state
 
     @abstractmethod
-    def fetch(self) -> Tuple[np.array, np.array, np.array, np.array, np.array]:
-        """Retrieve the data in memory.
+    def fetch(
+        self,
+    ) -> Tuple[Iterable[Any], Iterable[Any], Iterable[Any], Iterable[Any], np.ndarray]:
+        """Retrieve the data in-memory.
 
         Returns
         -------
-        Tuple[np.array, np.array, np.array, np.array, np.array]
-            train data, test data, train labels, test labels, and target names
+        Tuple[Iterable[Any], Iterable[Any], Iterable[Any], Iterable[Any], Iterable[Any]]
+            Train data, test data, train labels, test labels, and target names.
         """
         ...
 
     @abstractmethod
-    def stream(self) -> Tuple[Any, Any, Any, Any, np.array]:
+    def stream(
+        self,
+    ) -> Tuple[
+        Generator[Any, None, None],
+        Generator[Any, None, None],
+        Generator[Any, None, None],
+        Generator[Any, None, None],
+        np.ndarray,
+    ]:
         """Retrieve the data using a memory-efficient streaming approach.
 
         Returns
         -------
-        Tuple[Any, Any, Any, Any, np.array]
-            train data, test data, train labels, test labels, and target names
+        Tuple[
+                Generator[Any, None, None],
+                Generator[Any, None, None],
+                Generator[Any, None, None],
+                Generator[Any, None, None],
+                np.ndarray
+            ]
+            Train data, test data, train labels, test labels, and target names.
         """
         ...

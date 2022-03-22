@@ -28,7 +28,6 @@ class ScikitLearnTextFeatureExtractor(FeatureExtractor):
 
     def __init__(
         self,
-        stream: bool,
         vectorizer: Callable[..., Union[CountVectorizer, HashingVectorizer, TfidfVectorizer]],
         **kwargs,
     ) -> None:
@@ -42,23 +41,10 @@ class ScikitLearnTextFeatureExtractor(FeatureExtractor):
                 streamed data is expected to be a numpy array of raw text.
         vectorizer : Callable[..., Union[CountVectorizer, HashingVectorizer, TfidfVectorizer]]
             A scikit-learn vectorizer to be called/instatiated
-        *kwargs : dict
+        **kwargs : dict
             Keyword arguments passed to the vectorizer during instantiation
-
-        Other Parameters
-        ----------------
-        input : str
-            Used by the vectorizer, one of {'filename', 'file', 'content'}, defaults to 'content'
-        encoding : str
-            Used by the vectorizer, one of {'filename', 'file', 'content'}, defaults to 'utf-8'
-        decode_error : str
-            Used by the vectorizer, one of {'strict', 'ignore', 'replace'}, defaults to 'strict'
         """
 
-        super().__init__(stream)
-
-        kwargs["input"] = "filename" if self.stream else "content"
-        kwargs["decode_error"] = "replace"
         self.vectorizer = vectorizer(**kwargs)
 
     def extract_features(

@@ -203,7 +203,7 @@ def main(experiment_parameters: Dict[str, Union[str, int]]) -> None:
     )
     # Perform the feature extraction
     X_unlabeled_pool, X_test = feature_extractors.get_features(
-        X_unlabeled_pool, X_test, experiment_parameters["feature_representation"], stream=True
+        X_unlabeled_pool, X_test, experiment_parameters["feature_representation"]
     )
     # Select a stop set
     unlabeled_pool_initial_size = y_unlabeled_pool.shape[0]

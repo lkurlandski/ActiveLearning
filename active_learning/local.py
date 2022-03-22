@@ -1,4 +1,5 @@
-"""Assets that can be used across many different tests.
+"""
+Convienient for running processes locally from command line.
 
 TODO
 ----
@@ -9,8 +10,9 @@ FIXME
 -
 """
 
-experiment_parameters_iris = {
-    "output_root": None,
+
+experiment_parameters = {
+    "output_root": "outputGarbage",
     "task": "cls",
     "stop_set_size": 1000,
     "batch_size": 7,
