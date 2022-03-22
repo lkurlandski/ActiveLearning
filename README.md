@@ -71,3 +71,6 @@ Before committing changes, use black's auto formatter to enforce a uniform codin
 
 Pylint can identify errors in your code and provide other useful feedback. Consider addressing some of pylint's suggestions
 - pylint myfile.py
+
+Run the unit tests to make sure you did not break anything. Edit and add new unit tests if required.
+- pytest tests
