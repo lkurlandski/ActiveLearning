@@ -1,4 +1,12 @@
 """Protoype stopping algorithms, designed to be computed during learning instead of after it.
+
+TODO
+----
+- Bring into its own repository/module.
+
+FIXME
+-----
+-
 """
 
 from abc import ABC, abstractmethod

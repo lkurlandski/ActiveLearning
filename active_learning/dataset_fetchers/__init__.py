@@ -2,7 +2,9 @@
 
 TODO
 ----
-- Add multilabel support for RCV1, Reuters, and WebKB
+- Add multilabel support for RCV1, Reuters, and WebKB.
+- Once random_state is configured as a global variable, expose the mapper outside of its function
+    to support varification from outside this module.
 
 FIXME
 -----
@@ -127,27 +129,27 @@ def get_dataset(
     Parameters
     ----------
     dataset : str
-        Code to refer to a particular dataset
+        Code to refer to a particular dataset.
     stream : bool
-        Controls whether data is streamed or returned in full
+        Controls whether data is streamed or returned in full.
     random_state : int, optional
-        Integer used for reproducible randomization
+        Integer used for reproducible randomization.
 
     Returns
     -------
     Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray]
-        The arrays for X_train, y_train, X_test, and y_test, along with the set of categories
+        The arrays for X_train, y_train, X_test, and y_test, along with the set of categories.
 
     Raises
     ------
-    ValueError
-        If the dataset code is not recognized
+    KeyError
+        If the dataset code is not recognized.
     """
 
     mapper = get_mapper(random_state)
 
     if dataset not in mapper:
-        raise ValueError(f"Dataset not recognized: {dataset}")
+        raise KeyError(f"Dataset not recognized: {dataset}")
 
     fetcher = mapper[dataset]()
 

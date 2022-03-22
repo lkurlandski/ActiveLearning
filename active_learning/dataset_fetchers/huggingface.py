@@ -103,6 +103,7 @@ class ClassificationFetcher(HuggingFaceDatasetFetcher):
 
 class PredefinedClassificationFetcher(ClassificationFetcher):
     """Fetcher for datasets with a predefined train/test split."""
+
     ...
 
 

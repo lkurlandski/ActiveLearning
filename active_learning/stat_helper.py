@@ -1,4 +1,12 @@
 """Helpful statistical functions to assist in math and data wrangling.
+
+TODO
+----
+- Add tests and docstring for this functions.
+
+FIXME
+-----
+-
 """
 
 from pathlib import Path
@@ -185,7 +193,3 @@ def remove_ids_from_array(a: Any, idx: np.ndarray) -> Any:
         return delete_row_lil(a, idx)
 
     raise ValueError(f"Unknown matrix passed to remove_ids_from_array: {type(a)}")
-
-
-if __name__ == "__main__":
-    pass

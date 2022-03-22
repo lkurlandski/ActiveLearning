@@ -11,7 +11,7 @@ FIXME
 
 from pprint import pprint  # pylint: disable=unused-import
 import sys  # pylint: disable=unused-import
-from typing import List, Tuple
+from typing import Iterable, List, Tuple
 
 import numpy as np
 from transformers import pipeline
@@ -22,37 +22,38 @@ from active_learning.feature_extractors.base import FeatureExtractor
 class HuggingFaceFeatureExtractor(FeatureExtractor):
     """Feature extractor using huggingface utilities."""
 
-    def __init__(self, model: str) -> None:
+    def __init__(self, model: str, **kwargs) -> None:
         """Create instance with a specific pretrained transformer.
 
         Parameters
         ----------
-        stream : bool
-            Whether or not the input data will be streamed. In the case of text documents,
-                streamed data is expected to be a numpy array of filenames containing raw text. Non-
-                streamed data is expected to be a numpy array of raw text.
         model : str
             Name of a model from huggingface's collection of pretrained models
+
+        Other Parameters
+        ----------------
+        **kwargs
+            Keyword arguments to pass to huggingface pipeline() function.
         """
 
-        self.vectorizer = pipeline(task="feature-extraction", model=model)
+        self.vectorizer = pipeline(task="feature-extraction", model=model, **kwargs)
 
     def extract_features(
-        self, X_train: np.ndarray, X_test: np.ndarray
+        self, X_train: Iterable[str], X_test: Iterable[str]
     ) -> Tuple[np.ndarray, np.ndarray]:
         """Extract the features from a text dataset.
 
         Parameters
         ----------
-        X_train : np.ndarray
-            A one dimensional array of textual training data
-        X_test : np.ndarray
-            A one dimensional array of textual training data
+        X_train : Iterable[str]
+            A one dimensional iterable of textual training data.
+        X_test : Iterable[str]
+            A one dimensional iterable of textual test data.
 
         Returns
         -------
         Tuple[np.ndarray, np.ndarray]
-            Two dimensional feature representations of the input corpora
+            Two dimensional feature representations of the input corpora.
         """
 
         X_train = self._extract_features(X_train)
@@ -60,12 +61,12 @@ class HuggingFaceFeatureExtractor(FeatureExtractor):
 
         return X_train, X_test
 
-    def _extract_features(self, corpus: np.ndarray) -> np.ndarray:
+    def _extract_features(self, corpus: Iterable[str]) -> np.ndarray:
         """Extract the features from a corpus of textual data.
 
         Parameters
         ----------
-        corpus : np.ndarray
+        corpus : Iterable[str]
             Corpus of text to extract features from
 
         Returns

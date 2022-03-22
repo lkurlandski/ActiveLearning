@@ -3,9 +3,7 @@ Test the feature extraction procedures.
 
 TODO
 ----
-- Add tests for the FeatureExtractor, PreprocessedFeatureExtractor.
-- If the HuggingFaceFeatureExtractor's stream method is refactored, the associated unit tests can
-    be made more efficient by not re-constructing the HuggingFaceFeatureExtractor for each test.
+-
 
 FIXME
 -----
@@ -20,12 +18,7 @@ from sklearn.feature_extraction.text import (
     TfidfVectorizer,
 )
 
-from active_learning.feature_extractors import (
-    FeatureExtractor,
-    PreprocessedFeatureExtractor,
-    ScikitLearnTextFeatureExtractor,
-    HuggingFaceFeatureExtractor,
-)
+from active_learning.feature_extractors import huggingface, preprocessed, scikit_learn
 
 
 tr_corpus = [
@@ -42,21 +35,35 @@ ts_corpus = [
 ]
 
 
+class TestPreprocessedFeatureExtractor:
+    def test1(self):
+        vectorizer = preprocessed.PreprocessedFeatureExtractor()
+        tr, ts = vectorizer.extract_features((i for i in tr_corpus), (i for i in ts_corpus))
+        assert isinstance(tr, np.ndarray)
+        assert isinstance(ts, np.ndarray)
+
+    def test2(self):
+        vectorizer = preprocessed.PreprocessedFeatureExtractor()
+        tr, ts = vectorizer.extract_features([i for i in tr_corpus], [i for i in ts_corpus])
+        assert isinstance(tr, list)
+        assert isinstance(ts, list)
+
+
 class TestScikitLearnTextFeatureExtractor:
     def test1(self):
-        vectorizer = ScikitLearnTextFeatureExtractor(vectorizer=CountVectorizer)
+        vectorizer = scikit_learn.ScikitLearnTextFeatureExtractor(vectorizer=CountVectorizer)
         tr, ts = vectorizer.extract_features(tr_corpus, ts_corpus)
         assert scipy.sparse.issparse(tr)
         assert scipy.sparse.issparse(ts)
 
     def test2(self):
-        vectorizer = ScikitLearnTextFeatureExtractor(vectorizer=HashingVectorizer)
+        vectorizer = scikit_learn.ScikitLearnTextFeatureExtractor(vectorizer=HashingVectorizer)
         tr, ts = vectorizer.extract_features(iter(tr_corpus), iter(ts_corpus))
         assert scipy.sparse.issparse(tr)
         assert scipy.sparse.issparse(ts)
 
     def test3(self):
-        vectorizer = ScikitLearnTextFeatureExtractor(vectorizer=TfidfVectorizer)
+        vectorizer = scikit_learn.ScikitLearnTextFeatureExtractor(vectorizer=TfidfVectorizer)
         tr, ts = vectorizer.extract_features(tr_corpus, ts_corpus)
         assert scipy.sparse.issparse(tr)
         assert scipy.sparse.issparse(ts)
@@ -64,19 +71,19 @@ class TestScikitLearnTextFeatureExtractor:
 
 class TestScikitLearnTextFeatureExtractorStreaming:
     def test1(self):
-        vectorizer = ScikitLearnTextFeatureExtractor(vectorizer=CountVectorizer)
+        vectorizer = scikit_learn.ScikitLearnTextFeatureExtractor(vectorizer=CountVectorizer)
         tr, ts = vectorizer.extract_features((x for x in tr_corpus), (x for x in ts_corpus))
         assert scipy.sparse.issparse(tr)
         assert scipy.sparse.issparse(ts)
 
     def test2(self):
-        vectorizer = ScikitLearnTextFeatureExtractor(vectorizer=HashingVectorizer)
+        vectorizer = scikit_learn.ScikitLearnTextFeatureExtractor(vectorizer=HashingVectorizer)
         tr, ts = vectorizer.extract_features((x for x in tr_corpus), (x for x in ts_corpus))
         assert scipy.sparse.issparse(tr)
         assert scipy.sparse.issparse(ts)
 
     def test3(self):
-        vectorizer = ScikitLearnTextFeatureExtractor(vectorizer=TfidfVectorizer)
+        vectorizer = scikit_learn.ScikitLearnTextFeatureExtractor(vectorizer=TfidfVectorizer)
         tr, ts = vectorizer.extract_features(
             iter((x for x in tr_corpus)), iter((x for x in ts_corpus))
         )
@@ -86,13 +93,13 @@ class TestScikitLearnTextFeatureExtractorStreaming:
 
 class TestHuggingFaceFeatureExtractor:
     def test1(self):
-        vectorizer = HuggingFaceFeatureExtractor(model="bert-base-uncased")
+        vectorizer = huggingface.HuggingFaceFeatureExtractor(model="bert-base-uncased")
         tr, ts = vectorizer.extract_features(tr_corpus, ts_corpus)
         assert tr.shape == (4, 768)
         assert ts.shape == (3, 768)
 
     def test2(self):
-        vectorizer = HuggingFaceFeatureExtractor(model="roberta-base")
+        vectorizer = huggingface.HuggingFaceFeatureExtractor(model="roberta-base")
         tr, ts = vectorizer.extract_features(tr_corpus, ts_corpus)
         assert tr.shape == (4, 768)
         assert ts.shape == (3, 768)
@@ -100,13 +107,13 @@ class TestHuggingFaceFeatureExtractor:
 
 class TestHuggingFaceFeatureExtractorStreaming:
     def test1(self):
-        vectorizer = HuggingFaceFeatureExtractor(model="bert-base-uncased")
+        vectorizer = huggingface.HuggingFaceFeatureExtractor(model="bert-base-uncased")
         tr, ts = vectorizer.extract_features((x for x in tr_corpus), (x for x in ts_corpus))
         assert tr.shape == (4, 768)
         assert ts.shape == (3, 768)
 
     def test2(self):
-        vectorizer = HuggingFaceFeatureExtractor(model="roberta-base")
+        vectorizer = huggingface.HuggingFaceFeatureExtractor(model="roberta-base")
         tr, ts = vectorizer.extract_features((x for x in tr_corpus), (x for x in ts_corpus))
         assert tr.shape == (4, 768)
         assert ts.shape == (3, 768)

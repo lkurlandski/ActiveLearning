@@ -1,16 +1,24 @@
 """Acquire a scikit-learn estimator from a string code.
 
-This module is heavily reliant upon scikit-learn. Users are advised to refer to the following docs:
-    1.12. Multiclass and multioutput algorithms
-        https://scikit-learn.org/stable/modules/multiclass.html
+TODO
+----
+- Determine the optimal svm to use from scikit-learn.
+- Implement multilabel classification.
+- Expand into a module with wrappers for tensorflow, pytorch, and huggingface models.
+
+FIXME
+-----
+- Address the problem where the calibrated classifier will fail if not enough examples from each
+    class exist.
 """
+
+
 from dataclasses import dataclass, field
 from enum import Enum
 from pprint import pformat, pprint  # pylint: disable=unused-import
 import sys  # pylint: disable=unused-import
 from typing import Any, Callable, Dict, Set, Union
 
-import numpy as np
 import sklearn
 from sklearn.calibration import CalibratedClassifierCV
 from sklearn.ensemble import RandomForestClassifier
@@ -330,48 +338,3 @@ def get_estimator(
         estimator = CalibratedClassifierCV(estimator, cv=2, n_jobs=-1)
 
     return estimator
-
-
-def test():
-    """Test."""
-    import warnings
-    from sklearn.datasets import make_classification
-    from sklearn.exceptions import ConvergenceWarning
-
-    print("\nTests:\n_____\n\n")
-    learner_map = get_base_learner_map(True)
-    print(f"learner_map:-----------\n{pformat(learner_map)}\n\n")
-    multiclass_estimator_map = get_multiclass_estimator_map()
-    print(f"multiclass_estimator_map:-------------\n{pformat(multiclass_estimator_map)}\n\n")
-
-    print("get_estimator:\n-----------------------\n")
-    learner_codes = list(learner_map.keys())
-    multiclass_codes = list(multiclass_estimator_map.keys())
-
-    X, y1 = make_classification(n_classes=2)
-    X, y2 = make_classification(n_classes=4, n_informative=4)
-
-    for y in (y1, y2):
-        print(len(np.unique(y)))
-        for l in learner_codes:
-            print(f"\t{l}")
-            for m in multiclass_codes:
-                print(f"\t\t{m.value}")
-                try:
-                    e = get_estimator(l, m, len(np.unique(y)), True)
-                except ValueError as er:
-                    print(f"\t\t\t{er}")
-                    continue
-                print(f"\t\t\t{e}", end="")
-                with warnings.catch_warnings():
-                    warnings.filterwarnings("ignore", category=ConvergenceWarning)
-                    e.fit(X, y)
-                    e.predict(X)
-                    e.predict_proba(X)
-                print(f"  -  {e.score(X, y)}")
-
-
-if __name__ == "__main__":
-    print("Complete.")
-    sys.exit()
-    test()

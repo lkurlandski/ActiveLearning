@@ -1,10 +1,34 @@
-"""Administration tasks for the team admin."""
+"""Administration tasks for the team admin.
+
+TODO
+----
+-
+
+FIXME
+-----
+-
+"""
 
 from pprint import pformat
 import subprocess
+from typing import List
 
 
-def get_our_nodes(cpu=True, gpu=True):
+def get_our_nodes(cpu: bool = True, gpu: bool = True) -> List[str]:
+    """Return the nodes we commonly use.
+
+    Parameters
+    ----------
+    cpu : bool, optional
+        If True, includes the cpu nodes (broadwell and skylake), by default True.
+    gpu : bool, optional
+        If True, includes the gpu nodes (?), by default True.
+
+    Returns
+    -------
+    List[str]
+        List of the node names we use.
+    """
 
     nodes = []
 
@@ -21,7 +45,14 @@ def get_our_nodes(cpu=True, gpu=True):
     return nodes
 
 
-def analyze_disk_space(nodes):
+def analyze_disk_space(nodes: List[str]) -> None:
+    """Analyze the disk space of the /local/scratch directory on an ELSA hpc node.
+
+    Parameters
+    ----------
+    nodes : List[str]
+        List of nodes to analyze.
+    """
 
     for n in nodes:
         report = subprocess.run(
@@ -31,7 +62,14 @@ def analyze_disk_space(nodes):
         print(f"Node {n}:\n{report}")
 
 
-def detect_files(nodes):
+def detect_files(nodes: List[str]) -> None:
+    """Detect potentially stale/wasteful files in the /local/acratch directory of ELSA's hpc nodes.
+
+    Parameters
+    ----------
+    nodes : List[str]
+        List of nodes to analyze.
+    """
 
     for n in nodes:
         dirs = subprocess.run(

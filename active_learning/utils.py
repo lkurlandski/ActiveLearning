@@ -1,4 +1,12 @@
 """Random useful things unrelated to active learning, machine learning, or even mathematics.
+
+TODO
+----
+- Create a module for utils, which includes the stat_helper.
+
+FIXME
+-----
+-
 """
 
 import inspect

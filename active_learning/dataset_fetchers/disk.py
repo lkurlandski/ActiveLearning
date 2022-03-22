@@ -258,8 +258,9 @@ class TextFileDatasetFetcher(FileDatasetFetcher):
 
         return X, y, target_names
 
+    @staticmethod
     def X_y_to_generators(
-        self, X: List[str], y: List[Any]
+        X: List[str], y: List[Any]
     ) -> Tuple[Generator[str, None, None], Generator[Any, None, None]]:
         """Convert a training corpus of filenames and its corresponding format to documents.
 

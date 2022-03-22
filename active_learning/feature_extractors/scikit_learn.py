@@ -11,9 +11,9 @@ FIXME
 
 from pprint import pprint  # pylint: disable=unused-import
 import sys  # pylint: disable=unused-import
-from typing import Callable, Tuple, Union
+from typing import Callable, Iterable, Tuple, Union
 
-import numpy as np
+from scipy.sparse import spmatrix
 from sklearn.feature_extraction.text import (
     CountVectorizer,
     HashingVectorizer,
@@ -41,28 +41,31 @@ class ScikitLearnTextFeatureExtractor(FeatureExtractor):
                 streamed data is expected to be a numpy array of raw text.
         vectorizer : Callable[..., Union[CountVectorizer, HashingVectorizer, TfidfVectorizer]]
             A scikit-learn vectorizer to be called/instatiated
-        **kwargs : dict
+
+        Other Parameters
+        ----------------
+        **kwargs
             Keyword arguments passed to the vectorizer during instantiation
         """
 
         self.vectorizer = vectorizer(**kwargs)
 
     def extract_features(
-        self, X_train: np.ndarray, X_test: np.ndarray
-    ) -> Tuple[np.ndarray, np.ndarray]:
+        self, X_train: Iterable[str], X_test: Iterable[str]
+    ) -> Tuple[spmatrix, spmatrix]:
         """Extract the features from a text dataset.
 
         Parameters
         ----------
         X_train : np.ndarray
-            A one dimensional array of textual training data
+            A one dimensional array of textual training data.
         X_test : np.ndarray
-            A one dimensional array of textual training data
+            A one dimensional array of textual training data.
 
         Returns
         -------
-        Tuple[np.ndarray, np.ndarray]
-            Two dimensional feature representations of the input corpora
+        Tuple[spmatrix, spmatrix]
+            Two dimensional sparse feature representations of the input corpora.
         """
 
         X_train = self.vectorizer.fit_transform(X_train)

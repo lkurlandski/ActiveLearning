@@ -1,4 +1,12 @@
 """From experiment paramaters, create config files, then slurm scripts, and sbatch them.
+
+TODO
+----
+-
+
+FIXME
+-----
+-
 """
 
 import json
