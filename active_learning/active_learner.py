@@ -16,6 +16,7 @@ from pathlib import Path
 from pprint import pprint  # pylint: disable=unused-import
 import sys  # pylint: disable=unused-import
 import time
+import types
 from typing import Any, Dict, Tuple, Union
 import warnings
 
@@ -201,10 +202,14 @@ def main(experiment_parameters: Dict[str, Union[str, int]]) -> None:
     X_unlabeled_pool, X_test, y_unlabeled_pool, y_test, target_names = dataset_fetchers.get_dataset(
         experiment_parameters["dataset"], stream=True, random_state=random_state
     )
-    # Perform the feature extraction
+    # Perform the feature extraction and bring data in-memory, if required
     X_unlabeled_pool, X_test = feature_extractors.get_features(
         X_unlabeled_pool, X_test, experiment_parameters["feature_representation"]
     )
+    if isinstance(y_unlabeled_pool, types.GeneratorType):
+        y_unlabeled_pool = np.array(list(y_unlabeled_pool))
+    if isinstance(y_test, types.GeneratorType):
+        y_test = np.array(list(y_test))
     # Select a stop set
     unlabeled_pool_initial_size = y_unlabeled_pool.shape[0]
 

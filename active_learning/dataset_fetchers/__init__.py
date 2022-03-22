@@ -151,7 +151,7 @@ def get_dataset(
     if dataset not in mapper:
         raise KeyError(f"Dataset not recognized: {dataset}")
 
-    fetcher = mapper[dataset]()
+    fetcher: base.DatasetFetcher = mapper[dataset]()
 
     if stream:
         X_train, X_test, y_train, y_test, target_names = fetcher.stream()
