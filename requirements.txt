@@ -1,6 +1,12 @@
 absl-py==1.0.0
+-e git+https://nlp-ml.hpc.tcnj.edu:8080/kurlanl1/ActiveLearning.git@78036ba462b1bc15e0e2224babc072ce878d9b28#egg=active_learning
+aiohttp==3.8.1
+aiosignal==1.2.0
 astroid==2.9.3
 astunparse==1.6.3
+async-timeout==4.0.2
+asynctest==0.13.0
+attrs==21.4.0
 backcall==0.2.0
 black==22.1.0
 cached-property==1.5.2
@@ -9,13 +15,16 @@ certifi==2021.10.8
 charset-normalizer==2.0.11
 click==8.0.3
 cycler==0.11.0
-datasets==1.18.4
+datasets==2.0.0
 debugpy==1.5.1
 decorator==5.1.1
+dill==0.3.4
 entrypoints==0.4
 filelock==3.5.0
 flatbuffers==2.0
 fonttools==4.29.1
+frozenlist==1.3.0
+fsspec==2022.2.0
 gast==0.5.3
 google-auth==2.6.0
 google-auth-oauthlib==0.4.6
@@ -42,6 +51,9 @@ matplotlib==3.5.1
 matplotlib-inline==0.1.3
 mccabe==0.6.1
 modAL==0.4.1
+multidict==6.0.2
+multiprocess==0.70.12.2
+mypy-extensions==0.4.3
 nest-asyncio==1.5.4
 numpy==1.21.5
 oauthlib==3.2.0
@@ -49,13 +61,16 @@ opt-einsum==3.3.0
 packaging==21.3
 pandas==1.3.5
 parso==0.8.3
+pathspec==0.9.0
 pexpect==4.8.0
 pickleshare==0.7.5
 Pillow==9.0.1
 platformdirs==2.5.1
 prompt-toolkit==3.0.28
 protobuf==3.19.4
+psutil==5.9.0
 ptyprocess==0.7.0
+pyarrow==7.0.0
 pyasn1==0.4.8
 pyasn1-modules==0.2.8
 Pygments==2.11.2
@@ -68,6 +83,7 @@ pyzmq==22.3.0
 regex==2022.1.18
 requests==2.27.1
 requests-oauthlib==1.3.1
+responses==0.18.0
 rsa==4.8
 sacremoses==0.0.47
 scikit-learn==1.0.2
@@ -83,6 +99,7 @@ tf-estimator-nightly==2.8.0.dev2021122109
 threadpoolctl==3.1.0
 tokenizers==0.11.4
 toml==0.10.2
+tomli==2.0.1
 torch==1.10.2
 tornado==6.1
 tqdm==4.62.3
@@ -94,4 +111,6 @@ urllib3==1.26.8
 wcwidth==0.2.5
 Werkzeug==2.0.2
 wrapt==1.13.3
+xxhash==3.0.0
+yarl==1.7.2
 zipp==3.7.0
