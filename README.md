@@ -26,6 +26,7 @@ Enter the virtual environment (do this every time you want to use this environme
 - source env/bin/activate
 
 Install the required packages
+- pip install --upgrade pip
 - pip install -r requirements.txt
 
 Install the active_learning/ source code as package
