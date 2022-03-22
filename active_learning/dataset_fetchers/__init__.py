@@ -13,7 +13,7 @@ FIXME
 
 from pprint import pprint  # pylint: disable=unused-import
 import sys  # pylint: disable=unused-import
-from typing import Any, Callable, Dict, Tuple
+from typing import Any, Callable, Iterable, Tuple
 
 import numpy as np
 
@@ -123,7 +123,7 @@ def get_mapper(random_state: int = 0) -> Callable[..., base.DatasetFetcher]:
 
 def get_dataset(
     dataset: str, stream: bool, random_state: int
-) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+) -> Tuple[Iterable[Any], Iterable[Any], Iterable[Any], Iterable[Any], np.ndarray]:
     """Return any implemented dataset.
 
     Parameters
@@ -137,7 +137,7 @@ def get_dataset(
 
     Returns
     -------
-    Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray]
+    Tuple[Iterable[Any], Iterable[Any], Iterable[Any], Iterable[Any], np.ndarray]
         The arrays for X_train, y_train, X_test, and y_test, along with the set of categories.
 
     Raises
