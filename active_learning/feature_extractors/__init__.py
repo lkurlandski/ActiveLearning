@@ -25,6 +25,7 @@ from active_learning.feature_extractors import base
 from active_learning.feature_extractors import huggingface
 from active_learning.feature_extractors import preprocessed
 from active_learning.feature_extractors import scikit_learn
+from active_learning.feature_extractors import gensim
 from active_learning import utils
 
 
@@ -36,6 +37,8 @@ mapper = {
     "tfidf": utils.init(scikit_learn.ScikitLearnTextFeatureExtractor, vectorizer=TfidfVectorizer),
     "bert": utils.init(huggingface.HuggingFaceFeatureExtractor, model="bert-base-uncased"),
     "roberta": utils.init(huggingface.HuggingFaceFeatureExtractor, model="roberta-base"),
+    "w2v": utils.init(gensim.GensimFeatureExtractor, model="w2v"),
+    "d2v": utils.init(gensim.GensimFeatureExtractor, model="d2v")
 }
 
 
@@ -68,6 +71,8 @@ def get_features(
         raise KeyError(f"{feature_representation} not recognized.")
 
     feature_extractor = mapper[feature_representation]()
+    print("before feature extract")
     X_train, X_test = feature_extractor.extract_features(X_train, X_test)
+    print("after feature extract")
 
     return X_train, X_test

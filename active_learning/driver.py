@@ -21,7 +21,7 @@ from active_learning import runner
 
 
 # Location of the ActiveLearning directory
-root_path = Path("/home/hpc/kurlanl1/bloodgood/ActiveLearning")
+root_path = Path("/home/hpc/elphicb1/ActiveLearning/ActiveLearning")
 
 # Interpreter path
 python_path = root_path / "env/bin/python"

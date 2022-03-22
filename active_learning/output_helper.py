@@ -14,8 +14,8 @@ import shutil
 import os
 from typing import Dict, List, Union
 
-import utils
-import config
+#import utils
+#import config
 from active_learning import utils
 
 

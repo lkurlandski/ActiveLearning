@@ -35,9 +35,9 @@ def main(averager: bool, local: bool) -> None:
         "batch_size": [500],
         "base_learner": ["SVC"],
         "multiclass": ["ovr"],
-        "feature_representation": ["count", "bert"],
-        "dataset": ["RCV1_v2", "WebKB", "Reuters"],
-        "random_state": list(range(2)),
+        "feature_representation": ["d2v"],
+        "dataset": ["emotion"],
+        "random_state": list(range(1)),
     }
 
     # Controls which part of the program is run
