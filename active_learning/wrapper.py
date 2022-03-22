@@ -1,11 +1,20 @@
 """Wrapper to run any and all processes for any and all experiment parameters.
+
+TODO
+----
+-
+
+FIXME
+-----
+-
 """
 
 import argparse
 from pprint import pprint  # pylint: disable=unused-import
 import sys  # pylint: disable=unused-import
 
-import driver
+from active_learning import driver
+from active_learning import runner
 
 
 def main(averager: bool, local: bool) -> None:
@@ -20,19 +29,19 @@ def main(averager: bool, local: bool) -> None:
     """
 
     experiment_parameters_lists = {
-        "output_root": "/home/hpc/elphicb1/ActiveLearning/ActiveLearning/output4",
+        "output_root": "./outputFeatures",
         "task": "cls",
         "stop_set_size": [1000],
-        "batch_size": [50],
+        "batch_size": [500],
         "base_learner": ["SVC"],
         "multiclass": ["ovr"],
-        "feature_representation": ["w2v"],
-        "dataset": ["TweetEval"],
-        "random_state": list(range(1)),
+        "feature_representation": ["count", "bert"],
+        "dataset": ["RCV1_v2", "WebKB", "Reuters"],
+        "random_state": list(range(2)),
     }
 
     # Controls which part of the program is run
-    flags = {"averaging"} if averager else {"active_learning", "processor", "graphing"}
+    flags = {"averaging"} if averager else runner.default_flags
 
     driver.main(experiment_parameters_lists, flags, local)
 

@@ -1,46 +1,63 @@
 # ActiveLearning
 
-An active learning experimental environment based upon open source active learning libraries and frameworks. Much of this is inspired by the NLP-ML-Research repository, but is designed to be more modular, light weight, and simpler.
+An active learning experimental environment based upon open source active learning libraries and frameworks. Much of this is inspired by the NLP-ML-Research repository.
 
-## Technical Requirements
+## Requirements
 
-Codebase is written in Python 3.7.5. Goal is to upgrade this to Python 3.9.9. Requirements are contained in requirements.txt. 
+This codebase was written in Python 3.7.5. Third party requirements are detailed the requirements.txt file. 
 
-Currently, the system uses a slurm_template.sh file to create slurm scripts and execute them. The first line is this file tells the slurm script where to find the Python interpreter to use. The first line is '#!./env/bin/python -u', which indicates that it is looking for a Python interpreter in the ./env/bin/python location. Eventually, we will want to improve upon this clumsy behavior, but for now, you can simply perform the following:
+## Setup
 
-> python3 -m venv env
+The following command-line arguments should be sufficient to set up users.
 
-> pip install -r requirements.txt
+For ELSA users
+- ssh {user-id}@elsa.hpc.tcnj.edu
+- ssh dev1
 
-> source env/bin/activate
+Clone and enter repository
+- git clone https://nlp-ml.hpc.tcnj.edu:8080/kurlanl1/ActiveLearning.git
+- cd ActiveLearning
+
+Set up a virtual environment with the correct version of Python
+- module add python/3.7.5
+- python3 -m venv env
+
+Enter the virtual environment (do this every time you want to use this environment)
+- source env/bin/activate
+
+Install the required packages
+- pip install --upgrade pip
+- pip install -r requirements.txt
+
+Install the active_learning/ source code as package
+- pip install -e .
 
 Users are advised to familiarize themselves with the engineering aspects of the Python language and execution evironment.
 
 ## Codebase Usage
 
-The main components of this system are:
-- active_learner.py - runs active learning experiments
-- processor.py - processes raw output from active learning experiments into simple csv file formats
-- stopping.py - runs rudimentary stopping algorithms to compute where Stabilizing Predictions stops
-- graphing.py - creates learning curves from the processed and stopping data
-- averager.py - averages experimental runs across several different random sampling versions
+All source code for this repository resides in the active_learning package. 
 
-Each of these scripts can be run from the command line by changing the experiment_parameters dictionary to perform the process for a single set of active learning hyperparamerters. 
+There are four scripts that perform the active learning experiments and analyze the data:
+- active_learning/active_learner.py - runs active learning experiments
+- active_learning/processor.py - processes raw output from active learning experiments into simple csv file formats
+- active_learning/graphing.py - creates learning curves from the processed and stopping data
+- active_learning/averager.py - averages experimental runs across several different random sampling versions
 
-To run a many active learning experiments with several different options for the various parameters on the HPC, you need to use the following, which can all be easily controlled from wrapper.py:
-- driver.py - creates configuration files, creates slurm scripts, calls sbatch to run slurm scripts
+Each of these scripts can be run from the command line for a single set of experimental hyperparamerters. When run from the command line, they will use the experimental configurations specified in active_learning/local.py. To run from the command line,
+- python active_learning/active_learner.py
+- python active_learning/processor.py
+- python active_learning/graphing.py
+- python active_learning/averager.py
+
+If we want to run all four of these scripts in succession, one after another, we can use active_learning/runner.py. 
 - runner.py - interfaces to the active_learner, processor, stopping, graphing, and averager scripts
-- wrapper.py - interfaces to the driver and the runner scripts
 
-Additional assets include:
-- config.py - system-level configurations
-- estimators.py - handle base learners and estimators
-- input_helper.py - handle dataset input
-- output_helper.py - manage the complex output structure of active learning experiments
-- state_helper.py - contains useful statistical functions
-- stopping_methods.py - (prototype) assets for a future iteration of stopping criterion research
-- vectorizers.py - (prototype) assets to handle processing raw text into numerical format
-- verify.py - (depreciated) assets to check if all files are present in the output path
+If we want to run several experiments, we use a active_learning/wrapper.py to run different combinations of experimental configurations. By default, this program will be executed on the cluster. The user can run this program locally by running the --local flag. By default, this will not run the averager.py program. The user can add the --averager flag to run the averager.py program instead of the active_learner.py, processor.py, and graphing.py programs. In summary, the possible ways to run wrapper.py are as follows:
+- python active_learning/wrapper.py
+- python active_learning/wrapper.py --local
+- python active_learning/wrapper.py --average
+- python active_learning/wrapper.py --local --average
 
 ## Contributing
 
@@ -51,7 +68,10 @@ Using a uniform coding style across all team members can improve the readability
 - Limit the number of characters per line to 100 (suggest using an IDE extension to put vertical line at this position)
 
 Before committing changes, use black's auto formatter to enforce a uniform coding style
-> black --line-length 100 myfile.py
+- black --line-length 100 myfile.py
 
-and consider implementing some of the suggestions from pylint
-> pylint myfile.py
+Pylint can identify errors in your code and provide other useful feedback. Consider addressing some of pylint's suggestions
+- pylint myfile.py
+
+Run the unit tests to make sure you did not break anything. Edit and add new unit tests if required.
+- pytest tests

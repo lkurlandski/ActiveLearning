@@ -1,4 +1,12 @@
 """Assist with setting up and maintaining the output structure for experiments.
+
+TODO
+----
+- This system will probably require some refactoring at some point.
+
+FIXME
+-----
+-
 """
 
 from pathlib import Path
@@ -8,10 +16,9 @@ from typing import Dict, List, Union
 
 import utils
 import config
+from active_learning import utils
 
-# TODO: extract the concept of model evaluation upon a single set of examples into a container class
-# TODO: modify some of the function is graphing to operate upon these containers
-# TODO: separate the average OutputDataContainer (has no raw) from the indivudal OutputDataContainer
+
 class OutputDataContainer:
     """Results from one set of experiments or an everage across many sets."""
 
@@ -246,51 +253,3 @@ class RStatesOutputHelper:
             raise FileNotFoundError(f"Root directory does not exist: {self.root.as_posix()}")
 
         return "\n".join(list(utils.tree(self.root)))
-
-
-def test():
-    """Test."""
-
-    odc = OutputDataContainer("./tmp")
-    odc.setup()
-    print(odc)
-    odc.teardown()
-
-    experiment_parameters = {
-        "output_root": "./tmp",
-        "task": "cls",
-        "stop_set_size": 1000,
-        "batch_size": 7,
-        "base_learner": "NuSVC",
-        "multiclass": "ovr",
-        "feature_representation": "preprocessed",
-        "dataset": "Iris",
-        "random_state": 1,
-    }
-
-    oh = OutputHelper(experiment_parameters)
-    oh.setup()
-    print(oh)
-    oh.teardown()
-
-    oh1 = OutputHelper(experiment_parameters)
-    oh1.setup()
-    oh2 = OutputHelper(experiment_parameters)
-    oh2.setup()
-    orsc = RStatesOutputHelper(oh)
-    print(orsc)
-    oh1.teardown()
-    oh2.teardown()
-
-def move_output(experiment_parameters, user_path, job_id_list):
-    
-    source_dir = config.node_path
-
-    for job_id in job_id_list:
-        shutil.move(source_dir + job_id, user_path)
-    
-    experiment_parameters["output_root"] = user_path
-
-
-if __name__ == "__main__":
-    test()

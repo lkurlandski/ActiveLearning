@@ -1,8 +1,8 @@
-#!./env/bin/python -u
+#!/home/hpc/kurlanl1/bloodgood/ActiveLearning/env/bin/python -u
 
 #SBATCH --chdir=/home/hpc/kurlanl1/bloodgood/ActiveLearning
-#SBATCH --job-name=avila
-#SBATCH --output=./slurm/jobs/job.%A_%a.out
+#SBATCH --job-name=20NewsGroups
+#SBATCH --output=/home/hpc/kurlanl1/bloodgood/ActiveLearning/slurm/jobs/job.%A_%a.out
 #SBATCH --signal=B:INT@600
 #SBATCH --constraint="skylake|broadwell"
 #SBATCH --partition=long
@@ -16,9 +16,8 @@ import time
 import atexit
 import signal
 
-sys.path.append("/home/hpc/kurlanl1/bloodgood/ActiveLearning/src")
 
-import runner
+from active_learning import runner
 
 print('Running on:', platform.node())
 

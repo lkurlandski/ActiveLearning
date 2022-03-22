@@ -1,4 +1,12 @@
 """Create plots for the output data.
+
+TODO
+----
+-
+
+FIXME
+-----
+-
 """
 
 from pathlib import Path
@@ -11,9 +19,8 @@ from matplotlib.figure import Figure
 import matplotlib.pyplot as plt
 import pandas as pd
 
-import config
-import output
-import stopping_methods
+from active_learning import output_helper
+from active_learning import stopping_methods
 
 # Colors for stopping methods
 colors_stopping = ["lime", "blue", "megenta", "midnightblue"]
@@ -190,6 +197,9 @@ def create_graphs_for_overall(overall_path: Path, stopping_df: pd.DataFrame = No
 
         fig.savefig(overall_path / f"{data_file}.png", dpi=400)
         plt.close()
+        plt.clf()
+        plt.cla()
+        fig.clf()
 
 
 ####################################################################################################
@@ -212,27 +222,36 @@ def create_graphs_for_subset(subset_path: Path, stopping_df: pd.DataFrame = None
         Stopping results for plotting
     """
 
-    create_graphs_for_overall(subset_path / output.OutputDataContainer.overall_str, stopping_df)
-    # create_graphs_for_ind_cat(subset_path / output.OutputDataContainer.ind_cat_str, stopping_df)
+    create_graphs_for_overall(
+        subset_path / output_helper.OutputDataContainer.overall_str, stopping_df
+    )
+    # create_graphs_for_ind_cat(subset_path / output_helper.OutputDataContainer.ind_cat_str, stopping_df)
 
 
 ####################################################################################################
 
 
-def create_graphs_for_container(container: output.OutputDataContainer, stp_mthd: List[str] = None):
+def create_graphs_for_container(
+    container: output_helper.OutputDataContainer,
+    stp_mthd: List[str] = None,
+    add_stopping_lines: bool = True,
+):
     """Create graphs for a particular data container.
 
     Parameters
     ----------
-    container : output.OutputDataContainer
+    container : output_helper.OutputDataContainer
         The relevant data container
     stp_mthd : List[str], optional
         A list of stopping methods that are column names in stopping_results.csv, for plotting
     """
 
-    stopping_df = pd.read_csv(container.stopping_results_csv_file, index_col=0)
-    if stp_mthd is not None:
-        stopping_df = stopping_df[stp_mthd]
+    if add_stopping_lines:
+        stopping_df = pd.read_csv(container.stopping_results_csv_file, index_col=0)
+        if stp_mthd is not None:
+            stopping_df = stopping_df[stp_mthd]
+    else:
+        stopping_df = None
 
     paths = (
         container.processed_stop_set_path,
@@ -254,7 +273,7 @@ def main(experiment_parameters: Dict[str, Union[str, int]]) -> None:
 
     print("Beginning Graphing", flush=True)
 
-    oh = output.OutputHelper(experiment_parameters)
+    oh = output_helper.OutputHelper(experiment_parameters)
     create_graphs_for_container(oh.container, [repr(stopping_methods.StabilizingPredictions())])
 
     print("Ending Graphing", flush=True)
@@ -262,4 +281,6 @@ def main(experiment_parameters: Dict[str, Union[str, int]]) -> None:
 
 if __name__ == "__main__":
 
-    main(config.experiment_parameters)
+    from active_learning import local
+
+    main(local.experiment_parameters)
