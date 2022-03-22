@@ -5,7 +5,7 @@ import argparse
 from pprint import pprint  # pylint: disable=unused-import
 import sys  # pylint: disable=unused-import
 
-import driver
+from active_learning import driver
 
 
 def main(averager: bool, local: bool) -> None:
@@ -20,15 +20,15 @@ def main(averager: bool, local: bool) -> None:
     """
 
     experiment_parameters_lists = {
-        "output_root": "./output5",
+        "output_root": "./outputFeatures",
         "task": "cls",
         "stop_set_size": [1000],
-        "batch_size": [7],
-        "base_learner": ["SVC", "MLPClassifier"],
-        "multiclass": ["ovr", "ovo"],
-        "feature_representation": ["preprocessed"],
-        "dataset": ["Iris"],
-        "random_state": list(range(3)),
+        "batch_size": [500],
+        "base_learner": ["SVC"],
+        "multiclass": ["ovr"],
+        "feature_representation": ["count", "bert"],
+        "dataset": ["RCV1_v2", "WebKB", "Reuters"],
+        "random_state": list(range(2)),
     }
 
     # Controls which part of the program is run

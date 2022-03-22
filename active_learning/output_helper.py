@@ -5,7 +5,7 @@ from pathlib import Path
 import shutil
 from typing import Dict, List, Union
 
-import utils
+from active_learning import utils
 
 # TODO: extract the concept of model evaluation upon a single set of examples into a container class
 # TODO: modify some of the function is graphing to operate upon these containers

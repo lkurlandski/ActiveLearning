@@ -7,23 +7,23 @@ from typing import Dict, List, Union
 
 import pandas as pd
 
-import config
-import graphing
-import output
-import stat_helper
-import stopping_methods
+from active_learning import graphing
+from active_learning import output_helper
+from active_learning import stat_helper
+from active_learning import stopping_methods
 
 
 def average_processed(
-    in_containers: List[output.OutputDataContainer], out_container: output.OutputDataContainer
+    in_containers: List[output_helper.OutputDataContainer],
+    out_container: output_helper.OutputDataContainer,
 ):
     """Average the contents from multiple experiments that have been processed.
 
     Parameters
     ----------
-    in_containers : List[output.OutputDataContainer]
+    in_containers : List[output_helper.OutputDataContainer]
         Data containers from experiments from multiple random states
-    out_container : output.OutputDataContainer
+    out_container : output_helper.OutputDataContainer
         The average output container
     """
 
@@ -42,15 +42,16 @@ def average_processed(
 
 
 def average_stopping(
-    in_containers: List[output.OutputDataContainer], out_container: output.OutputDataContainer
+    in_containers: List[output_helper.OutputDataContainer],
+    out_container: output_helper.OutputDataContainer,
 ):
     """Average the stopping results from multiple experiments.
 
     Parameters
     ----------
-    in_containers : List[output.OutputDataContainer]
+    in_containers : List[output_helper.OutputDataContainer]
         Data containers from experiments from multiple random states
-    out_container : output.OutputDataContainer
+    out_container : output_helper.OutputDataContainer
         The average output container
     """
 
@@ -60,15 +61,16 @@ def average_stopping(
 
 
 def average_container(
-    in_containers: List[output.OutputDataContainer], out_container: output.OutputDataContainer
+    in_containers: List[output_helper.OutputDataContainer],
+    out_container: output_helper.OutputDataContainer,
 ):
     """Average the results from multiple experiments.
 
     Parameters
     ----------
-    in_containers : List[output.OutputDataContainer]
+    in_containers : List[output_helper.OutputDataContainer]
         Data containers from experiments from multiple random states
-    out_container : output.OutputDataContainer
+    out_container : output_helper.OutputDataContainer
         The average output container
     """
 
@@ -87,7 +89,7 @@ def main(experiment_parameters: Dict[str, Union[str, int]]) -> None:
 
     print("Beginning Averaging", flush=True)
 
-    roh = output.RStatesOutputHelper(output.OutputHelper(experiment_parameters))
+    roh = output_helper.RStatesOutputHelper(output_helper.OutputHelper(experiment_parameters))
     average_container(roh.ind_rstates_containers, roh.avg_rstates_container)
     graphing.create_graphs_for_container(
         roh.avg_rstates_container, [repr(stopping_methods.StabilizingPredictions())]
@@ -98,4 +100,6 @@ def main(experiment_parameters: Dict[str, Union[str, int]]) -> None:
 
 if __name__ == "__main__":
 
-    main(config.experiment_parameters)
+    from active_learning import local
+
+    main(local.experiment_parameters)

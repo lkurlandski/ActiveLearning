@@ -9,8 +9,7 @@ from typing import Dict, List, Union
 
 import pandas as pd
 
-import config
-import output
+from active_learning import output_helper
 
 
 def report_jsons_to_dicts(
@@ -66,18 +65,18 @@ def dict_of_dfs_to_csvs(dfs: Dict[str, pd.DataFrame], processed_path: Path) -> N
 
     for k, df in dfs.items():
         if k in {"accuracy", "macro_avg", "weighted_avg"}:
-            path = processed_path / output.OutputDataContainer.overall_str / f"{k}.csv"
+            path = processed_path / output_helper.OutputDataContainer.overall_str / f"{k}.csv"
         else:
-            path = processed_path / output.OutputDataContainer.ind_cat_str / f"{k}.csv"
+            path = processed_path / output_helper.OutputDataContainer.ind_cat_str / f"{k}.csv"
         df.to_csv(path)
 
 
-def process_container(container: output.OutputDataContainer):
+def process_container(container: output_helper.OutputDataContainer):
     """Process the raw data in a particular container.
 
     Parameters
     ----------
-    container : output.OutputDataContainer
+    container : output_helper.OutputDataContainer
         The container where the raw data is located and where the processed data should go
     """
 
@@ -110,7 +109,7 @@ def main(experiment_parameters: Dict[str, Union[str, int]]):
 
     print("Beginning Processing", flush=True)
 
-    oh = output.OutputHelper(experiment_parameters)
+    oh = output_helper.OutputHelper(experiment_parameters)
     process_container(oh.container)
 
     print("Ending Processing", flush=True)
@@ -118,4 +117,6 @@ def main(experiment_parameters: Dict[str, Union[str, int]]):
 
 if __name__ == "__main__":
 
-    main(config.experiment_parameters)
+    from active_learning import local
+
+    main(local.experiment_parameters)

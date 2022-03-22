@@ -140,7 +140,8 @@ disable=print-statement,
         exception-escape,
         comprehension-escape,
         import-error,
-        invalid-name
+        invalid-name,
+        duplicate-code
 
 # Enable the message, report, category or checker with the given id(s). You can
 # either give multiple identifier separated by comma (,) or put this option
@@ -278,7 +279,14 @@ good-names=i,
            k,
            ex,
            Run,
-           _
+           _,
+           x,
+           y,
+           X,
+           X_train,
+           X_test,
+           y_train,
+           y_test
 
 # Include a hint for the correct naming format with invalid-name.
 include-naming-hint=yes

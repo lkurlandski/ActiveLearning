@@ -22,7 +22,7 @@ from sklearn.multiclass import (
 from sklearn.neural_network import MLPClassifier
 from sklearn.svm import LinearSVC, NuSVC, SVC
 
-import utils
+from active_learning import utils
 
 
 class MCOpts(Enum):
@@ -372,4 +372,6 @@ def test():
 
 
 if __name__ == "__main__":
+    print("Complete.")
+    sys.exit()
     test()

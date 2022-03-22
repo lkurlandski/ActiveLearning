@@ -1,4 +1,13 @@
 """Run the active learning process.
+
+TODO
+----
+- Refector the main method to reduce its length and complexity.
+- Implement a label-encoding strategy for the target array.
+
+FIXME
+-----
+-
 """
 
 import datetime
@@ -7,7 +16,7 @@ from pathlib import Path
 from pprint import pprint  # pylint: disable=unused-import
 import sys  # pylint: disable=unused-import
 import time
-from typing import Dict, Union
+from typing import Any, Dict, Tuple, Union
 import warnings
 
 from modAL.batch import uncertainty_batch_sampling
@@ -17,12 +26,12 @@ import pandas as pd
 from sklearn.exceptions import ConvergenceWarning
 from sklearn.metrics import classification_report
 
-import config
-import estimators
-import input_helper
-import output
-import stat_helper
-import stopping_methods
+from active_learning import estimators
+from active_learning import output_helper
+from active_learning import stat_helper
+from active_learning import stopping_methods
+from active_learning import dataset_fetchers
+from active_learning import feature_extractors
 
 
 def print_update(
@@ -64,7 +73,9 @@ def print_update(
     )
 
 
-def report_to_json(report: Dict[str, Union[float, Dict[str, float]]], report_path: Path, i: int):
+def report_to_json(
+    report: Dict[str, Union[float, Dict[str, float]]], report_path: Path, i: int
+) -> None:
     """Write a report taken from active learning to a specially named json output path.
 
     Parameters
@@ -81,7 +92,6 @@ def report_to_json(report: Dict[str, Union[float, Dict[str, float]]], report_pat
         json.dump(report, f, sort_keys=True, indent=4, separators=(",", ": "))
 
 
-# TODO: come up with a better label-encoding strategy
 def get_index_for_each_class(
     y: np.ndarray, target_names: np.ndarray, n_each: int = 1
 ) -> np.ndarray:
@@ -117,8 +127,41 @@ def get_index_for_each_class(
     return idx
 
 
-# TODO: refactor this long function to improve code quality
-# TODO: instead of deleting elements from the unlabeled pool, use masked arrays for efficiency
+def evaluate_and_record(
+    learner: ActiveLearner, X: np.ndarray, y: np.ndarray, raw_path: Path, iteration: int
+) -> Tuple[np.ndarray, Dict[str, Any]]:
+    """Evlaluate and record the learner's performance on a particular set of data.
+
+    Parameters
+    ----------
+    learner : ActiveLearner
+        Learner to evaluate
+    X : np.ndarray
+        Features to evaluate on
+    y : np.ndarray
+        Labels for the features
+    raw_path : Path
+        Where to save the results (corresponds to report_to_json())
+    iteration : int
+        The iteration of AL
+
+    Returns
+    -------
+    Tuple[np.ndarray, Dict[str, Any]]
+        The learner's predictions on the set and the report of the learner's performance
+    """
+
+    # Evaluate the learner on the unlabeled pool
+    preds = np.array([])
+    report = {}
+    if y.shape[0] > 0:
+        preds = learner.predict(X)
+        report = classification_report(y, preds, zero_division=1, output_dict=True)
+        report_to_json(report, raw_path, iteration)
+
+    return preds, report
+
+
 def main(experiment_parameters: Dict[str, Union[str, int]]) -> None:
     """Run the active learning algorithm for a set of experiment parmameters.
 
@@ -154,12 +197,15 @@ def main(experiment_parameters: Dict[str, Union[str, int]]) -> None:
     # Otherwise, we use the most up-to-date methods provided by numpy
     rng = np.random.default_rng(random_state)
 
-    # Get the dataset and select a stop set from it
-    X_unlabeled_pool, X_test, y_unlabeled_pool, y_test, target_names = input_helper.get_data(
-        experiment_parameters["dataset"],
-        experiment_parameters["feature_representation"],
-        random_state,
+    # Get the dataset
+    X_unlabeled_pool, X_test, y_unlabeled_pool, y_test, target_names = dataset_fetchers.get_dataset(
+        experiment_parameters["dataset"], stream=True, random_state=random_state
     )
+    # Perform the feature extraction
+    X_unlabeled_pool, X_test = feature_extractors.get_features(
+        X_unlabeled_pool, X_test, experiment_parameters["feature_representation"]
+    )
+    # Select a stop set
     unlabeled_pool_initial_size = y_unlabeled_pool.shape[0]
 
     estimator = estimators.get_estimator(
@@ -175,7 +221,7 @@ def main(experiment_parameters: Dict[str, Union[str, int]]) -> None:
     X_stop_set, y_stop_set = X_unlabeled_pool[stop_set_idx], y_unlabeled_pool[stop_set_idx]
 
     # Setup output directory structure
-    oh = output.OutputHelper(experiment_parameters)
+    oh = output_helper.OutputHelper(experiment_parameters)
     oh.setup()
 
     # Get ids of one instance of each class
@@ -206,40 +252,31 @@ def main(experiment_parameters: Dict[str, Union[str, int]]) -> None:
         X_unlabeled_pool = stat_helper.remove_ids_from_array(X_unlabeled_pool, idx)
         y_unlabeled_pool = stat_helper.remove_ids_from_array(y_unlabeled_pool, idx)
 
-        # Evaluate the learner on the test set
-        preds_test = learner.predict(X_test)
-        report_test = classification_report(y_test, preds_test, zero_division=1, output_dict=True)
-        report_to_json(report_test, oh.container.raw_test_set_path, i)
-
-        # Evaluate the learner on the unlabeled pool
-        if y_unlabeled_pool.shape[0] > 0:
-            preds_unlabeled_pool = learner.predict(X_unlabeled_pool)
-            report_unlabeled_pool = classification_report(
-                y_unlabeled_pool, preds_unlabeled_pool, zero_division=1, output_dict=True
-            )
-            report_to_json(report_unlabeled_pool, oh.container.raw_train_set_path, i)
-
-        # Evaluate the learner on the stop set
-        preds_stop_set = learner.predict(X_stop_set)
-        report_stop_set = classification_report(
-            y_stop_set, preds_stop_set, zero_division=1, output_dict=True
+        _, _ = evaluate_and_record(
+            learner, X_unlabeled_pool, y_unlabeled_pool, oh.container.raw_train_set_path, i
         )
-        report_to_json(report_stop_set, oh.container.raw_stop_set_path, i)
+        preds_stop_set, _ = evaluate_and_record(
+            learner, X_stop_set, y_stop_set, oh.container.raw_stop_set_path, i
+        )
+        _, report_test_set = evaluate_and_record(
+            learner, X_test, y_test, oh.container.raw_test_set_path, i
+        )
 
         # Evaluate the stopping methods
         stopping_manager.check_stopped(stop_set_predictions=preds_stop_set)
-        results = {
-            "annotations": learner.y_training.shape[0],
-            "iteration": i,
-            "accuracy": report_test["accuracy"],
-            "macro avg f1-score": report_test["macro avg"]["f1-score"],
-            "weighted avg f1-score": report_test["weighted avg"]["f1-score"],
-        }
-        stopping_manager.update_results(**results)
+        stopping_manager.update_results(
+            **{
+                "annotations": learner.y_training.shape[0],
+                "iteration": i,
+                "accuracy": report_test_set["accuracy"],
+                "macro avg f1-score": report_test_set["macro avg"]["f1-score"],
+                "weighted avg f1-score": report_test_set["weighted avg"]["f1-score"],
+            }
+        )
 
         # Print a status update and increment the iteration counter
         print_update(
-            start, unlabeled_pool_initial_size, y_unlabeled_pool, i, report_test["accuracy"]
+            start, unlabeled_pool_initial_size, y_unlabeled_pool, i, report_test_set["accuracy"]
         )
 
         i += 1
@@ -259,6 +296,8 @@ def main(experiment_parameters: Dict[str, Union[str, int]]) -> None:
 
 if __name__ == "__main__":
 
+    from active_learning import local
+
     with warnings.catch_warnings():
         warnings.filterwarnings("ignore", category=ConvergenceWarning)
-        main(config.experiment_parameters)
+        main(local.experiment_parameters)

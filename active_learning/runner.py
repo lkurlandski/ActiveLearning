@@ -9,12 +9,11 @@ import warnings
 
 from sklearn.exceptions import ConvergenceWarning
 
-import active_learner
-import config
-import averager
-import graphing
-import processor
-import utils
+from active_learning import active_learner
+from active_learning import averager
+from active_learning import graphing
+from active_learning import processor
+from active_learning import utils
 
 
 def main(
@@ -68,4 +67,6 @@ def main(
 
 if __name__ == "__main__":
 
-    main(config.experiment_parameters)
+    from active_learning import local
+
+    main(local.experiment_parameters)
