@@ -20,14 +20,14 @@ def main(averager: bool, local: bool) -> None:
     """
 
     experiment_parameters_lists = {
-        "output_root": "./output5",
+        "output_root": "/home/hpc/elphicb1/ActiveLearning/ActiveLearning/output4",
         "task": "cls",
         "stop_set_size": [1000],
-        "batch_size": [7],
+        "batch_size": [50],
         "base_learner": ["SVC"],
         "multiclass": ["ovr"],
         "feature_representation": ["w2v"],
-        "dataset": ["20NewsGroups"],
+        "dataset": ["TweetEval"],
         "random_state": list(range(1)),
     }
 

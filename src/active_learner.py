@@ -162,8 +162,8 @@ def main(experiment_parameters: Dict[str, Union[str, int]]) -> None:
         experiment_parameters["feature_representation"],
         random_state,
     )
-    X_test, X_unlabeled_pool = vectorize.w2v_vectorize(X_test, X_unlabeled_pool)
     unlabeled_pool_initial_size = y_unlabeled_pool.shape[0]
+    print(X_unlabeled_pool[10])
 
     estimator = estimators.get_estimator(
         base_learner_code=experiment_parameters["base_learner"],

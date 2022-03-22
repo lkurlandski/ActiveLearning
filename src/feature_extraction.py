@@ -15,7 +15,9 @@ import sys  # pylint: disable=unused-import
 from typing import Any, List, Tuple, Union
 
 import numpy as np
+from nltk.tokenize import word_tokenize
 from gensim.models import Word2Vec
+from scipy.sparse import csr_matrix
 from sklearn.feature_extraction.text import (
     CountVectorizer,
     HashingVectorizer,
@@ -222,56 +224,55 @@ class GensimFeatureExtractor(FeatureExtractor):
         Tuple[np.ndarray, np.ndarray]
             Two dimensional feature representations of the input corpora
         """
-        X_test = [sentence.split() for sentence in X_test]
+        if self.model == "w2v":
+            return self.get_w2v_vectors(X_train, X_test)
+        elif self.model == "d2v":
+            return self.get_d2v_vectors(X_train, X_test), 
+        else:
+            pass
+            #raise some error
+
+    def get_w2v_vectors(self, X_train, X_test):
+
+        X_train = list(X_train)
+        X_test = list(X_test)
+
         X_train = [sentence.split() for sentence in X_train]
-        X_combined = X_test + X_train
+        X_test = [sentence.split() for sentence in X_test]
+        X_combined = X_train + X_test
 
-        #X_combined_numpy = np.asarray(X_combined)
-        #print(X_combined_numpy.shape[0])
-        #print(X_test)
-    
         vectors = Word2Vec(sentences=X_combined, min_count=1, window=15, epochs=50)
-        #print(vectors.wv['integrity'])
+        
+        X_train = self._vectorize_split(X_train, vectors)
+        X_test = self._vectorize_split(X_test, vectors)
+        print(np.asarray(X_test))
 
-        X_test_vectors = []
-        X_train_vectors = []
-        X_test_vectors_iter = []
-        X_train_vectors_iter = []
-        #create a list of lists of W2V vectors using X_test and X_train
-        for sentence in X_test:
-            for token in sentence[:300]:
+        return csr_matrix(np.asarray(X_train)), csr_matrix(np.asarray(X_test))
+
+    def get_d2v_vectors(self, X_train, X_test):
+        pass
+
+    def _vectorize_split(self, split, vectors):
+        vectorized_iter = []
+        vectorized = []
+        token_cutoff = 100
+        
+        for sentence in split:
+            for token in sentence[:token_cutoff]:
                 try:
-                    X_test_vectors_iter.append(vectors.wv[token])
+                    vectorized_iter.append(vectors.wv[token])
                     #look at the function in sequencer, add zeros and flatten
                 except Exception:
                     print("Could not find token", token)
 
-            last_pieces = 300 - len(X_test_vectors_iter)
+            last_pieces = token_cutoff - len(vectorized_iter)
             for i in range(last_pieces):
-                X_test_vectors_iter.append(np.zeros(100,))
-            X_test_vectors.append(np.asarray(X_test_vectors_iter).flatten())
-            X_test_vectors_iter.clear()
+                vectorized_iter.append(np.zeros(100,))
+            vectorized.append(np.asarray(vectorized_iter).flatten())
+            vectorized_iter.clear()
 
-        for sentence in X_train:
-            for token in sentence[:300]:
-                try:
-                    X_train_vectors_iter.append(vectors.wv[token])
-                    #look at the function in sequencer, add zeros and flatten
-                except Exception:
-                    print("Could not find token", token)
-                    pass
-
-            last_pieces = 300 - len(X_train_vectors_iter)
-            for i in range(last_pieces):
-                X_train_vectors_iter.append(np.zeros(100,))
-            
-            X_train_vectors.append(np.asarray(X_train_vectors_iter).flatten())
-            X_train_vectors_iter.clear()
-
-        #print(np.asarray(X_test_vectors).shape)
-        #print(np.asarray(X_train_vectors).shape)
-
-        return np.asarray(X_test_vectors), np.asarray(X_train_vectors)
+        print(type(vectorized))
+        return vectorized
 
 valid_feature_representations = {
     "preprocessed",

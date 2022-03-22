@@ -1,13 +1,16 @@
 #file to convert text data to vectors
 from gensim.models import Word2Vec
 import numpy as np
+from datasets import load_dataset
 
 def w2v_vectorize(X_test, X_train):
     #create the vectors using boff
 
+    print(X_test)
     X_test = [sentence.split() for sentence in X_test]
     X_train = [sentence.split() for sentence in X_train]
     X_combined = X_test + X_train
+    print(X_test)
 
     #X_combined_numpy = np.asarray(X_combined)
     #print(X_combined_numpy.shape[0])
@@ -56,4 +59,15 @@ def w2v_vectorize(X_test, X_train):
     #print(np.asarray(X_train_vectors).shape)
 
     return np.asarray(X_test_vectors), np.asarray(X_train_vectors)
+
+
+#test_dataset = load_dataset('emotion', split = 'test')
+#labels = test_dataset.features['label'].names
+#X_test = test_dataset['text']
+#y_test = test_dataset['label']
+
+#test_dataset = load_dataset('emotion', split = 'train')
+#X_train = test_dataset['text']
+#y_train = test_dataset['label']
+#w2v_vectorize(X_test, X_train)
     

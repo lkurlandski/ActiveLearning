@@ -144,20 +144,19 @@ def get_emotions():
     X_train = test_dataset['text']
     y_train = test_dataset['label']
 
-    return X_train, X_test, np.asarray(y_train), np.asarray(y_test), labels
+    return np.asarray(X_train), np.asarray(X_test), np.asarray(y_train), np.asarray(y_test), np.asarray(labels)
 
-def get_ethos():
-    test_dataset = load_dataset('ethos', split = 'test')
-    labels = test_dataset.features['label'].names
-    X_test = test_dataset['text']
-    y_test = test_dataset['label']
-    print(labels)
+def get_tweet_eval():
+    dataset = load_dataset('tweet_eval', 'irony', split = 'test')
+    labels = dataset.features['label'].names
+    X_test = dataset['text']
+    y_test = dataset['label']
 
-    test_dataset = load_dataset('ethos', split = 'train')
-    X_train = test_dataset['text']
-    y_train = test_dataset['label']
+    dataset = load_dataset('tweet_eval', 'irony', split = 'train')
+    X_train = dataset['text']
+    y_train = dataset['label']
 
-    return X_train, X_test, np.asarray(y_train), np.asarray(y_test), labels
+    return np.asarray(X_train), np.asarray(X_test), np.asarray(y_train), np.asarray(y_test), np.asarray(labels)
 
 
 # TODO: attempt to access bunch['file_names'] and create a streaming approach for text datasets
@@ -194,6 +193,10 @@ def get_dataset(
         X_train, X_test, y_train, y_test, target_names = get_covertype(random_state)
     elif dataset == "Iris":
         X_train, X_test, y_train, y_test, target_names = get_iris(random_state)
+    elif dataset == "Emotions":
+        X_train, X_test, y_train, y_test, target_names = get_emotions()
+    elif dataset == "TweetEval":
+        X_train, X_test, y_train, y_test, target_names = get_tweet_eval()
     else:
         raise ValueError(f"Dataset not recognized: {dataset}")
 
