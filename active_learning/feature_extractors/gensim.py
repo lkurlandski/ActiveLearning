@@ -12,6 +12,7 @@ FIXME
 from pprint import pprint  # pylint: disable=unused-import
 import sys  # pylint: disable=unused-import
 from typing import Iterable, List, Tuple
+import collections
 
 import numpy as np
 from transformers import pipeline
@@ -47,7 +48,7 @@ class GensimFeatureExtractor(FeatureExtractor):
         if self.model == "w2v":
             return self.get_w2v_vectors(X_train, X_test)
         elif self.model == "d2v":
-            return self.get_d2v_vectors(X_train, X_test), 
+            return self.get_d2v_vectors(X_train, X_test)
         else:
             pass
             #raise some error
@@ -70,23 +71,23 @@ class GensimFeatureExtractor(FeatureExtractor):
         return csr_matrix(np.asarray(X_train)), csr_matrix(np.asarray(X_test))
 
     def get_d2v_vectors(self, X_train, X_test):
-        X_train_documents = [TaggedDocument(doc, [i]) for i, doc in enumerate(X_train)]
-        X_test_documents = [TaggedDocument(doc, [i]) for i, doc in enumerate(X_test)]
 
-        X_train_model = Doc2Vec(X_train_documents, vector_size=100, window=2, min_count=1)
-        X_test_model = Doc2Vec(X_test_documents, vector_size=100, window=2, min_count=1)
+        X_train_tokens = [sentence.split() for sentence in X_train]
+        X_test_tokens = [sentence.split() for sentence in X_test]
+        
+        X_train_tagged_documents = [TaggedDocument(doc, [i]) for i, doc in enumerate(X_train_tokens)]
+
+        d2v_model = Doc2Vec(X_train_tagged_documents, vector_size=100, window=2, min_count=1)
 
         X_test_vectors = []
         X_train_vectors = []
 
-        for document in range(0, (len(X_train_documents) - 1)):
-            X_train_vectors.append(X_train_model.dv[document])
-
-        for document in range(0, (len(X_test_documents) - 1)):
-            X_test_vectors.append(X_test_model.dv[document])
+        for doc_id in range(len(X_train_tokens)):
+            X_train_vectors.append(d2v_model.infer_vector(X_train_tokens[doc_id]))
         
-        print("returning vectors")
-        print(X_test_vectors)
+        for doc_id in range(len(X_test_tokens)):
+            X_test_vectors.append(d2v_model.infer_vector(X_test_tokens[doc_id]))
+        
         print(np.asarray(X_test_vectors).shape)
         print(np.asarray(X_train_vectors).shape)
         return np.asarray(X_train_vectors), np.asarray(X_test_vectors)

@@ -15,6 +15,7 @@ from pathlib import Path
 from pprint import pformat
 from typing import Dict, Set, Union
 import warnings
+import os
 
 from sklearn.exceptions import ConvergenceWarning
 
@@ -23,6 +24,7 @@ from active_learning import averager
 from active_learning import graphing
 from active_learning import local
 from active_learning import processor
+from active_learning import slurm_handling
 
 
 all_flags = {"active_learning", "processor", "graphing", "averaging"}
@@ -68,11 +70,22 @@ def main(
     if experiment_parameters is None:
         with open(config_file, "r", encoding="utf8") as f:
             experiment_parameters = json.load(f)
+    
+    #writing the files to /local/scratch
+    print(os.environ["SLURM_JOB_ID"])
+    try:
+        slurm_handling.job_id_list.append(os.environ["SLURM_JOB_ID"])
+        slurm_handling.user_path = experiment_parameters["output_root"]
+        experiment_parameters["output_root"] = slurm_handling.node_root
+    except Exception:
+        pass
 
     with warnings.catch_warnings():
         warnings.filterwarnings("ignore", category=ConvergenceWarning)
         if "active_learning" in flags:
             active_learner.main(experiment_parameters)
+            slurm_handling.move_output()
+            experiment_parameters["output_root"] = slurm_handling.user_path
 
     if "processor" in flags:
         processor.main(experiment_parameters)

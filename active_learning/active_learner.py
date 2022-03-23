@@ -201,7 +201,7 @@ def main(experiment_parameters: Dict[str, Union[str, int]]) -> None:
 
     # Get the dataset
     X_unlabeled_pool, X_test, y_unlabeled_pool, y_test, target_names = dataset_fetchers.get_dataset(
-        experiment_parameters["dataset"], stream=True, random_state=random_state
+        experiment_parameters["dataset"], stream=False, random_state=random_state
     )
     # Perform the feature extraction and bring data in-memory, if required
     X_unlabeled_pool, X_test = feature_extractors.get_features(

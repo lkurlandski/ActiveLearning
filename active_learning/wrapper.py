@@ -29,10 +29,10 @@ def main(averager: bool, local: bool) -> None:
     """
 
     experiment_parameters_lists = {
-        "output_root": "./outputFeatures",
+        "output_root": "/home/hpc/elphicb1/ActiveLearning/ActiveLearning/output",
         "task": "cls",
         "stop_set_size": [1000],
-        "batch_size": [500],
+        "batch_size": [30],
         "base_learner": ["SVC"],
         "multiclass": ["ovr"],
         "feature_representation": ["d2v"],

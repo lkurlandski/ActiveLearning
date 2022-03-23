@@ -1,20 +1,20 @@
+import shutil
+import signal, os, sys
 
-node_root = "/local/scratch"
+node_root = "/local/scratch/"
+interrupted = False
+job_id_list = []
+user_path = ""
 
-def move_output(experiment_parameters, user_path, job_id_list):
-    
-    source_dir = config.node_path
-
+def move_output():
     for job_id in job_id_list:
-        shutil.move(source_dir + job_id, user_path)
-    
-    experiment_parameters["output_root"] = user_path
+        shutil.move(node_root + job_id, user_path)
 
- job_id_list = []
-try:
-    job_id_list.append(os.environ["SLURM_JOB_ID"])
-    user_path = experiment_parameters["output_root"]
-    experiment_parameters["output_root"] = config.node_path
-except:
-    #print("Running locally.")
-    pass
+def signal_handler(sigint, frame):
+    global interrupted
+    interrupted = True
+
+signal.signal(signal.SIGINT, signal_handler)
+
+if interrupted:
+    print("CAUGHT SIGNAL")
