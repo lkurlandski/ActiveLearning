@@ -18,6 +18,7 @@ from sklearn.feature_extraction.text import (
     TfidfVectorizer,
 )
 
+from active_learning import feature_extractors
 from active_learning.feature_extractors import huggingface, preprocessed, scikit_learn
 
 
@@ -33,6 +34,32 @@ ts_corpus = [
     "This data is for the test set.",
     "***. ### ???.",
 ]
+
+
+class TestInterface:
+    def test_no_stream1(self):
+        tr, ts = feature_extractors.get_features(tr_corpus, ts_corpus, "count")
+        assert scipy.sparse.issparse(tr)
+        assert scipy.sparse.issparse(ts)
+
+    def test_no_stream2(self):
+        tr, ts = feature_extractors.get_features(tr_corpus, ts_corpus, "bert")
+        assert isinstance(tr, np.ndarray)
+        assert isinstance(ts, np.ndarray)
+
+    def test_stream1(self):
+        tr, ts = feature_extractors.get_features(
+            (i for i in tr_corpus), (i for i in ts_corpus), "count"
+        )
+        assert scipy.sparse.issparse(tr)
+        assert scipy.sparse.issparse(ts)
+
+    def test_stream2(self):
+        tr, ts = feature_extractors.get_features(
+            (i for i in tr_corpus), (i for i in ts_corpus), "bert"
+        )
+        assert isinstance(tr, np.ndarray)
+        assert isinstance(ts, np.ndarray)
 
 
 class TestPreprocessedFeatureExtractor:
