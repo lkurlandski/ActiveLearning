@@ -73,20 +73,22 @@ class GensimFeatureExtractor(FeatureExtractor):
         X_train_documents = [TaggedDocument(doc, [i]) for i, doc in enumerate(X_train)]
         X_test_documents = [TaggedDocument(doc, [i]) for i, doc in enumerate(X_test)]
 
-        X_train_model = Doc2Vec(X_train_documents, vector_size=5, window=2, min_count=1)
-        X_test_model = Doc2Vec(X_test_documents, vector_size=5, window=2, min_count=1)
+        X_train_model = Doc2Vec(X_train_documents, vector_size=100, window=2, min_count=1)
+        X_test_model = Doc2Vec(X_test_documents, vector_size=100, window=2, min_count=1)
 
         X_test_vectors = []
         X_train_vectors = []
 
         for document in range(0, (len(X_train_documents) - 1)):
-            X_train_vectors.append(X_train_model[document])
+            X_train_vectors.append(X_train_model.dv[document])
 
         for document in range(0, (len(X_test_documents) - 1)):
-            X_test_vectors.append(X_test_model[document])
+            X_test_vectors.append(X_test_model.dv[document])
         
         print("returning vectors")
         print(X_test_vectors)
+        print(np.asarray(X_test_vectors).shape)
+        print(np.asarray(X_train_vectors).shape)
         return np.asarray(X_train_vectors), np.asarray(X_test_vectors)
 
 
