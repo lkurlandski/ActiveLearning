@@ -7,14 +7,7 @@ job_id_list = []
 user_path = ""
 
 def move_output():
+    print("moving the output")
     for job_id in job_id_list:
+        print(job_id)
         shutil.move(node_root + job_id, user_path)
-
-def signal_handler(sigint, frame):
-    global interrupted
-    interrupted = True
-
-signal.signal(signal.SIGINT, signal_handler)
-
-if interrupted:
-    print("CAUGHT SIGNAL")

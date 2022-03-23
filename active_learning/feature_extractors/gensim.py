@@ -77,6 +77,7 @@ class GensimFeatureExtractor(FeatureExtractor):
         
         X_train_tagged_documents = [TaggedDocument(doc, [i]) for i, doc in enumerate(X_train_tokens)]
 
+        print(type(X_train_tagged_documents))
         d2v_model = Doc2Vec(X_train_tagged_documents, vector_size=100, window=2, min_count=1)
 
         X_test_vectors = []

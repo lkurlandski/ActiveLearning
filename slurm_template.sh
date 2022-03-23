@@ -18,18 +18,23 @@ import signal
 
 
 from active_learning import runner
+from active_learning import slurm_handling
+
+slurm_job_id = os.environ['SLURM_JOB_ID']
 
 print('Running on:', platform.node())
 
 # Create signal handler for SIGINT
 def sigint_handler(signum, frame):
 	print('INT signal handler called.  Exiting.')
-	# Cleanup files
+	#Cleanup files
+	slurm_handling.move_output()
 	print('Job interrupted at: ' + time.strftime('%m/%d/%Y %H:%M'))
 	sys.exit(-1)
 
 # Register SIGINT handler and atexit function (to ensure deletion of local files)
-signal.signal(signal.SIGINT, sigint_handler)
+signal.signal(signal.SIGTERM, sigint_handler)
+
 
 # Start job and print out config file path
 print('Starting runner.sh job for gc task at: ' + time.strftime('%m/%d/%Y %H:%M'))

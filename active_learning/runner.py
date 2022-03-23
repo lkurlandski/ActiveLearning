@@ -16,6 +16,7 @@ from pprint import pformat
 from typing import Dict, Set, Union
 import warnings
 import os
+import signal
 
 from sklearn.exceptions import ConvergenceWarning
 
@@ -72,7 +73,7 @@ def main(
             experiment_parameters = json.load(f)
     
     #writing the files to /local/scratch
-    print(os.environ["SLURM_JOB_ID"])
+    print(signal.getsignal(signal.SIGINT))
     try:
         slurm_handling.job_id_list.append(os.environ["SLURM_JOB_ID"])
         slurm_handling.user_path = experiment_parameters["output_root"]
