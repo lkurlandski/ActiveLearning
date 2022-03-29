@@ -29,15 +29,16 @@ def main(averager: bool, local: bool) -> None:
     """
 
     experiment_parameters_lists = {
-        "output_root": "./outputFeatures",
+        "output_root": "./outputGarbage",
         "task": "cls",
-        "stop_set_size": [1000],
-        "batch_size": [500],
+        "stop_set_size": [0.1],
+        "batch_size": [0.5],
+        "query_strategy": ["uncertainty_batch_sampling"],
         "base_learner": ["SVC"],
         "multiclass": ["ovr"],
-        "feature_representation": ["count", "bert"],
-        "dataset": ["RCV1_v2", "WebKB", "Reuters"],
-        "random_state": list(range(2)),
+        "feature_representation": ["count"],
+        "dataset": ["Reuters"],
+        "random_state": list(range(1)),
     }
 
     # Controls which part of the program is run

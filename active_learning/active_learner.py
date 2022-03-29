@@ -22,6 +22,7 @@ import warnings
 
 from modAL.batch import uncertainty_batch_sampling
 from modAL.models import ActiveLearner
+from modAL.uncertainty import entropy_sampling, margin_sampling, uncertainty_sampling
 import numpy as np
 import pandas as pd
 from sklearn.exceptions import ConvergenceWarning
@@ -33,6 +34,14 @@ from active_learning import stat_helper
 from active_learning import stopping_methods
 from active_learning import dataset_fetchers
 from active_learning import feature_extractors
+
+
+query_strategies = {
+    "entropy_sampling": entropy_sampling,
+    "margin_sampling": margin_sampling,
+    "uncertainty_batch_sampling": uncertainty_batch_sampling,
+    "uncertainty_sampling": uncertainty_sampling,
+}
 
 
 def print_update(
@@ -212,23 +221,26 @@ def main(experiment_parameters: Dict[str, Union[str, int]]) -> None:
     # Get the batch size (handle proportions and absolute values)
     tmp = float(experiment_parameters["batch_size"])
     batch_size = int(tmp) if tmp.is_integer() else int(tmp * unlabeled_pool_initial_size)
+    batch_size = max(1, batch_size)
 
     # Get the stop set size (handle proportions and absolute values)
     tmp = float(experiment_parameters["stop_set_size"])
     stop_set_size = int(tmp) if tmp.is_integer() else int(tmp * unlabeled_pool_initial_size)
+    stop_set_size = max(1, stop_set_size)
 
     # Select a stop set for stabilizing predictions
     stop_set_size = min(stop_set_size, unlabeled_pool_initial_size)
     stop_set_idx = rng.choice(unlabeled_pool_initial_size, size=stop_set_size, replace=False)
     X_stop_set, y_stop_set = X_unlabeled_pool[stop_set_idx], y_unlabeled_pool[stop_set_idx]
 
-    # Get the estimator/base learner to use.
+    # Get the modAL compatible estimator and query strategy to use
     estimator = estimators.get_estimator(
         base_learner_code=experiment_parameters["base_learner"],
         multiclass_code=experiment_parameters["multiclass"],
         n_targets=target_names.shape[0],
         probabalistic_required=True,
     )
+    query_strategy = query_strategies[experiment_parameters["query_strategy"]]
 
     # Setup output directory structure
     oh = output_helper.OutputHelper(experiment_parameters)
@@ -249,11 +261,13 @@ def main(experiment_parameters: Dict[str, Union[str, int]]) -> None:
 
         # Setup the learner and stabilizing predictions in the 0th iteration
         if i == 0:
-            learner = ActiveLearner(estimator=estimator, query_strategy=uncertainty_batch_sampling)
+            learner = ActiveLearner(estimator=estimator, query_strategy=query_strategy)
             learner.teach(X_unlabeled_pool[idx], y_unlabeled_pool[idx])
 
         # Retrain the learner during every other iteration
         else:
+            if batch_size > y_unlabeled_pool.shape[0]:
+                batch_size = y_unlabeled_pool.shape[0]
             idx, query_sample = learner.query(X_pool=X_unlabeled_pool, n_instances=batch_size)
             query_labels = y_unlabeled_pool[idx]
             learner.teach(query_sample, query_labels)
