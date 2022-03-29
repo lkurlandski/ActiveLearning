@@ -36,7 +36,7 @@ def main(averager: bool, local: bool) -> None:
         "base_learner": ["SVC"],
         "multiclass": ["ovr"],
         "feature_representation": ["d2v"],
-        "dataset": ["emotion"],
+        "dataset": ["20NewsGroups"],
         "random_state": list(range(1)),
     }
 

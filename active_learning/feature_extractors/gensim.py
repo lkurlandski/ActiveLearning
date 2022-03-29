@@ -55,30 +55,46 @@ class GensimFeatureExtractor(FeatureExtractor):
 
     def get_w2v_vectors(self, X_train, X_test):
 
-        X_train = list(X_train)
-        X_test = list(X_test)
+        X_train_tokens = [sentence.split() for sentence in X_train]
+        X_test_tokens = [sentence.split() for sentence in X_test]
 
-        X_train = [sentence.split() for sentence in X_train]
-        X_test = [sentence.split() for sentence in X_test]
-        X_combined = X_train + X_test
+        w2v_model = Word2Vec(sentences=X_train, min_count=1, window=15, epochs=20)
 
-        vectors = Word2Vec(sentences=X_combined, min_count=1, window=15, epochs=50)
+        X_train_vectors = []
+        X_train_sentence_vectors = []
+        for sentence in X_train_tokens:
+            for token in sentence:
+                try:
+                    X_train_sentence_vectors.append(w2v_model.wv[token])
+                except Exception:
+                    pass
+            X_train_vectors.append(np.mean(np.asarray(X_train_sentence_vectors), axis=0))
+            
+        print("This is the shape of X_test_vectors", X_train_vectors.shape)
+
+        X_test_vectors = []
+        X_test_sentence_vectors = []
+        for sentence in X_test_tokens:
+            for token in sentence:
+                try:
+                    X_test_vectors.append(w2v_model.wv[token])
+                except Exception:
+                    pass
+            X_test_vectors.append(np.mean(np.asarray(X_test_sentence_vectors), axis=0))
         
-        X_train = self._vectorize_split(X_train, vectors)
-        X_test = self._vectorize_split(X_test, vectors)
-        print(np.asarray(X_test))
-
-        return csr_matrix(np.asarray(X_train)), csr_matrix(np.asarray(X_test))
+        print("This is the shape of X_test_vectors", X_test_vectors.shape)
+        return X_train_vectors, X_test_vectors
 
     def get_d2v_vectors(self, X_train, X_test):
 
+        print("this is the type", type(X_train))
         X_train_tokens = [sentence.split() for sentence in X_train]
         X_test_tokens = [sentence.split() for sentence in X_test]
         
         X_train_tagged_documents = [TaggedDocument(doc, [i]) for i, doc in enumerate(X_train_tokens)]
 
-        print(type(X_train_tagged_documents))
-        d2v_model = Doc2Vec(X_train_tagged_documents, vector_size=100, window=2, min_count=1)
+        print("this is the type", type(X_train_tagged_documents))
+        d2v_model = Doc2Vec(X_train_tagged_documents, vector_size=800, window=2, min_count=1, epochs=20)
 
         X_test_vectors = []
         X_train_vectors = []
@@ -92,27 +108,3 @@ class GensimFeatureExtractor(FeatureExtractor):
         print(np.asarray(X_test_vectors).shape)
         print(np.asarray(X_train_vectors).shape)
         return np.asarray(X_train_vectors), np.asarray(X_test_vectors)
-
-
-    def _vectorize_split(self, split, vectors):
-        #this needs to be reworked to use a mean
-        vectorized_iter = []
-        vectorized = []
-        token_cutoff = 100
-        
-        for sentence in split:
-            for token in sentence[:token_cutoff]:
-                try:
-                    vectorized_iter.append(vectors.wv[token])
-                    #look at the function in sequencer, add zeros and flatten
-                except Exception:
-                    print("Could not find token", token)
-
-            last_pieces = token_cutoff - len(vectorized_iter)
-            for i in range(last_pieces):
-                vectorized_iter.append(np.zeros(100,))
-            vectorized.append(np.asarray(vectorized_iter).flatten())
-            vectorized_iter.clear()
-
-        print(type(vectorized))
-        return vectorized
