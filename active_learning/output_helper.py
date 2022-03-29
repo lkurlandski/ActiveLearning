@@ -9,6 +9,7 @@ FIXME
 -
 """
 
+from copy import deepcopy
 from pathlib import Path
 import shutil
 import os
@@ -132,27 +133,30 @@ class OutputDataContainer:
 class OutputHelper:
     """Manage the paths for a particular set of AL parameters."""
 
-    def __init__(self, experiment_parameters: Dict[str, Union[str, int]]):
+    def __init__(self, experiment_parameters: Dict[str, Union[str, int, float]]) -> None:
         """Manage the paths for a particular set of AL parameters.
 
         Parameters
         ----------
-        experiment_parameters : Dict[str, Union[str, int]]
+        experiment_parameters : Dict[str, Union[str, int, float]]
             Experiment specifications
         """
 
-        # Shorthand for the experiment parameters
+        # TODO: can this be safely removed? Is it being used anywhere?
         self.experiment_parameters = experiment_parameters
 
-        #self.user_path = Path(experiment_parameters["output_root"])
+        # Path objects require string parameters for everything
+        experiment_parameters: Dict[str, str] = {
+            k: str(v) for k, v in deepcopy(experiment_parameters).items()
+        }
 
         # Base paths
         self.root = Path(experiment_parameters["output_root"])
-        self.slurm_path = self.root / os.environ['SLURM_JOB_ID']
-        self.task_path = self.slurm_path / experiment_parameters["task"]
-        self.stop_set_size_path = self.task_path / str(experiment_parameters["stop_set_size"])
-        self.batch_size_path = self.stop_set_size_path / str(experiment_parameters["batch_size"])
-        self.base_learner_path = self.batch_size_path / experiment_parameters["base_learner"]
+        self.task_path = self.root / experiment_parameters["task"]
+        self.stop_set_size_path = self.task_path / experiment_parameters["stop_set_size"]
+        self.batch_size_path = self.stop_set_size_path / experiment_parameters["batch_size"]
+        self.query_strategy_path = self.batch_size_path / experiment_parameters["query_strategy"]
+        self.base_learner_path = self.query_strategy_path / experiment_parameters["base_learner"]
         self.multiclass_path = self.base_learner_path / experiment_parameters["multiclass"]
         self.feature_representation_path = (
             self.multiclass_path / experiment_parameters["feature_representation"]
@@ -161,7 +165,7 @@ class OutputHelper:
 
         # Data container for this individual rstates output
         self.ind_rstates_path = self.dataset_path / "ind_rstates"
-        self.output_path = self.ind_rstates_path / str(experiment_parameters["random_state"])
+        self.output_path = self.ind_rstates_path / experiment_parameters["random_state"]
         self.container = OutputDataContainer(self.output_path)
 
         # Data container for the average rstates output
@@ -203,6 +207,7 @@ class OutputHelper:
         self.task_path.mkdir(exist_ok=exist_ok)
         self.stop_set_size_path.mkdir(exist_ok=exist_ok)
         self.batch_size_path.mkdir(exist_ok=exist_ok)
+        self.query_strategy_path.mkdir(exist_ok=exist_ok)
         self.base_learner_path.mkdir(exist_ok=exist_ok)
         self.multiclass_path.mkdir(exist_ok=exist_ok)
         self.feature_representation_path.mkdir(exist_ok=exist_ok)

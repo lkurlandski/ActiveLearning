@@ -29,14 +29,15 @@ def main(averager: bool, local: bool) -> None:
     """
 
     experiment_parameters_lists = {
-        "output_root": "/home/hpc/elphicb1/ActiveLearning/ActiveLearning/output",
+        "output_root": "./outputGarbage",
         "task": "cls",
-        "stop_set_size": [1000],
-        "batch_size": [200],
+        "stop_set_size": [0.1],
+        "batch_size": [0.5],
+        "query_strategy": ["uncertainty_batch_sampling"],
         "base_learner": ["SVC"],
         "multiclass": ["ovr"],
-        "feature_representation": ["d2v"],
-        "dataset": ["20NewsGroups"],
+        "feature_representation": ["count"],
+        "dataset": ["Reuters"],
         "random_state": list(range(1)),
     }
 

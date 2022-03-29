@@ -14,6 +14,7 @@ experiment_parameters_iris = {
     "task": "cls",
     "stop_set_size": 1000,
     "batch_size": 7,
+    "query_strategy": "uncertainty_batch_sampling",
     "base_learner": "SVC",
     "multiclass": "ovr",
     "feature_representation": "preprocessed",

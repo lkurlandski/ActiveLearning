@@ -14,8 +14,9 @@ FIXME
 experiment_parameters = {
     "output_root": "outputGarbage",
     "task": "cls",
-    "stop_set_size": 1000,
-    "batch_size": 7,
+    "stop_set_size": 1,
+    "batch_size": 0.07,
+    "query_strategy": "uncertainty_batch_sampling",
     "base_learner": "SVC",
     "multiclass": "ovr",
     "feature_representation": "preprocessed",
