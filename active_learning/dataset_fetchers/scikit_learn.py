@@ -2,7 +2,7 @@
 
 TODO
 ----
-- Add support for fetching datasets from OpenML.org, which can be done through scikit-learn.
+- Add pseudo-streaming support for a consistent API with the rest of the fetchers module.
 
 FIXME
 -----
@@ -11,7 +11,7 @@ FIXME
 
 from pprint import pprint  # pylint: disable=unused-import
 import sys  # pylint: disable=unused-import
-from typing import Any, Callable, Dict, Tuple, Union
+from typing import Any, Callable, Dict, Iterable, Tuple, Union
 import warnings
 
 import numpy as np
@@ -45,7 +45,7 @@ class ScikitLearnDatasetFetcher(DatasetFetcher):
         self.dataset = dataset
         self.test_size = test_size
 
-    def fetch(self):
+    def fetch(self) -> Tuple[Iterable[Any], Iterable[Any], np.ndarray, np.ndarray, np.ndarray]:
 
         loader, kwargs = self.get_dataset_loader_and_kwargs()
 
@@ -57,18 +57,18 @@ class ScikitLearnDatasetFetcher(DatasetFetcher):
         if utils.check_callable_has_parameter(loader, "subset"):
             kwargs["subset"] = "train"
             bunch = loader(**kwargs)
-            X_train, y_train = np.array(bunch["data"]), np.array(bunch["target"])
+            X_train, y_train = bunch["data"], bunch["target"]
             target_names_train = np.array(bunch["target_names"])
 
             kwargs["subset"] = "test"
             bunch = loader(**kwargs)
-            X_test, y_test = np.array(bunch["data"]), np.array(bunch["target"])
+            X_test, y_test = bunch["data"], bunch["target"]
             target_names_test = np.array(bunch["target_names"])
 
             target_names = np.unique(np.concatenate((target_names_train, target_names_test)))
         else:
             bunch = loader(**kwargs)
-            X, y = np.array(bunch["data"]), np.array(bunch["target"])
+            X, y = bunch["data"], bunch["target"]
             X_train, X_test, y_train, y_test = train_test_split(
                 X, y, test_size=self.test_size, random_state=self.random_state
             )
@@ -76,16 +76,18 @@ class ScikitLearnDatasetFetcher(DatasetFetcher):
 
         return X_train, X_test, y_train, y_test, target_names
 
-    def stream(self):
+    def stream(self) -> Tuple[Iterable[Any], Iterable[Any], np.ndarray, np.ndarray, np.ndarray]:
 
         warnings.warn(
-            "scikit-learn does not offer native streaming support. "
-            "This request will not be serviced by streaming."
+            "Streaming with scikit-learn datasets not fully support by scikit-learn and"
+            " pseudo-streaming not fully implemented within this codebase.\nTo implement pseudo-"
+            " streaming, this class will have to address the fact that some scikit-learn datasets"
+            " are fully preprocessed (thus should not be pseudo-streamed), while others are not."
+            " Therefore, to implement this method, we fall back to the fetch() method, but the"
+            " behavior is undefined and risky."
         )
 
-        X_train, X_test, y_train, y_test, target_names = self.fetch()
-
-        return X_train, X_test, y_train, y_test, target_names
+        return self.fetch()
 
     def get_dataset_loader_and_kwargs(
         self,
@@ -103,6 +105,10 @@ class ScikitLearnDatasetFetcher(DatasetFetcher):
         if self.dataset == "Iris":
             return sklearn.datasets.load_iris, {}
         if self.dataset == "20NewsGroups":
+            warnings.warn(
+                "WARNING: scikit-learn's implementation of 20NewsGroups does not properly handle"
+                " the multilabel nature of the dataset"
+            )
             return sklearn.datasets.fetch_20newsgroups, {"remove": ("headers", "footers", "quotes")}
 
         raise ValueError(f"{self.dataset} not recongized.")

@@ -2,9 +2,8 @@
 
 TODO
 ----
-- Add multilabel support for RCV1, Reuters, and WebKB.
 - Once random_state is configured as a global variable, expose the mapper outside of its function
-    to support varification from outside this module.
+    to support vertification from outside this module.
 
 FIXME
 -----
@@ -96,7 +95,7 @@ def get_mapper(random_state: int = 0) -> Callable[..., base.DatasetFetcher]:
             categories=["student", "faculty", "course", "project"],
         ),
         "glue": utils.init(
-            huggingface.PredefinedClassificationFetcher,
+            huggingface.RandomizedClassificationFetcher,
             random_state=random_state,
             path="glue",
             name="sst2",
@@ -123,7 +122,7 @@ def get_mapper(random_state: int = 0) -> Callable[..., base.DatasetFetcher]:
 
 def get_dataset(
     dataset: str, stream: bool, random_state: int
-) -> Tuple[Iterable[Any], Iterable[Any], Iterable[Any], Iterable[Any], np.ndarray]:
+) -> Tuple[Iterable[Any], Iterable[Any], np.ndarray, np.ndarray, np.ndarray]:
     """Return any implemented dataset.
 
     Parameters
@@ -137,7 +136,7 @@ def get_dataset(
 
     Returns
     -------
-    Tuple[Iterable[Any], Iterable[Any], Iterable[Any], Iterable[Any], np.ndarray]
+    Tuple[Iterable[Any], Iterable[Any], np.ndarray, np.ndarray, np.ndarray]
         The arrays for X_train, y_train, X_test, and y_test, along with the set of categories.
 
     Raises
