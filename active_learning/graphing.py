@@ -2,7 +2,7 @@
 
 TODO
 ----
--
+- Once the stopping methods module is working properly, add the stopping vlines again.
 
 FIXME
 -----
@@ -20,7 +20,7 @@ import matplotlib.pyplot as plt
 import pandas as pd
 
 from active_learning import output_helper
-from active_learning import stopping_methods
+from active_learning import stopping_methods  # pylint: disable=unused-import
 
 # Colors for stopping methods
 colors_stopping = ["lime", "blue", "megenta", "midnightblue"]
@@ -274,7 +274,12 @@ def main(experiment_parameters: Dict[str, Union[str, int]]) -> None:
     print("Beginning Graphing", flush=True)
 
     oh = output_helper.OutputHelper(experiment_parameters)
-    create_graphs_for_container(oh.container, [repr(stopping_methods.StabilizingPredictions())])
+    # TODO: Once the stopping methods module is working properly, add the stopping vlines again.
+    create_graphs_for_container(
+        oh.container,
+        None,
+        False,  # [repr(stopping_methods.StabilizingPredictions())],
+    )
 
     print("Ending Graphing", flush=True)
 
