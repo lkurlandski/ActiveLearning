@@ -16,7 +16,7 @@ from typing import Any, List, Tuple
 
 import numpy as np
 import pandas as pd
-import scipy
+from scipy import sparse
 
 # TODO: if a column of the original dataframe was integer type and the corresponding column in
 # the new dataframe is also integer, but represented by a floating point (eg 1.000),
@@ -77,6 +77,7 @@ def mean_dataframes_from_files(paths: List[Path], **read_csv_kwargs) -> pd.DataF
     return mean_dataframes(dfs)
 
 
+# FIXME: remove this asset and use sklearn.utils.shuffle instead
 def shuffle_corresponding_arrays(
     a1: np.ndarray, a2: np.ndarray, random_state: int
 ) -> Tuple[np.ndarray, np.ndarray]:
@@ -115,7 +116,7 @@ def shuffle_corresponding_arrays(
 # TODO: test and document this function
 def delete_rows_csr(mat, idx):
 
-    if not isinstance(mat, scipy.sparse.csr_matrix):
+    if not isinstance(mat, sparse.csr_matrix):
         raise ValueError(f"Works only for CSR format, not {type(mat)}")
 
     idx = list(idx)
@@ -127,7 +128,7 @@ def delete_rows_csr(mat, idx):
 # TODO: test and document this function
 def delete_row_csr(mat, i):
 
-    if not isinstance(mat, scipy.sparse.csr_matrix):
+    if not isinstance(mat, sparse.csr_matrix):
         raise ValueError(f"Works only for CSR format, not {type(mat)}")
 
     if not isinstance(i, int):
@@ -150,7 +151,7 @@ def delete_row_csr(mat, i):
 # TODO: test and document this function
 def delete_row_lil(mat, i):
 
-    if not isinstance(mat, scipy.sparse.csr_matrix):
+    if not isinstance(mat, sparse.csr_matrix):
         raise ValueError(f"Works only for LIL format, not {type(mat)}")
 
     if not isinstance(i, int):
@@ -165,31 +166,48 @@ def delete_row_lil(mat, i):
 
 # TODO: test and document this function
 def remove_ids_from_array(a: Any, idx: np.ndarray) -> Any:
-    """Remove certain elements from several types of contiguous data structures.
-
-    Parameters
-    ----------
-    a : Any
-        An input array or data structure
-    idx : np.ndarray
-        ids to remove from the input data structure
-
-    Returns
-    -------
-    Any
-        The input array with the seleted ids removed (same type as input)
-
-    Raises
-    ------
-    ValueError
-        If the type of the input array is unexpected
-    """
 
     if isinstance(a, np.ndarray):
         return np.delete(a, idx, axis=0)
-    if isinstance(a, scipy.sparse.csr_matrix):
+    if isinstance(a, sparse.csr_matrix):
         return delete_rows_csr(a, idx)
-    if isinstance(a, scipy.sparse.lil_matrix):
+    if isinstance(a, sparse.lil_matrix):
         return delete_row_lil(a, idx)
 
     raise ValueError(f"Unknown matrix passed to remove_ids_from_array: {type(a)}")
+
+
+def iter_spmatrix(matrix: sparse.spmatrix):
+    """Iterator for iterating the elements in a scipy.sparse.*_matrix.
+
+    This will always return:
+    >>> (row, column, matrix-element)
+
+    Currently this can iterate `coo`, `csc`, `lil` and `csr`, others may easily be added.
+
+    Parameters
+    ----------
+    matrix : scipy.sparse.spmatrix
+        The sparse matrix to iterate non-zero elements
+    """
+    if sparse.isspmatrix_coo(matrix):
+        for r, c, m in zip(matrix.row, matrix.col, matrix.data):
+            yield r, c, m
+
+    elif sparse.isspmatrix_csc(matrix):
+        for c in range(matrix.shape[1]):
+            for ind in range(matrix.indptr[c], matrix.indptr[c + 1]):
+                yield matrix.indices[ind], c, matrix.data[ind]
+
+    elif sparse.isspmatrix_csr(matrix):
+        for r in range(matrix.shape[0]):
+            for ind in range(matrix.indptr[r], matrix.indptr[r + 1]):
+                yield r, matrix.indices[ind], matrix.data[ind]
+
+    elif sparse.isspmatrix_lil(matrix):
+        for r in range(matrix.shape[0]):
+            for c, d in zip(matrix.rows[r], matrix.data[r]):
+                yield r, c, d
+
+    else:
+        raise NotImplementedError("The iterator for this sparse matrix has not been implemented")

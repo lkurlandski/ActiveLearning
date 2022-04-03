@@ -115,60 +115,6 @@ def plot_from_dataframe(
     return fig, ax
 
 
-####################################################################################################
-
-
-def create_accuracy_graph(accuracy_df: pd.DataFrame) -> Tuple[Figure, Axes]:
-    """Create the accuracy vs labeling effort curve.
-
-    Parameters
-    ----------
-    accuracy_df : pd.DataFrame
-        Performance of model per throughout learning
-
-    Returns
-    -------
-    Tuple[Figure, Axes]
-        The learning curve
-    """
-
-    return plot_from_dataframe(accuracy_df, x_column="training_data", y_columns=["accuracy"])
-
-
-def create_weighted_average_graph(weighted_avg_df: pd.DataFrame) -> Tuple[Figure, Axes]:
-    """Create the weighted average vs labeling effort curve.
-
-    Parameters
-    ----------
-    accuracy_df : pd.DataFrame
-        Performance of model per throughout learning
-
-    Returns
-    -------
-    Tuple[Figure, Axes]
-        The learning curve
-    """
-
-    return plot_from_dataframe(weighted_avg_df, x_column="training_data", y_columns=["f1-score"])
-
-
-def create_macro_average_graph(macro_avg_df: pd.DataFrame) -> Tuple[Figure, Axes]:
-    """Create the macro average vs labeling effort curve.
-
-    Parameters
-    ----------
-    accuracy_df : pd.DataFrame
-        Performance of model per throughout learning
-
-    Returns
-    -------
-    Tuple[Figure, Axes]
-        The learning curve
-    """
-
-    return plot_from_dataframe(macro_avg_df, x_column="training_data", y_columns=["f1-score"])
-
-
 def create_graphs_for_overall(overall_path: Path, stopping_df: pd.DataFrame = None):
     """Create graphs which should exist under the avg directory.
 
@@ -182,15 +128,33 @@ def create_graphs_for_overall(overall_path: Path, stopping_df: pd.DataFrame = No
             by default None
     """
 
-    for data_file in ("accuracy", "macro_avg", "weighted_avg"):
-        df = pd.read_csv(overall_path / f"{data_file}.csv", index_col=0)
+    for data_file in (
+        "accuracy",
+        "hamming_loss",
+        "macro_avg",
+        "weighted_avg",
+        "micro_avg",
+        "samples_avg",
+    ):
+        path = overall_path / f"{data_file}.csv"
+        if not path.exists():
+            continue
 
-        if data_file == "accuracy":
-            fig, ax = create_accuracy_graph(df)
-        elif data_file == "macro_avg":
-            fig, ax = create_macro_average_graph(df)
-        elif data_file == "weighted_avg":
-            fig, ax = create_weighted_average_graph(df)
+        df = pd.read_csv(path, index_col=0)
+
+        if (
+            data_file == "macro_avg"
+            or data_file == "micro_avg"
+            or data_file == "weighted_avg"
+            or data_file == "samples_avg"
+        ):
+            y_columns = ["f1-score"]
+        elif data_file == "accuracy" or data_file == "hamming_loss":
+            y_columns = [data_file]
+        else:
+            raise ValueError(f"Unexpected data_file, {data_file}")
+
+        fig, ax = plot_from_dataframe(df, x_column="training_data", y_columns=y_columns)
 
         if stopping_df is not None:
             add_stopping_vlines(fig, ax, stopping_df)

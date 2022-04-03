@@ -79,6 +79,7 @@ def get_mapper(random_state: int = 0) -> Callable[..., base.DatasetFetcher]:
             categories=[
                 "acq",
                 "corn",
+                "crude",
                 "earn",
                 "grain",
                 "interest",

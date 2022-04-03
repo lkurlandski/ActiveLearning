@@ -54,8 +54,7 @@ def main(
     """
 
     flags = default_flags if flags is None else flags
-
-    print(f"runner.main\nexperiment_parameters:\n{pformat(experiment_parameters)}")
+    print(f"runner.main -- flags:\n{pformat(flags)}")
 
     if config_file is None and experiment_parameters is None:
         raise ValueError("One of config_file or experiment_parameters must not be None")
@@ -68,6 +67,7 @@ def main(
     if experiment_parameters is None:
         with open(config_file, "r", encoding="utf8") as f:
             experiment_parameters = json.load(f)
+    print(f"runner.main -- experiment_parameters:\n{pformat(experiment_parameters)}")
 
     with warnings.catch_warnings():
         warnings.filterwarnings("ignore", category=ConvergenceWarning)

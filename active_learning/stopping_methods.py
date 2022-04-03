@@ -11,12 +11,15 @@ FIXME
 
 from abc import ABC, abstractmethod
 from pprint import pprint  # pylint: disable=unused-import
+import random
 import statistics
 import sys  # pylint: disable=unused-import
 from typing import Any, Dict, List
+import warnings
 
 import pandas as pd
 import numpy as np
+from scipy import sparse
 from sklearn.metrics import cohen_kappa_score
 
 
@@ -80,14 +83,10 @@ class StoppingMethod(ABC):
 class StabilizingPredictions(StoppingMethod):
     """Stablizing Predictions stopping method."""
 
-    stop_set_predictions: np.ndarray
+    prv_preds: np.ndarray
+    preds: np.ndarray
 
-    def __init__(
-        self,
-        windows: int = 3,
-        threshold: float = 0.99,
-        initial_stop_set_predictions: np.ndarray = None,
-    ):
+    def __init__(self, windows: int = 3, threshold: float = 0.99):
         """Stablizing Predictions stopping method.
 
         Parameters
@@ -96,21 +95,14 @@ class StabilizingPredictions(StoppingMethod):
             The number of kappas to compute the mean of, by default 3
         threshold : float, optional
             The threshold the mean kappas must exceed, by default 0.99
-        intial_stop_set_predictions : np.ndarray, optional
-            The very first stop set predictions, if the user computes them, by default None
-
-        The first time this method is evaluated, there will not be two sets of model
-            predictions to compute the kappa agreement on. The user can "skip" this phase and
-            essentially start one iteration later in the AL process by providing the previous
-            set of predictions.
         """
 
         super().__init__("Stabilizing Predictions")
 
         self.windows = windows
         self.threshold = threshold
-        self.kappas = [] if initial_stop_set_predictions is None else [np.NaN]
-        self.previous_stop_set_predictions = initial_stop_set_predictions
+        self.kappas = []
+        self.prv_preds = None
 
     def get_hyperparameters_dict(self) -> Dict[str, float]:
 
@@ -119,16 +111,16 @@ class StabilizingPredictions(StoppingMethod):
             "windows": self.windows,
         }
 
-    def check_stopped(self, stop_set_predictions: np.ndarray, **kwargs) -> None:
+    def check_stopped(self, preds: np.ndarray, **kwargs) -> None:
         """Determine if this instance has stopped and update its stopped attribute.
 
         Parameters
         ----------
-        stop_set_predictions : np.ndarray
+        preds : np.ndarray
             Predictions on a stop set of training data.
         """
 
-        self.stop_set_predictions = stop_set_predictions
+        self.preds = preds
         self.update_kappas()
 
         if len(self.kappas[1:]) < self.windows:
@@ -138,15 +130,57 @@ class StabilizingPredictions(StoppingMethod):
             self.stopped = True
 
     def update_kappas(self) -> None:
-        """Update this instances' kappa list by computing agreement between the sets of predictions."""
+        """Update this instances' kappa list by computing agreement between the sets of predictions.
 
-        kappa = (
-            np.NaN
-            if self.previous_stop_set_predictions is None
-            else cohen_kappa_score(self.previous_stop_set_predictions, self.stop_set_predictions)
-        )
+        In the case of a multilabel classification problem, our objective is to cast the model's
+            two-dimensional multilabel prediction vector into a one-dimensional single label
+            prediction vector. The most logical way to do this is as follows:
+            - if both models think example x belongs in class c, then the single label should be c.
+            - else, the single label should be any of their predicted classes.
+        """
+
+        kappa = self.get_cohen_kappa_score(self.prv_preds, self.preds)
         self.kappas.append(kappa)
-        self.previous_stop_set_predictions = self.stop_set_predictions
+        self.prv_preds = self.preds
+
+    @staticmethod
+    def get_cohen_kappa_score(y1, y2):
+        y1 = y1.toarray() if sparse.issparse(y1) else y1
+        y2 = y2.toarray() if sparse.issparse(y2) else y2
+
+        if y1 is None or y2 is None:
+            return np.NaN
+
+        if y1.ndim == 1 and y2.ndim == 1:
+            return cohen_kappa_score(y1, y2)
+
+        if y1.ndim != 2 or y2.ndim != 2:
+            raise ValueError("Unexpected dimensionality of predictions: {(y1.ndim, y2.ndim)}.")
+
+        warnings.warn(
+            "WARNING: Cohen's Kappa statistic is not formally defined for multilabel agreement.\n"
+            "Computing a naive multilable Cohen's Kappa statistic, but recommend you use another"
+            " agreement metric, such as Krippendorff's Alpha."
+        )
+
+        y1_ = [None] * y1.shape[0]
+        y2_ = [None] * y2.shape[0]
+        for i, (prev_pred, pred) in enumerate(zip(y1, y2)):
+            for c, (c1, c2) in enumerate(zip(prev_pred, pred)):
+                if (c1 == 1 and c2 == 1) or (c1 == 0 and c2 == 0):
+                    y1_[i] = c
+                    y2_[i] = c
+                    break
+                if c1 == 1:
+                    y1_[i] = c
+                if c2 == 1:
+                    y2_[i] = c
+                if y1_[i] is None:
+                    y1_[1] = random.choice([i for i in range(len(prev_pred)) if i != y2_[i]])
+                if y2_[i] is None:
+                    y2_[1] = random.choice([i for i in range(len(pred)) if i != y1_[i]])
+
+        return cohen_kappa_score(y1_, y2_)
 
 
 # TODO: implement

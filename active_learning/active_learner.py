@@ -14,6 +14,7 @@ import datetime
 import json
 from pathlib import Path
 from pprint import pprint  # pylint: disable=unused-import
+import random
 import sys  # pylint: disable=unused-import
 import time
 from typing import Any, Dict, Tuple, Union
@@ -24,8 +25,10 @@ from modAL.models import ActiveLearner
 from modAL.uncertainty import entropy_sampling, margin_sampling, uncertainty_sampling
 import numpy as np
 import pandas as pd
+from scipy import sparse
 from sklearn.exceptions import ConvergenceWarning
-from sklearn.metrics import classification_report
+from sklearn import metrics
+from sklearn.utils.multiclass import unique_labels
 
 from active_learning import estimators
 from active_learning import output_helper
@@ -101,39 +104,64 @@ def report_to_json(
         json.dump(report, f, sort_keys=True, indent=4, separators=(",", ": "))
 
 
-def get_index_for_each_class(
-    y: np.ndarray, target_names: np.ndarray, n_each: int = 1
-) -> np.ndarray:
-    """Return indices that contain location of one element per class.
+def get_first_batch(y: Union[np.ndarray, sparse.csr_matrix], protocol: str, k: int) -> np.ndarray:
+    """Get indices for the first batch of AL.
 
     Parameters
     ----------
-    y : np.ndarray
-        Array of train/test class target_names that corresponds to an array of train/test data.
-    target_names : np.ndarray
-        Array of all available classes in the target_names.
-    n_each : int
-        Number of samples for each class to seed with
+    y : Union[np.ndarray, sparse.csc_matrix]
+        The target vector for the examples which are available for selection.
+    protocol : str
+        String describing how to select examples. One of {"random", "k_per_class"}.
+    k : int
+        Determines how many examples are selected. If protocol is "random", k is the absolute number
+            of elements selected. If protocol is "k_per_class", k is the number of instances
+            belonging to each class that are selected.
 
     Returns
     -------
     np.ndarray
-        Indices that contain location of one element per class from y.
+        Indices for the first batch.
+
+    Raises
+    ------
+    TypeError
+        If y is not of the correct data type.
+    ValueError
+        If protocol is not recognized.
     """
 
-    # If the data is label-encoded (as it should be) but the target_names are raw strings
-    # (as they perhaps should be) this ensures one of every encoded label is captured
-    target_names = list(range(len(target_names))) if y[0] not in set(target_names) else target_names
+    if protocol == "random":
+        idx = np.array(random.sample(list(range(y.shape[0])), k))
 
-    idx = {l: [] for l in target_names}
-    for i, l in enumerate(y):
-        if len(idx[l]) < n_each:
-            idx[l].append(i)
+        return idx
 
-    idx = list(idx.values())
-    idx = np.array(idx).flatten()
+    elif protocol == "k_per_class":
+        idx = {l: [] for l in unique_labels(y)}
+        for i, label in enumerate(y):
 
-    return idx
+            if isinstance(y, np.ndarray) and y.ndim == 1:
+                positive_classes = [int(label)]
+            elif isinstance(y, np.ndarray) and y.ndim == 2:
+                positive_classes = np.where(label == 1)[0].tolist()
+            elif sparse.isspmatrix_csr(label):
+                positive_classes = label.indices.tolist()
+            else:
+                raise TypeError(
+                    f"Encountered an unexpected type, {type(label)},"
+                    f" when iterating through y, {type(y)}."
+                )
+
+            for c in positive_classes:
+                if len(idx[c]) < k:
+                    idx[c].append(i)
+
+        idx = list(idx.values())
+        idx = np.array(idx).flatten()
+
+        return idx
+
+    raise ValueError(f"protocol: {protocol} not recognized.")
 
 
 def evaluate_and_record(
@@ -165,7 +193,11 @@ def evaluate_and_record(
     report = {}
     if y.shape[0] > 0:
         preds = learner.predict(X)
-        report = classification_report(y, preds, zero_division=1, output_dict=True)
+        report = metrics.classification_report(y, preds, zero_division=1, output_dict=True)
+        report = {k.replace(" ", "_"): v for k, v in report.items()}
+        if "accuracy" not in report:
+            report["accuracy"] = metrics.accuracy_score(y, preds)
+        report["hamming_loss"] = metrics.hamming_loss(y, preds)
         report_to_json(report, raw_path, iteration)
 
     return preds, report
@@ -202,9 +234,11 @@ def main(experiment_parameters: Dict[str, Union[str, int]]) -> None:
     np.random.seed(random_state)
     # Otherwise, we use the most up-to-date methods provided by numpy
     rng = np.random.default_rng(random_state)
+    # And some stuff from random
+    random.seed(random_state)
 
     # Get the dataset
-    X_unlabeled_pool, X_test, y_unlabeled_pool, y_test, target_names = dataset_fetchers.get_dataset(
+    X_unlabeled_pool, X_test, y_unlabeled_pool, y_test, _ = dataset_fetchers.get_dataset(
         experiment_parameters["dataset"], stream=True, random_state=random_state
     )
     # Perform the feature extraction
@@ -240,9 +274,6 @@ def main(experiment_parameters: Dict[str, Union[str, int]]) -> None:
     oh = output_helper.OutputHelper(experiment_parameters)
     oh.setup()
 
-    # Get ids of one instance of each class
-    idx = get_index_for_each_class(y_unlabeled_pool, target_names, n_each=2)
-
     # Track the number of training data in the labeled pool
     training_data = []
 
@@ -255,6 +286,7 @@ def main(experiment_parameters: Dict[str, Union[str, int]]) -> None:
 
         # Setup the learner and stabilizing predictions in the 0th iteration
         if i == 0:
+            idx = get_first_batch(y_unlabeled_pool, protocol="random", k=batch_size)
             learner = ActiveLearner(estimator=estimator, query_strategy=query_strategy)
             learner.teach(X_unlabeled_pool[idx], y_unlabeled_pool[idx])
 
@@ -281,14 +313,12 @@ def main(experiment_parameters: Dict[str, Union[str, int]]) -> None:
         )
 
         # Evaluate the stopping methods
-        stopping_manager.check_stopped(stop_set_predictions=preds_stop_set)
+        stopping_manager.check_stopped(preds=preds_stop_set)
         stopping_manager.update_results(
             **{
                 "annotations": learner.y_training.shape[0],
                 "iteration": i,
                 "accuracy": report_test_set["accuracy"],
-                "macro avg f1-score": report_test_set["macro avg"]["f1-score"],
-                "weighted avg f1-score": report_test_set["weighted avg"]["f1-score"],
             }
         )
 
