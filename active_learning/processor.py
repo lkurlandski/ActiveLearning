@@ -72,7 +72,14 @@ def dict_of_dfs_to_csvs(dfs: Dict[str, pd.DataFrame], processed_path: Path) -> N
     """
 
     for k, df in dfs.items():
-        if k in {"accuracy", "macro_avg", "weighted_avg"}:
+        if k in {
+            "accuracy",
+            "hamming_loss",
+            "macro_avg",
+            "weighted_avg",
+            "micro_avg",
+            "samples_avg",
+        }:
             path = processed_path / output_helper.OutputDataContainer.overall_str / f"{k}.csv"
         else:
             path = processed_path / output_helper.OutputDataContainer.ind_cat_str / f"{k}.csv"
@@ -103,6 +110,7 @@ def process_container(container: output_helper.OutputDataContainer):
         for df in dfs.values():
             df.insert(0, "training_data", num_training_data)
         dfs["accuracy"] = dfs["accuracy"].rename(columns={0: "accuracy"})
+        dfs["hamming_loss"] = dfs["hamming_loss"].rename(columns={0: "hamming_loss"})
         dict_of_dfs_to_csvs(dfs, processed_path)
 
 

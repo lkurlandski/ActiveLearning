@@ -50,8 +50,8 @@ class DatasetFetcher(ABC):
     ) -> Tuple[
         Generator[Any, None, None],
         Generator[Any, None, None],
-        Generator[Any, None, None],
-        Generator[Any, None, None],
+        np.ndarray,
+        np.ndarray,
         np.ndarray,
     ]:
         """Retrieve the data using a memory-efficient streaming approach.
@@ -61,9 +61,9 @@ class DatasetFetcher(ABC):
         Tuple[
                 Generator[Any, None, None],
                 Generator[Any, None, None],
-                Generator[Any, None, None],
-                Generator[Any, None, None],
-                np.ndarray
+                np.ndarray,
+                np.ndarray,
+                np.ndarray,
             ]
             Train data, test data, train labels, test labels, and target names.
         """

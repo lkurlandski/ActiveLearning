@@ -6,7 +6,7 @@ TODO
 
 FIXME
 -----
-- For glue, sst2, y_test contains only -1, but y_train contains 0 and 1.
+-
 """
 
 from pprint import pprint  # pylint: disable=unused-import
@@ -81,8 +81,8 @@ class ClassificationFetcher(HuggingFaceDatasetFetcher):
     ) -> Tuple[
         Generator[Any, None, None],
         Generator[Any, None, None],
-        Generator[Any, None, None],
-        Generator[Any, None, None],
+        np.ndarray,
+        np.ndarray,
         np.ndarray,
     ]:
 
@@ -91,12 +91,10 @@ class ClassificationFetcher(HuggingFaceDatasetFetcher):
         X_train = (x[self.feature_keys[self.path]] for x in self.dataset["train"])
         X_test = (x[self.feature_keys[self.path]] for x in self.dataset["test"])
 
-        y_train = [x["label"] for x in self.dataset["train"]]
-        y_test = [x["label"] for x in self.dataset["test"]]
-        target_names = np.sort(np.unique(np.concatenate((np.array(y_train), np.array(y_test)))))
+        y_train = np.array([x["label"] for x in self.dataset["train"]])
+        y_test = np.array([x["label"] for x in self.dataset["test"]])
 
-        y_train = (y for y in y_train)
-        y_test = (y for y in y_test)
+        target_names = np.sort(np.unique(np.concatenate((y_train, y_test))))
 
         return X_train, X_test, y_train, y_test, target_names
 

@@ -5,6 +5,7 @@ TODO
 - Determine the optimal svm to use from scikit-learn.
 - Implement multilabel classification.
 - Expand into a module with wrappers for tensorflow, pytorch, and huggingface models.
+- When doing the above, perform a big overhaul/refactor.
 
 FIXME
 -----
@@ -19,18 +20,31 @@ from pprint import pformat, pprint  # pylint: disable=unused-import
 import sys  # pylint: disable=unused-import
 from typing import Any, Callable, Dict, Set, Union
 
-import sklearn
+import numpy as np
+from scipy.sparse import spmatrix
+from sklearn.base import BaseEstimator
 from sklearn.calibration import CalibratedClassifierCV
 from sklearn.ensemble import RandomForestClassifier
-from sklearn.multiclass import (
-    OneVsOneClassifier,
-    OneVsRestClassifier,
-    OutputCodeClassifier,
-)
+from sklearn.multiclass import OneVsOneClassifier, OneVsRestClassifier, OutputCodeClassifier
+from sklearn.multioutput import MultiOutputClassifier
 from sklearn.neural_network import MLPClassifier
-from sklearn.svm import LinearSVC, NuSVC, SVC
+from sklearn.utils.multiclass import type_of_target
+from sklearn.svm import LinearSVC, SVC
 
 from active_learning import utils
+
+
+support_multi_label = {
+    "DecisionTreeClassifier",
+    "ExtraTreeClassifier",
+    "ExtraTreesClassifier",
+    "KNeighborsClassifier",
+    "MLPClassifier",
+    "RadiusNeighborsClassifier",
+    "RandomForestClassifier",
+    "RidgeClassifier",
+    "RidgeClassifierCV",
+}
 
 
 class MCOpts(Enum):
@@ -56,14 +70,14 @@ class MultiClassEstimator:
 
     Parameters
     ----------
-    wrapper : Callable[..., sklearn.base.BaseEstimator]
+    wrapper : Callable[..., BaseEstimator]
         A callable which resutrn a scikit-learn multiclass wrapper
     kwargs : Dict[str, Any]
         Keyword arguments to pass to the wrapper,
             defaults to a dict instructing for maximum parallelization
     """
 
-    wrapper: Callable[..., sklearn.base.BaseEstimator]
+    wrapper: Callable[..., BaseEstimator]
     kwargs: Dict[str, Any] = field(default_factory=lambda: {"n_jobs": -1})
 
 
@@ -91,7 +105,7 @@ class BaseLearner:
 
     Parameters
     ----------
-    learner : Callable[..., sklearn.base.BaseEstimator]
+    learner : Callable[..., BaseEstimator]
         A callable which returns a scikit-learn base learner
     default_multiclass_code : MCOpts
         A string which contains the built-in multiclass support mode of the learner
@@ -102,7 +116,7 @@ class BaseLearner:
             defaults to an empty set
     """
 
-    learner: Callable[..., sklearn.base.BaseEstimator]
+    learner: Callable[..., BaseEstimator]
     default_multiclass_code: MCOpts
     kwargs: Dict[str, Any] = field(default_factory=dict)
     multiclass_options: Set[str] = field(default_factory=set)
@@ -136,15 +150,12 @@ def get_base_learner_map(probabalistic_required: bool) -> Dict[str, BaseLearner]
         "SVC": BaseLearner(
             SVC, MCOpts.ovo, {"probability": probabalistic_required, "kernel": "linear"}
         ),
-        "NuSVC": BaseLearner(
-            NuSVC, MCOpts.ovo, {"nu": 0.25, "probability": probabalistic_required}
-        ),
     }
 
     return mapper
 
 
-def extract_estimator(base_learner: BaseLearner) -> sklearn.base.BaseEstimator:
+def extract_estimator(base_learner: BaseLearner) -> BaseEstimator:
     """Extract the base learner from the BaseLearner type.
 
     Parameters
@@ -154,7 +165,7 @@ def extract_estimator(base_learner: BaseLearner) -> sklearn.base.BaseEstimator:
 
     Returns
     -------
-    sklearn.base.BaseEstimator
+    BaseEstimator
         scikit learn base learner
     """
 
@@ -186,9 +197,7 @@ def wrap_estimator_for_multiclass(
 
 def change_estimator_parameters_for_multiclass(
     base_learner: BaseLearner, multiclass_estimator: MultiClassEstimator, multiclass_code: MCOpts
-) -> Union[
-    sklearn.base.BaseEstimator, OneVsOneClassifier, OneVsRestClassifier, OutputCodeClassifier
-]:
+) -> Union[BaseEstimator, OneVsOneClassifier, OneVsRestClassifier, OutputCodeClassifier]:
     """Alter the multi_class parameter scitkit learn base learner with valid value, or use wrapper.
 
     Parameters
@@ -202,7 +211,7 @@ def change_estimator_parameters_for_multiclass(
 
     Returns
     -------
-    Union[sklearn.base.BaseEstimator, OneVsOneClassifier, OneVsRestClassifier, OutputCodeClassifier]
+    Union[BaseEstimator, OneVsOneClassifier, OneVsRestClassifier, OutputCodeClassifier]
         Either the scikit learn base learner instatiated with a valid option for its multi_class
             parameter or a multiclass wrapper if requested option is invalid.
     """
@@ -219,44 +228,13 @@ def change_estimator_parameters_for_multiclass(
     return wrap_estimator_for_multiclass(base_learner, multiclass_estimator)
 
 
-def is_multiclass_trivial(
-    n_targets: int, base_learner: BaseLearner, multiclass_code: MCOpts
-) -> bool:
-    """Determine if multiclass classification protocols are unnessecary.
-
-    This can occur if:
-        - binary classification problem
-        - learner handles multiclass naturally
-        - learner's default protocol is requested
-
-    Parameters
-    ----------
-    n_targets : int
-        Number of classification targets
-    base_learner : BaseLearner
-        BaseLearner object
-    multiclass_code : MCOpts
-        Protocol for which mode of multiclass classification should be deployed
-
-    Returns
-    -------
-    bool
-        Whether or not the multiclass problem needs to be handled
-    """
-
-    multiclass_trivial = (
-        n_targets == 2
-        or base_learner.default_multiclass_code == MCOpts.base
-        or base_learner.default_multiclass_code == multiclass_code
-    )
-
-    return multiclass_trivial
-
-
 def get_estimator(
-    base_learner_code: str, multiclass_code: str, n_targets: int, probabalistic_required: bool
+    base_learner_code: str,
+    y: Union[np.ndarray, spmatrix],
+    multiclass_code: str,
+    probabalistic_required: bool = True,
 ) -> Union[
-    sklearn.base.BaseEstimator,
+    BaseEstimator,
     OneVsOneClassifier,
     OneVsRestClassifier,
     OutputCodeClassifier,
@@ -279,7 +257,7 @@ def get_estimator(
     Returns
     -------
     Union[
-        sklearn.base.BaseEstimator,
+        BaseEstimator,
         OneVsOneClassifier,
         OneVsRestClassifier,
         OutputCodeClassifier,
@@ -297,6 +275,10 @@ def get_estimator(
         If occ multiclass classification is requested for probablistic models
     """
 
+    target_type = type_of_target(y)
+    if target_type in {"continuous", "continuous-multioutput", "multiclass-multioutput", "unknown"}:
+        raise ValueError("Estimators for this kind of target not supported")
+
     # Attain data about the base learner requested
     learner_map = get_base_learner_map(probabalistic_required)
     if base_learner_code not in learner_map:
@@ -311,7 +293,11 @@ def get_estimator(
     multiclass_estimator_map = get_multiclass_estimator_map()
     multiclass_estimator = multiclass_estimator_map[multiclass_code]
 
-    multiclass_trivial = is_multiclass_trivial(n_targets, base_learner, multiclass_code)
+    multiclass_trivial = (
+        target_type == "binary"
+        or base_learner.default_multiclass_code == MCOpts.base
+        or base_learner.default_multiclass_code == multiclass_code
+    )
 
     # Check for errors if bad multiclass parameters are passed in
     if not multiclass_trivial:
@@ -336,5 +322,11 @@ def get_estimator(
     if probabalistic_required and not hasattr(estimator, "predict_proba"):
         # FIXME: this will crash if less than 2 examples from any class exist...
         estimator = CalibratedClassifierCV(estimator, cv=2, n_jobs=-1)
+
+    # This functionality is currently experimental in scikit-learn and its API is subject to change
+    multilabel_strs = {"multilabel", "multioutput", "multioutput_only"}
+    supports_multilabel = any((v for k, v in estimator._get_tags().items() if k in multilabel_strs))
+    if target_type == "multilabel-indicator" and not supports_multilabel:
+        estimator = MultiOutputClassifier(estimator, n_jobs=-1)
 
     return estimator
