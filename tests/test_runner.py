@@ -19,6 +19,7 @@ def test1(tmp_path):
         flags={"active_learning", "processor", "graphing"},
     )
 
+    # Run a different random state then average them
     experiment_parameters["random_state"] = 1
     runner.main(
         experiment_parameters=experiment_parameters,

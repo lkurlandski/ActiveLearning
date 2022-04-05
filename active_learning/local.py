@@ -19,7 +19,7 @@ experiment_parameters = {
     "query_strategy": "uncertainty_batch_sampling",
     "base_learner": "SVC",
     "multiclass": "ovr",
-    "feature_representation": "preprocessed",
-    "dataset": "Iris",
+    "feature_representation": "count",
+    "dataset": "20NewsGroups",
     "random_state": 0,
 }

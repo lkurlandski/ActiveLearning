@@ -27,7 +27,18 @@ colors_stopping = ["lime", "blue", "megenta", "midnightblue"]
 # Colors for performance metrics
 colors_performance = [
     f"tab:{c}"
-    for c in ["blue", "orange", "green", "red", "purple", "brown", "pink", "grey", "olive", "cyan"]
+    for c in [
+        "blue",
+        "orange",
+        "green",
+        "red",
+        "purple",
+        "brown",
+        "pink",
+        "grey",
+        "olive",
+        "cyan",
+    ]
 ]
 
 
@@ -104,7 +115,6 @@ def plot_from_dataframe(
     for i, col in enumerate(y_columns):
         ax.scatter(x=x, y=df[col], marker=".", color=colors_performance[i], label=col)
 
-    # Assume all performance metrics are 0 to 1
     ax.set_ylim([0, 1])
 
     ax.legend()
@@ -113,66 +123,6 @@ def plot_from_dataframe(
     ax.set_ylabel("Performance")
 
     return fig, ax
-
-
-def create_graphs_for_overall(overall_path: Path, stopping_df: pd.DataFrame = None):
-    """Create graphs which should exist under the avg directory.
-
-    Parameters
-    ----------
-    avg_path : Path
-        Location of the avg path to create graphs from. Should contain "accuracy", "macro_avg", and
-            "weighted_avg" subdirectories
-    stopping_df : pd.DataFrame, optional
-        Stopping results dataframe to extract the performance of stopping methods from,
-            by default None
-    """
-
-    for data_file in (
-        "accuracy",
-        "hamming_loss",
-        "macro_avg",
-        "weighted_avg",
-        "micro_avg",
-        "samples_avg",
-    ):
-        path = overall_path / f"{data_file}.csv"
-        if not path.exists():
-            continue
-
-        df = pd.read_csv(path, index_col=0)
-
-        if (
-            data_file == "macro_avg"
-            or data_file == "micro_avg"
-            or data_file == "weighted_avg"
-            or data_file == "samples_avg"
-        ):
-            y_columns = ["f1-score"]
-        elif data_file == "accuracy" or data_file == "hamming_loss":
-            y_columns = [data_file]
-        else:
-            raise ValueError(f"Unexpected data_file, {data_file}")
-
-        fig, ax = plot_from_dataframe(df, x_column="training_data", y_columns=y_columns)
-
-        if stopping_df is not None:
-            add_stopping_vlines(fig, ax, stopping_df)
-
-        fig.savefig(overall_path / f"{data_file}.png", dpi=400)
-        plt.close()
-        plt.clf()
-        plt.cla()
-        fig.clf()
-
-
-####################################################################################################
-
-# TODO: implement
-# def create_graphs_for_ind_cat(ind_path:Path, stopping_df : pd.DataFrame = None):
-#    pass
-
-####################################################################################################
 
 
 def create_graphs_for_subset(subset_path: Path, stopping_df: pd.DataFrame = None):
@@ -186,13 +136,31 @@ def create_graphs_for_subset(subset_path: Path, stopping_df: pd.DataFrame = None
         Stopping results for plotting
     """
 
-    create_graphs_for_overall(
-        subset_path / output_helper.OutputDataContainer.overall_str, stopping_df
-    )
-    # create_graphs_for_ind_cat(subset_path / output_helper.OutputDataContainer.ind_cat_str, stopping_df)
+    averages = {"macro_avg", "micro_avg", "weighted_avg", "samples_avg"}
 
+    for data_file in sorted(subset_path.iterdir()):
 
-####################################################################################################
+        df = pd.read_csv(data_file, index_col=0)
+
+        if data_file.stem in averages:
+            y_columns = ["f1-score"]
+        elif data_file.stem == "accuracy":
+            y_columns = ["accuracy"]
+        elif data_file.stem == "hamming_loss":
+            y_columns = ["hamming_loss"]
+        else:
+            y_columns = ["f1-score"]
+
+        fig, ax = plot_from_dataframe(df, x_column="training_data", y_columns=y_columns)
+
+        if stopping_df is not None:
+            add_stopping_vlines(fig, ax, stopping_df)
+
+        fig.savefig(data_file.with_suffix(".png"), dpi=400)
+        plt.close()
+        plt.clf()
+        plt.cla()
+        fig.clf()
 
 
 def create_graphs_for_container(
