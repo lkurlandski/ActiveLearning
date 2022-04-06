@@ -29,15 +29,15 @@ def main(averager: bool, local: bool) -> None:
     """
 
     experiment_parameters_lists = {
-        "output_root": "./outputGarbage",
+        "output_root": "./new_output",
         "task": "cls",
         "stop_set_size": [0.1],
-        "batch_size": [0.5],
+        "batch_size": [200],
         "query_strategy": ["uncertainty_batch_sampling"],
         "base_learner": ["SVC"],
         "multiclass": ["ovr"],
-        "feature_representation": ["count"],
-        "dataset": ["Reuters"],
+        "feature_representation": ["d2v"],
+        "dataset": ["emotion"],
         "random_state": list(range(1)),
     }
 

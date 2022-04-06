@@ -72,13 +72,16 @@ def main(
         with open(config_file, "r", encoding="utf8") as f:
             experiment_parameters = json.load(f)
     
-    #writing the files to /local/scratch
-    print(signal.getsignal(signal.SIGINT))
+    #writing the files to /local/scratch/
     try:
+        #check if the root directory bloodgood exists in /local/scratch/
+        #if does not create it, and make output_root /local/scratch/bloodgood/
+        #when the job finsihes write the files to the user path using glob
         slurm_handling.job_id_list.append(os.environ["SLURM_JOB_ID"])
         slurm_handling.user_path = experiment_parameters["output_root"]
         experiment_parameters["output_root"] = slurm_handling.node_root
     except Exception:
+        #job is not running through slurm
         pass
 
     with warnings.catch_warnings():

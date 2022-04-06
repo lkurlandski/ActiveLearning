@@ -48,6 +48,7 @@ class OutputDataContainer:
 
         self.processed_path = self.root / Path("processed")
         self.raw_path = self.root / Path("raw")
+        print("This is root", self.root)
 
         self.raw_stop_set_path = self.raw_path / self.stop_set_str
         self.raw_test_set_path = self.raw_path / self.test_set_str
@@ -152,6 +153,7 @@ class OutputHelper:
 
         # Base paths
         self.root = Path(experiment_parameters["output_root"])
+        print(self.root)
         self.task_path = self.root / experiment_parameters["task"]
         self.stop_set_size_path = self.task_path / experiment_parameters["stop_set_size"]
         self.batch_size_path = self.stop_set_size_path / experiment_parameters["batch_size"]
@@ -203,7 +205,7 @@ class OutputHelper:
             self.root.mkdir()
 
         self.root.mkdir(exist_ok=exist_ok)
-        self.slurm_path.mkdir(exist_ok=exist_ok)
+        #self.slurm_path.mkdir(exist_ok=exist_ok)
         self.task_path.mkdir(exist_ok=exist_ok)
         self.stop_set_size_path.mkdir(exist_ok=exist_ok)
         self.batch_size_path.mkdir(exist_ok=exist_ok)
