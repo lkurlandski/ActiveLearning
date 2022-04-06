@@ -11,7 +11,7 @@ FIXME
 """
 
 import numpy as np
-import scipy.sparse
+from scipy import sparse
 from sklearn.feature_extraction.text import (
     CountVectorizer,
     HashingVectorizer,
@@ -39,8 +39,8 @@ ts_corpus = [
 class TestInterface:
     def test_no_stream1(self):
         tr, ts = feature_extractors.get_features(tr_corpus, ts_corpus, "count")
-        assert scipy.sparse.issparse(tr)
-        assert scipy.sparse.issparse(ts)
+        assert sparse.isspmatrix_csr(tr)
+        assert sparse.isspmatrix_csr(ts)
 
     def test_no_stream2(self):
         tr, ts = feature_extractors.get_features(tr_corpus, ts_corpus, "bert")
@@ -51,8 +51,8 @@ class TestInterface:
         tr, ts = feature_extractors.get_features(
             (i for i in tr_corpus), (i for i in ts_corpus), "count"
         )
-        assert scipy.sparse.issparse(tr)
-        assert scipy.sparse.issparse(ts)
+        assert sparse.isspmatrix_csr(tr)
+        assert sparse.isspmatrix_csr(ts)
 
     def test_stream2(self):
         tr, ts = feature_extractors.get_features(
@@ -80,42 +80,42 @@ class TestScikitLearnTextFeatureExtractor:
     def test1(self):
         vectorizer = scikit_learn.ScikitLearnTextFeatureExtractor(vectorizer=CountVectorizer)
         tr, ts = vectorizer.extract_features(tr_corpus, ts_corpus)
-        assert scipy.sparse.issparse(tr)
-        assert scipy.sparse.issparse(ts)
+        assert sparse.isspmatrix_csr(tr)
+        assert sparse.isspmatrix_csr(ts)
 
     def test2(self):
         vectorizer = scikit_learn.ScikitLearnTextFeatureExtractor(vectorizer=HashingVectorizer)
         tr, ts = vectorizer.extract_features(iter(tr_corpus), iter(ts_corpus))
-        assert scipy.sparse.issparse(tr)
-        assert scipy.sparse.issparse(ts)
+        assert sparse.isspmatrix_csr(tr)
+        assert sparse.isspmatrix_csr(ts)
 
     def test3(self):
         vectorizer = scikit_learn.ScikitLearnTextFeatureExtractor(vectorizer=TfidfVectorizer)
         tr, ts = vectorizer.extract_features(tr_corpus, ts_corpus)
-        assert scipy.sparse.issparse(tr)
-        assert scipy.sparse.issparse(ts)
+        assert sparse.isspmatrix_csr(tr)
+        assert sparse.isspmatrix_csr(ts)
 
 
 class TestScikitLearnTextFeatureExtractorStreaming:
     def test1(self):
         vectorizer = scikit_learn.ScikitLearnTextFeatureExtractor(vectorizer=CountVectorizer)
         tr, ts = vectorizer.extract_features((x for x in tr_corpus), (x for x in ts_corpus))
-        assert scipy.sparse.issparse(tr)
-        assert scipy.sparse.issparse(ts)
+        assert sparse.isspmatrix_csr(tr)
+        assert sparse.isspmatrix_csr(ts)
 
     def test2(self):
         vectorizer = scikit_learn.ScikitLearnTextFeatureExtractor(vectorizer=HashingVectorizer)
         tr, ts = vectorizer.extract_features((x for x in tr_corpus), (x for x in ts_corpus))
-        assert scipy.sparse.issparse(tr)
-        assert scipy.sparse.issparse(ts)
+        assert sparse.isspmatrix_csr(tr)
+        assert sparse.isspmatrix_csr(ts)
 
     def test3(self):
         vectorizer = scikit_learn.ScikitLearnTextFeatureExtractor(vectorizer=TfidfVectorizer)
         tr, ts = vectorizer.extract_features(
             iter((x for x in tr_corpus)), iter((x for x in ts_corpus))
         )
-        assert scipy.sparse.issparse(tr)
-        assert scipy.sparse.issparse(ts)
+        assert sparse.isspmatrix_csr(tr)
+        assert sparse.isspmatrix_csr(ts)
 
 
 class TestHuggingFaceFeatureExtractor:

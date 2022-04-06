@@ -12,7 +12,7 @@ FIXME
 import types
 
 import numpy as np
-from scipy.sparse import issparse
+from scipy import sparse
 
 from active_learning import dataset_fetchers
 from active_learning.dataset_fetchers import disk
@@ -27,8 +27,8 @@ class TestInterface:
 
         assert isinstance(X_train, list)
         assert isinstance(X_test, list)
-        assert issparse(y_train)
-        assert issparse(y_test)
+        assert sparse.isspmatrix_csr(y_train)
+        assert sparse.isspmatrix_csr(y_test)
         assert isinstance(target_names, np.ndarray)
 
     def test_stream1(self):
@@ -38,8 +38,8 @@ class TestInterface:
 
         assert isinstance(X_train, types.GeneratorType)
         assert isinstance(X_test, types.GeneratorType)
-        assert issparse(y_train)
-        assert issparse(y_test)
+        assert sparse.isspmatrix_csr(y_train)
+        assert sparse.isspmatrix_csr(y_test)
         assert isinstance(target_names, np.ndarray)
 
         assert isinstance(next(X_train), str)
@@ -53,8 +53,8 @@ class TestTextFileDatasetFetcher:
 
         assert isinstance(X_train, list)
         assert isinstance(X_test, list)
-        assert issparse(y_train)
-        assert issparse(y_test)
+        assert sparse.isspmatrix_csr(y_train)
+        assert sparse.isspmatrix_csr(y_test)
         assert isinstance(target_names, np.ndarray)
 
         assert len(X_train) == 9840
@@ -107,8 +107,8 @@ class TestTextFileDatasetFetcher:
 
         assert isinstance(X_train, list)
         assert isinstance(X_test, list)
-        assert issparse(y_train)
-        assert issparse(y_test)
+        assert sparse.isspmatrix_csr(y_train)
+        assert sparse.isspmatrix_csr(y_test)
         assert isinstance(target_names, np.ndarray)
 
         assert len(X_train) == 6177
@@ -125,8 +125,8 @@ class TestTextFileDatasetFetcher:
 
         assert isinstance(X_train, types.GeneratorType)
         assert isinstance(X_test, types.GeneratorType)
-        assert issparse(y_train)
-        assert issparse(y_test)
+        assert sparse.isspmatrix_csr(y_train)
+        assert sparse.isspmatrix_csr(y_test)
         assert isinstance(target_names, np.ndarray)
 
         assert isinstance(next(X_train), str)
@@ -153,8 +153,8 @@ class TestTextFileDatasetFetcher:
 
         assert isinstance(X_train, types.GeneratorType)
         assert isinstance(X_test, types.GeneratorType)
-        assert issparse(y_train)
-        assert issparse(y_test)
+        assert sparse.isspmatrix_csr(y_train)
+        assert sparse.isspmatrix_csr(y_test)
         assert isinstance(target_names, np.ndarray)
 
         assert y_train.shape[0] == 9840
