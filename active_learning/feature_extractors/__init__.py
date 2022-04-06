@@ -36,6 +36,10 @@ mapper = {
     "tfidf": utils.init(scikit_learn.ScikitLearnTextFeatureExtractor, vectorizer=TfidfVectorizer),
     "bert": utils.init(huggingface.HuggingFaceFeatureExtractor, model="bert-base-uncased"),
     "roberta": utils.init(huggingface.HuggingFaceFeatureExtractor, model="roberta-base"),
+    "distilbert": utils.init(huggingface.HuggingFaceFeatureExtractor, model="distilbert-base-uncased"),
+    "bert-cased":  utils.init(huggingface.HuggingFaceFeatureExtractor, model="bert-base-cased"),
+    "albert": utils.init(huggingface.HuggingFaceFeatureExtractor, model="albert-base-v2"),
+    "distilroberta": utils.init(huggingface.HuggingFaceFeatureExtractor, model="distilroberta-base"),
 }
 
 
