@@ -14,27 +14,67 @@ FIXME
 """
 
 
-from dataclasses import dataclass, field
-from enum import Enum
 from pprint import pformat, pprint  # pylint: disable=unused-import
 import sys  # pylint: disable=unused-import
-from typing import Any, Callable, Dict, Set, Union
+from typing import Any, Callable, Dict
+import warnings
 
 import numpy as np
-from scipy.sparse import spmatrix
 from sklearn.base import BaseEstimator
-from sklearn.calibration import CalibratedClassifierCV
-from sklearn.ensemble import RandomForestClassifier
-from sklearn.multiclass import OneVsOneClassifier, OneVsRestClassifier, OutputCodeClassifier
-from sklearn.multioutput import MultiOutputClassifier
+from sklearn.ensemble import (
+    ExtraTreesClassifier,
+    GradientBoostingClassifier,
+    RandomForestClassifier,
+)
+from sklearn.multiclass import OneVsRestClassifier
 from sklearn.neural_network import MLPClassifier
-from sklearn.utils.multiclass import type_of_target
-from sklearn.svm import LinearSVC, SVC
+from sklearn.svm import SVC
 
 from active_learning import utils
 
 
-support_multi_label = {
+inherintly_multiclass = {
+    "BernoulliNB",
+    "DecisionTreeClassifier",
+    "ExtraTreeClassifier",
+    "ExtraTreesClassifier",
+    "GaussianNB",
+    "KNeighborsClassifier",
+    "LabelPropagation",
+    "LabelSpreading",
+    "LinearDiscriminantAnalysis",
+    "LinearSVC",  # (setting multi_class=”crammer_singer”)
+    "LogisticRegression",  # (setting multi_class=”multinomial”)
+    "LogisticRegressionCV",  # (setting multi_class=”multinomial”)
+    "MLPClassifier",
+    "NearestCentroid",
+    "QuadraticDiscriminantAnalysis",
+    "RadiusNeighborsClassifier",
+    "RandomForestClassifier",
+    "RidgeClassifier",
+    "RidgeClassifierCV",
+}
+
+
+multiclass_as_one_vs_one = {
+    "NuSVC",
+    "SVC",
+    "GaussianProcessClassifier",  # (setting multi_class = “one_vs_one”)
+}
+
+multiclass_as_one_vs_rest = {
+    "GradientBoostingClassifier",
+    "GaussianProcessClassifier",  # (setting multi_class = “one_vs_rest”)
+    "LinearSVC",  # (setting multi_class=”ovr”)
+    "LogisticRegression",  # (setting multi_class=”ovr”)
+    "LogisticRegressionCV",  # (setting multi_class=”ovr”)
+    "SGDClassifier",
+    "Perceptron",
+    "PassiveAggressiveClassifier",
+}
+
+
+support_multilabel = {
     "DecisionTreeClassifier",
     "ExtraTreeClassifier",
     "ExtraTreesClassifier",
@@ -47,286 +87,203 @@ support_multi_label = {
 }
 
 
-class MCOpts(Enum):
-    """The options for multiclass classification supported by the system."""
-
-    ovo: str = "ovo"
-    ovr: str = "ovr"
-    occ: str = "occ"
-    crammer_singer: str = "crammer_singer"
-    base: str = "base"
-
-
-# Mapper to handle the two different names for classification types in sklearn
-synonyms = {
-    MCOpts.ovo: "one_versus_one",
-    MCOpts.ovr: "one_versus_rest",
+support_multiclass_multioutput = {
+    "DecisionTreeClassifier",
+    "ExtraTreeClassifier",
+    "ExtraTreesClassifier",
+    "KNeighborsClassifier",
+    "RadiusNeighborsClassifier",
+    "RandomForestClassifier",
 }
 
 
-@dataclass
-class MultiClassEstimator:
-    """Contains the optional multiclass estimator the estimator-creation chain.
+def get_MultiOutputToMultiLabelClassifier(
+    base: Callable[..., BaseEstimator]
+) -> Callable[..., BaseEstimator]:
+    """Get a MultiOutputToMultiLabelClassifier to wrap multioutput scikit-learn base learners.
 
     Parameters
     ----------
-    wrapper : Callable[..., BaseEstimator]
-        A callable which resutrn a scikit-learn multiclass wrapper
-    kwargs : Dict[str, Any]
-        Keyword arguments to pass to the wrapper,
-            defaults to a dict instructing for maximum parallelization
-    """
-
-    wrapper: Callable[..., BaseEstimator]
-    kwargs: Dict[str, Any] = field(default_factory=lambda: {"n_jobs": -1})
-
-
-def get_multiclass_estimator_map() -> Dict[str, MultiClassEstimator]:
-    """Return the mapping of keyword arguments to MultiClassEstimator instances.
+    base : Callable[..., BaseEstimator]
+        A scikit-learn classifier class that is inherintly multioutput.
 
     Returns
     -------
-    Dict[str, MultiClassEstimator]
-        Mapping of keyword arguments to BaseLearner instances
+    Callable[..., BaseEstimator]
+        A class that inherits from base that handles the conversion of predict_proba calls.
     """
 
-    mapper = {
-        MCOpts.occ: MultiClassEstimator(OutputCodeClassifier, {"n_jobs": -1, "random_state": 0}),
-        MCOpts.ovo: MultiClassEstimator(OneVsOneClassifier),
-        MCOpts.ovr: MultiClassEstimator(OneVsRestClassifier),
-    }
+    if base.__name__ not in support_multiclass_multioutput:
+        warnings.warn(
+            f"WARNING: the {base.__name__} class is not inhertintly multiclass, so the"
+            " MultiOutputToMultiLabelClassifier wrapper class should not be used."
+        )
 
-    return mapper
+    class MultiOutputToMultiLabelClassifier(base):
+        """Have a multioutput classifier emulate the behavior of a multilabel classifier."""
+
+        def __init__(self, **kwargs):
+            """Instantiate a scikit-learn base learner.
+
+            Parameters
+            ----------
+            **kwargs
+                Keyword arguments passed to the super classes's __init__ method.
+            """
+
+            super().__init__(**kwargs)
+            self.predict_proba = self._predict_proba
+
+        def __repr__(self):
+            return "MultiOutputToMultiLabelClassifier(" + super().__repr__() + ")"
+
+        def __str__(self):
+            return "MultiOutputToMultiLabelClassifier(" + super().__repr__() + ")"
+
+        def _predict_proba(self, X) -> np.ndarray:
+            """Get prediction probabilities that are casted into a multilabel format.
+
+            Parameters
+            ----------
+            X
+                Features to make predictions upon.
+
+            Returns
+            -------
+            np.ndarray
+                An (n_samples, n_classes) ndarray indicating class probabilities.
+            """
+
+            probas = super().predict_proba(X)
+            if not all(p.shape == (X.shape[0], 2) for p in probas):
+                raise ValueError(
+                    "Expected every probability to have shape (n_samples, 2) not "
+                    f"{(X.shape[0], 2)}"
+                )
+            probas = [p[:, 1] for p in probas]
+            probas = np.vstack(probas).T
+            return probas
+
+        def predict(self, X) -> np.ndarray:
+            """Get predictions.
+
+            Parameters
+            ----------
+            X
+                Features to make predictions upon.
+
+            Returns
+            -------
+            np.ndarray
+                An (n_samples,) ndarray indicating class predictions.
+            """
+
+            self.predict_proba = super().predict_proba
+            preds = super().predict(X)
+            self.predict_proba = self._predict_proba
+            return preds
+
+    return MultiOutputToMultiLabelClassifier
 
 
-@dataclass
-class BaseLearner:
-    """Contains the base learner as part of the estimator-creation chain.
-
-    Parameters
-    ----------
-    learner : Callable[..., BaseEstimator]
-        A callable which returns a scikit-learn base learner
-    default_multiclass_code : MCOpts
-        A string which contains the built-in multiclass support mode of the learner
-    kwargs : Dict[str, Any]
-        Keyword arguments to pass to the learner, defaults to an empty dict
-    multiclass_options: Set[str]
-        Set of valid options for the learner 'multi_class' argument, if it has one,
-            defaults to an empty set
-    """
-
-    learner: Callable[..., BaseEstimator]
-    default_multiclass_code: MCOpts
-    kwargs: Dict[str, Any] = field(default_factory=dict)
-    multiclass_options: Set[str] = field(default_factory=set)
-
-
-def get_base_learner_map(probabalistic_required: bool) -> Dict[str, BaseLearner]:
+def get_mapper(random_state: int) -> Dict[str, Dict[str, Any]]:
     """Return the mapping of keyword arguments to BaseLearner instances.
 
     Parameters
     ----------
-    probabalistic_required : bool
-        Whether or not the system demands probabalistic models, ie, models that implement a
-            predict_proba method.
+    random_state : int
+        Integer for reproducible results.
 
     Returns
     -------
-    Dict[str, BaseLearner]
-        Mapping of keyword arguments to BaseLearner instances
+    Dict[str, BaseEstimator]
+        Mapping of keyword arguments to scikit-learn learners.
     """
 
-    # TODO: Investigate MLPClassifier with early_stopping=True destroyed performance on Iris dataset
-    # TODO: Investigate whether the CalibratedClassifierCV(LinearSVC()) with a Platt Scaling is
-    # slower the SVC(kernel='linear')
-    # Add learners alphabeically, by the name of their parent package
     mapper = {
-        "RandomForestClassifier": BaseLearner(RandomForestClassifier, MCOpts.base),
-        "MLPClassifier": BaseLearner(MLPClassifier, MCOpts.base, {"early_stopping": False}),
-        "LinearSVC": BaseLearner(
-            LinearSVC, MCOpts.ovr, multiclass_options={MCOpts.ovr, MCOpts.crammer_singer}
-        ),
-        "SVC": BaseLearner(
-            SVC, MCOpts.ovo, {"probability": probabalistic_required, "kernel": "linear"}
-        ),
+        "ExtraTreesClassifier": {
+            "cls": ExtraTreesClassifier,
+            "args": [],
+            "kwargs": dict(random_state=random_state),
+        },
+        "GradientBoostingClassifier": {
+            "cls": GradientBoostingClassifier,
+            "args": [],
+            "kwargs": dict(random_state=random_state),
+        },
+        "RandomForestClassifier": {
+            "cls": RandomForestClassifier,
+            "args": [],
+            "kwargs": dict(random_state=random_state),
+        },
+        "MLPClassifier": {
+            "cls": MLPClassifier,
+            "args": [],
+            "kwargs": dict(random_state=random_state),
+        },
+        "SVC": {
+            "cls": SVC,
+            "args": [],
+            "kwargs": dict(kernel="linear", probability=True, random_state=random_state),
+        },
     }
 
     return mapper
 
 
-def extract_estimator(base_learner: BaseLearner) -> BaseEstimator:
-    """Extract the base learner from the BaseLearner type.
-
-    Parameters
-    ----------
-    base_learner : BaseLearner
-        BaseLearner container from which to extract the base learner estimator from
-
-    Returns
-    -------
-    BaseEstimator
-        scikit learn base learner
-    """
-
-    return base_learner.learner(**base_learner.kwargs)
-
-
-def wrap_estimator_for_multiclass(
-    base_learner: BaseLearner, multiclass_estimator: MultiClassEstimator
-) -> Union[OneVsOneClassifier, OneVsRestClassifier, OutputCodeClassifier]:
-    """Instatiated scikit learn base learner then wrap in a multiclass meta estimator.
-
-    Parameters
-    ----------
-    base_learner : BaseLearner
-        BaseLearner object, which will have its base_learner instatiated then wrapped
-    multiclass_estimator : MultiClassEstimator
-        MultiClassEstimator to instatiate with the base_learner
-
-    Returns
-    -------
-    Union[OneVsOneClassifier, OneVsRestClassifier, OutputCodeClassifier]
-        A multiclass wrapper around a base learner
-    """
-
-    estimator = extract_estimator(base_learner)
-    estimator = multiclass_estimator.wrapper(estimator, **multiclass_estimator.kwargs)
-    return estimator
-
-
-def change_estimator_parameters_for_multiclass(
-    base_learner: BaseLearner, multiclass_estimator: MultiClassEstimator, multiclass_code: MCOpts
-) -> Union[BaseEstimator, OneVsOneClassifier, OneVsRestClassifier, OutputCodeClassifier]:
-    """Alter the multi_class parameter scitkit learn base learner with valid value, or use wrapper.
-
-    Parameters
-    ----------
-    base_learner : BaseLearner
-        BaseLearner object, which will have its base_learner instatiated then possibly wrapped
-    multiclass_estimator : MultiClassEstimator
-        MultiClassEstimator to possibly instatiate with the base_learner
-    multiclass_code : MCOpts
-        Code to attempt to use as the base learner's multi_class argument
-
-    Returns
-    -------
-    Union[BaseEstimator, OneVsOneClassifier, OneVsRestClassifier, OutputCodeClassifier]
-        Either the scikit learn base learner instatiated with a valid option for its multi_class
-            parameter or a multiclass wrapper if requested option is invalid.
-    """
-
-    # Use the short string for this multiclass method
-    if multiclass_code in base_learner.multiclass_options:
-        base_learner.kwargs["multi_class"] = multiclass_code.value
-        return extract_estimator(base_learner)
-    # Use the alternative string for this multiclass method
-    if multiclass_code in synonyms and synonyms[multiclass_code] in base_learner.multiclass_options:
-        base_learner.kwargs["multi_class"] = synonyms[multiclass_code]
-        return extract_estimator(base_learner)
-    # Requested protocal was invalid
-    return wrap_estimator_for_multiclass(base_learner, multiclass_estimator)
-
-
 def get_estimator(
-    base_learner_code: str,
-    y: Union[np.ndarray, spmatrix],
-    multiclass_code: str,
-    probabalistic_required: bool = True,
-) -> Union[
-    BaseEstimator,
-    OneVsOneClassifier,
-    OneVsRestClassifier,
-    OutputCodeClassifier,
-    CalibratedClassifierCV,
-]:
+    learner: str,
+    target_type: str,
+    random_state: int,
+) -> BaseEstimator:
     """Get a scikit learn estimator given a desired base learner and a multiclass protocol.
 
     Parameters
     ----------
-    base_learner_code : str
-        Code to refer to the base learner to use
-    multiclass_code : str
-        Code to refer to the multiclass protocol. One of {"ovo", "ovr", "occ", "crammer_singer"}
-    n_targets : int
-        Number of classification targets
-    probabalistic_required : bool
-        Whether a probablistic model is required or not, ie, if the model needs to have a
-            predict_proba method
+    learner : str
+        Code to refer to the base learner to use.
+    target_type : str
+        Type of target vector for classification, as returned by
+            sklearn.utils.multiclass.type_of_target(). Currently supported targets are one of:
+            {'multilabel-indicator', 'multiclass-multioutput', 'multiclass', 'binary'}
 
     Returns
     -------
-    Union[
-        BaseEstimator,
-        OneVsOneClassifier,
-        OneVsRestClassifier,
-        OutputCodeClassifier,
-        CalibratedClassifierCV
-    ]
-        A scikit learn estimator that can be used for multiclass classification
+    BaseEstimator
+        A scikit learn estimator that can be used for multiclass classification.
 
     Raises
     ------
-    ValueError
-        If the base_learner_code is not recognized
-    ValueError
-        If crammer_singer multiclass classification is requested for learner other than LinearSVC
-    ValueError
-        If occ multiclass classification is requested for probablistic models
+    KeyError
+        If the learner is not recognized.
     """
 
-    target_type = type_of_target(y)
-    if target_type in {"continuous", "continuous-multioutput", "multiclass-multioutput", "unknown"}:
-        raise ValueError("Estimators for this kind of target not supported")
+    if target_type not in {"multilabel-indicator", "multiclass", "binary"}:
+        raise ValueError(f"Estimators for this kind of target: {target_type} not supported")
 
-    # Attain data about the base learner requested
-    learner_map = get_base_learner_map(probabalistic_required)
-    if base_learner_code not in learner_map:
-        raise ValueError(
-            f"{base_learner_code} not recognized as a valid base learner."
-            f"Valid options are: {set(learner_map.keys())}"
-        )
-    base_learner = learner_map[base_learner_code]
+    mapper = get_mapper(random_state)
 
-    # Attain data about the multiclass mode requested
-    multiclass_code = MCOpts(multiclass_code)
-    multiclass_estimator_map = get_multiclass_estimator_map()
-    multiclass_estimator = multiclass_estimator_map[multiclass_code]
+    if learner not in mapper:
+        raise KeyError(f"Learner not recognized: {learner}")
 
-    multiclass_trivial = (
-        target_type == "binary"
-        or base_learner.default_multiclass_code == MCOpts.base
-        or base_learner.default_multiclass_code == multiclass_code
-    )
+    cls = mapper[learner]["cls"]
+    args = mapper[learner]["args"]
+    kwargs = mapper[learner]["kwargs"]
 
-    # Check for errors if bad multiclass parameters are passed in
-    if not multiclass_trivial:
-        if multiclass_code == MCOpts.crammer_singer and not isinstance(
-            base_learner.learner, LinearSVC
-        ):
-            raise ValueError("crammer_singer multiclass mode is only implemented for LinearSVC.")
+    clf = utils.init(cls, *args, **kwargs)()
 
-        if multiclass_code == MCOpts.occ and probabalistic_required:
-            raise ValueError(f"{OutputCodeClassifier} does not support probablistic outputs.")
+    if target_type == "binary":
+        return clf
+    if target_type == "multiclass":
+        if learner in inherintly_multiclass:
+            return clf
+        return OneVsRestClassifier(clf, n_jobs=-1)
+    if target_type == "multilabel-indicator":
+        if learner in support_multiclass_multioutput:
+            MultiOutputToMultiLabelClassifier = get_MultiOutputToMultiLabelClassifier(cls)
+            return MultiOutputToMultiLabelClassifier(*args, **kwargs)
+        if learner in support_multilabel:
+            return clf
+        return OneVsRestClassifier(clf, n_jobs=-1)
 
-    if multiclass_trivial:
-        estimator = extract_estimator(base_learner)
-    elif not utils.check_callable_has_parameter(base_learner.learner, "multi_class"):
-        estimator = wrap_estimator_for_multiclass(base_learner, multiclass_estimator)
-    else:
-        estimator = change_estimator_parameters_for_multiclass(
-            base_learner, multiclass_estimator, multiclass_code
-        )
-
-    # If the base learner not support probabalistic outputs, wrap with probablistic estimator
-    if probabalistic_required and not hasattr(estimator, "predict_proba"):
-        # FIXME: this will crash if less than 2 examples from any class exist...
-        estimator = CalibratedClassifierCV(estimator, cv=2, n_jobs=-1)
-
-    # This functionality is currently experimental in scikit-learn and its API is subject to change
-    multilabel_strs = {"multilabel", "multioutput", "multioutput_only"}
-    supports_multilabel = any((v for k, v in estimator._get_tags().items() if k in multilabel_strs))
-    if target_type == "multilabel-indicator" and not supports_multilabel:
-        estimator = MultiOutputClassifier(estimator, n_jobs=-1)
-
-    return estimator
+    raise Exception("Undefined behavior occurred associated with the type of target.")

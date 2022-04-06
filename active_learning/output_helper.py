@@ -18,15 +18,12 @@ from active_learning import utils
 
 
 class OutputDataContainer:
-    """Results from one set of experiments or an everage across many sets."""
+    """Results from one set of experiments or an average across many sets."""
 
     stop_set_str = "stop_set"
     test_set_str = "test_set"
     train_set_str = "train_set"
     subsets = (stop_set_str, test_set_str, train_set_str)
-
-    ind_cat_str = "ind"
-    overall_str = "overall"
 
     def __init__(self, root: Path):
         """Results from one set of experiments or an everage across many sets.
@@ -45,6 +42,7 @@ class OutputDataContainer:
 
         self.processed_path = self.root / Path("processed")
         self.raw_path = self.root / Path("raw")
+        self.graphs_path = self.root / Path("graphs")
 
         self.raw_stop_set_path = self.raw_path / self.stop_set_str
         self.raw_test_set_path = self.raw_path / self.test_set_str
@@ -53,15 +51,6 @@ class OutputDataContainer:
         self.processed_stop_set_path = self.processed_path / self.stop_set_str
         self.processed_test_set_path = self.processed_path / self.test_set_str
         self.processed_train_set_path = self.processed_path / self.train_set_str
-
-        self.processed_stop_set_ind = self.processed_stop_set_path / self.ind_cat_str
-        self.processed_stop_set_all = self.processed_stop_set_path / self.overall_str
-
-        self.processed_test_set_ind = self.processed_test_set_path / self.ind_cat_str
-        self.processed_test_set_all = self.processed_test_set_path / self.overall_str
-
-        self.processed_train_set_ind = self.processed_train_set_path / self.ind_cat_str
-        self.processed_train_set_all = self.processed_train_set_path / self.overall_str
 
     def __str__(self) -> str:
         """Return a unix tree-like representation of this instance.
@@ -110,15 +99,6 @@ class OutputDataContainer:
         self.processed_stop_set_path.mkdir(exist_ok=exist_ok)
         self.processed_test_set_path.mkdir(exist_ok=exist_ok)
         self.processed_train_set_path.mkdir(exist_ok=exist_ok)
-
-        self.processed_stop_set_ind.mkdir(exist_ok=exist_ok)
-        self.processed_stop_set_all.mkdir(exist_ok=exist_ok)
-
-        self.processed_test_set_ind.mkdir(exist_ok=exist_ok)
-        self.processed_test_set_all.mkdir(exist_ok=exist_ok)
-
-        self.processed_train_set_ind.mkdir(exist_ok=exist_ok)
-        self.processed_train_set_all.mkdir(exist_ok=exist_ok)
 
     def teardown(self):
         """Remove everything this object represents."""

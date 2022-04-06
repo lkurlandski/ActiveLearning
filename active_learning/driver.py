@@ -103,7 +103,9 @@ def create_config_file(experiment_parameters: Dict[str, Union[str, int]], i: int
 
 
 def main(
-    experiment_parameters_lists: Dict[str, List[Union[str, int]]], flags: Set[str], local: bool
+    experiment_parameters_lists: Dict[str, List[Union[str, int]]],
+    flags: Set[str],
+    local: bool,
 ) -> None:
     """Create configuration files or run the AL pipeline with a set of hyperparameters.
 
@@ -158,7 +160,8 @@ def main(
 
                                     if local:
                                         runner.main(
-                                            experiment_parameters=experiment_parameters, flags=flags
+                                            experiment_parameters=experiment_parameters,
+                                            flags=flags,
                                         )
                                     else:
                                         create_config_file(experiment_parameters, i)

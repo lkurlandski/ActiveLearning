@@ -45,7 +45,9 @@ class ScikitLearnDatasetFetcher(DatasetFetcher):
         self.dataset = dataset
         self.test_size = test_size
 
-    def fetch(self) -> Tuple[Iterable[Any], Iterable[Any], np.ndarray, np.ndarray, np.ndarray]:
+    def fetch(
+        self,
+    ) -> Tuple[Iterable[Any], Iterable[Any], np.ndarray, np.ndarray, np.ndarray]:
 
         loader, kwargs = self.get_dataset_loader_and_kwargs()
 
@@ -76,7 +78,9 @@ class ScikitLearnDatasetFetcher(DatasetFetcher):
 
         return X_train, X_test, y_train, y_test, target_names
 
-    def stream(self) -> Tuple[Iterable[Any], Iterable[Any], np.ndarray, np.ndarray, np.ndarray]:
+    def stream(
+        self,
+    ) -> Tuple[Iterable[Any], Iterable[Any], np.ndarray, np.ndarray, np.ndarray]:
 
         warnings.warn(
             "Streaming with scikit-learn datasets not fully support by scikit-learn and"

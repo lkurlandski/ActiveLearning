@@ -87,7 +87,9 @@ def main(
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument(
-        "--averager", help="Run the averager program instead of pipeline", action="store_true"
+        "--averager",
+        help="Run the averager program instead of pipeline",
+        action="store_true",
     )
     args = parser.parse_args()
 

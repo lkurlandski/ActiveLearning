@@ -109,7 +109,11 @@ class RandomizedClassificationFetcher(ClassificationFetcher):
     """Fetcher for datasets with no predefined train/test splits."""
 
     def __init__(
-        self, random_state: int, path: str, test_size: Union[int, float] = None, **kwargs
+        self,
+        random_state: int,
+        path: str,
+        test_size: Union[int, float] = None,
+        **kwargs,
     ) -> None:
         super().__init__(random_state, path, **kwargs)
         self.dataset = self.dataset["train"].train_test_split(
