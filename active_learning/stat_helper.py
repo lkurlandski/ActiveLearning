@@ -178,7 +178,7 @@ def remove_ids_from_array(a: Any, idx: np.ndarray) -> Any:
 
 
 def iter_spmatrix(matrix: sparse.spmatrix):
-    """Iterator for iterating the elements in a scipy.sparse.*_matrix.
+    """Iterator for iterating the elements in a sparse.*_matrix.
 
     This will always return:
     >>> (row, column, matrix-element)
@@ -187,7 +187,7 @@ def iter_spmatrix(matrix: sparse.spmatrix):
 
     Parameters
     ----------
-    matrix : scipy.sparse.spmatrix
+    matrix : sparse.spmatrix
         The sparse matrix to iterate non-zero elements
     """
     if sparse.isspmatrix_coo(matrix):

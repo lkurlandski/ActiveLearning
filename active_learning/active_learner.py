@@ -54,16 +54,16 @@ class Pool:
 
     Parameters
     ----------
-    X : Union[np.ndarray, sparse.spmatrix]
+    X : Union[np.ndarray, sparse.csr_matrix]
         Training features.
-    y : Union[np.ndarray, sparse.spmatrix]
+    y : Union[np.ndarray, sparse.csr_matrix]
         Corresponding labels.
     path : Path
         An optional path to record evaluation data for the data, defaults to None.
     """
 
-    X: Union[np.ndarray, sparse.spmatrix]
-    y: Union[np.ndarray, sparse.spmatrix]
+    X: Union[np.ndarray, sparse.csr_matrix]
+    y: Union[np.ndarray, sparse.csr_matrix]
     path: Path = None
 
 

@@ -22,7 +22,7 @@ from typing import Any, Dict, Generator, Iterable, List, Tuple, Union
 import warnings
 
 import numpy as np
-from scipy.sparse import spmatrix
+from scipy import sparse
 from sklearn.datasets import load_files
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import MultiLabelBinarizer
@@ -196,7 +196,7 @@ class TextFileDatasetFetcher(FileDatasetFetcher):
     @staticmethod
     def change_representation_if_mulitlabel(
         X: Iterable[str], y: Iterable[Any]
-    ) -> Tuple[Iterable[str], Union[Iterable[Any], spmatrix]]:
+    ) -> Tuple[Iterable[str], Union[Iterable[Any], sparse.csr_matrix]]:
         """Detect duplicate files with different labels and restructure to support multilabel.
 
         Parameters
@@ -208,7 +208,7 @@ class TextFileDatasetFetcher(FileDatasetFetcher):
 
         Returns
         -------
-        Tuple[Iterable[str], Union[Iterable[Any], spmatrix]]
+        Tuple[Iterable[str], Union[Iterable[Any], sparse.csr_matrix]]
             The original data if no duplicate files were detected; else the data restructured to
                 support multilabel classification.
         """

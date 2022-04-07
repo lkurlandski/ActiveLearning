@@ -14,7 +14,7 @@ import sys  # pylint: disable=unused-import
 from typing import Any, Callable, Dict, Iterable, Tuple, Union
 
 import numpy as np
-from scipy.sparse import spmatrix
+from scipy import sparse
 from sklearn.feature_extraction.text import (
     CountVectorizer,
     HashingVectorizer,
@@ -49,7 +49,7 @@ mapper = {
 
 def get_features(
     X_train: Iterable[Any], X_test: Iterable[Any], feature_representation: str
-) -> Tuple[Union[np.ndarray, spmatrix], Union[np.ndarray, spmatrix]]:
+) -> Tuple[Union[np.ndarray, sparse.csr_matrix], Union[np.ndarray, sparse.csr_matrix]]:
     """Get numerical features from raw data; vectorize the data.
 
     Parameters
@@ -63,7 +63,7 @@ def get_features(
 
     Returns
     -------
-    Tuple[Union[np.ndarray, spmatrix], Union[np.ndarray, spmatrix]]
+    Tuple[Union[np.ndarray, sparse.csr_matrix], Union[np.ndarray, sparse.csr_matrix]]
         Numeric representation of the train and test data.
 
     Raises

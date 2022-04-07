@@ -13,7 +13,7 @@ from pprint import pprint  # pylint: disable=unused-import
 import sys  # pylint: disable=unused-import
 from typing import Callable, Iterable, Tuple, Union
 
-from scipy.sparse import csr_matrix
+from scipy import sparse
 from sklearn.feature_extraction.text import (
     CountVectorizer,
     HashingVectorizer,
@@ -52,7 +52,7 @@ class ScikitLearnTextFeatureExtractor(FeatureExtractor):
 
     def extract_features(
         self, X_train: Iterable[str], X_test: Iterable[str]
-    ) -> Tuple[csr_matrix, csr_matrix]:
+    ) -> Tuple[sparse.csr_matrix, sparse.csr_matrix]:
         """Extract the features from a text dataset.
 
         Parameters
@@ -64,12 +64,12 @@ class ScikitLearnTextFeatureExtractor(FeatureExtractor):
 
         Returns
         -------
-        Tuple[spmatrix, spmatrix]
+        Tuple[sparse.csr_matrix, sparse.csr_matrix]
             Two dimensional sparse feature representations of the input corpora.
         """
 
-        X_train: csr_matrix = self.vectorizer.fit_transform(X_train)
-        X_test: csr_matrix = self.vectorizer.transform(X_test)
+        X_train: sparse.csr_matrix = self.vectorizer.fit_transform(X_train)
+        X_test: sparse.csr_matrix = self.vectorizer.transform(X_test)
 
         # Sorting the indices is very important for usage in downstream parallelization tasks
         # This can be read about in scikit-learn's issue #6614
