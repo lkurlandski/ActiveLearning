@@ -1,13 +1,22 @@
+
+from pathlib import Path
 import shutil
-import signal, os, sys
+from glob import glob
+import os
 
-node_root = "/local/scratch/"
-interrupted = False
-job_id_list = []
+
 user_path = ""
+node_root = "/local/scratch/bloodgood/"
 
-def move_output(experiment_parameters):
-    #need to check if the directory exists before trying to move
-    print("Moving output from node file system to user file system.")
-    for task in experiment_parameters["task"]:
-        shutil.move(node_root, user_path)
+
+def move_output():
+    subdirs1 = Path(node_root).glob("**")
+    subdirs2 = glob("/local/scratch/bloodgood/*/")
+    print(subdirs1)
+    print(subdirs2)
+
+    for dir in subdirs1:
+        print(dir)
+        #if not(Path.exists(dir)):
+            #os.mkdir(dir)
+        shutil.copy(dir, user_path)

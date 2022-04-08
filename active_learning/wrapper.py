@@ -32,12 +32,12 @@ def main(averager: bool, local: bool) -> None:
         "output_root": "./new_output",
         "task": "cls",
         "stop_set_size": [0.1],
-        "batch_size": [200],
+        "batch_size": [25],
         "query_strategy": ["uncertainty_batch_sampling"],
         "base_learner": ["SVC"],
         "multiclass": ["ovr"],
-        "feature_representation": ["d2v"],
-        "dataset": ["emotion"],
+        "feature_representation": ["preprocessed"],
+        "dataset": ["Iris"],
         "random_state": list(range(1)),
     }
 
