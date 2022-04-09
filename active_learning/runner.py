@@ -30,25 +30,20 @@ default_flags = {"active_learning", "processor", "graphing"}
 
 
 def main(
-    config_file: Path = None,
-    experiment_parameters: Dict[str, Union[str, int]] = None,
+    experiment_parameters: Dict[str, Union[str, int]],
     flags: Set[str] = None,
 ):
-    """Run the AL pipeline from a configuration file or from a set of experiment parameters.
+    """Run the AL pipeline from a set of experiment parameters.
 
     Parameters
     ----------
-    config_file : Path, optional
-        Location of a configuration file, by default None.
     experiment_parameters : Dict[str, Union[str, int]], optional
-        A single set of hyperparmaters and for the active learning experiment, by default None.
+        A single set of hyperparmaters and for the active learning experiment.
     flags : Set[str], optional
         Set of flags to control which parts of the AL pipeline are run, by default None.
 
     Raises
     ------
-    ValueError
-        If neither a configuration file or experiment_parameters are given.
     ValueError
         If flags contains an unrecognized flag.
     """
@@ -56,17 +51,11 @@ def main(
     flags = default_flags if flags is None else flags
     print(f"runner.main -- flags:\n{pformat(flags)}")
 
-    if config_file is None and experiment_parameters is None:
-        raise ValueError("One of config_file or experiment_parameters must not be None")
-
     if not flags <= all_flags:
         raise ValueError(
             f"Unexpected flags passed as argument: {flags}." f"\nValid flags are: {all_flags}"
         )
 
-    if experiment_parameters is None:
-        with open(config_file, "r", encoding="utf8") as f:
-            experiment_parameters = json.load(f)
     print(f"runner.main -- experiment_parameters:\n{pformat(experiment_parameters)}")
 
     with warnings.catch_warnings():
@@ -94,7 +83,6 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     main(
-        config_file=None,
-        experiment_parameters=local.experiment_parameters,
-        flags=default_flags if not args.averager else "averaging",
+        local.experiment_parameters,
+        default_flags if not args.averager else "averaging",
     )

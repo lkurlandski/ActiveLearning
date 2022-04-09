@@ -35,25 +35,10 @@ def get_mapper(random_state: int = 0) -> Callable[..., base.DatasetFetcher]:
     """
 
     mapper = {
-        "20NewsGroups": utils.init(
-            disk.PredefinedTextFileDatasetFetcher,
-            random_state=random_state,
-            dataset="20NewsGroups",
-        ),
         "Avila": utils.init(
             disk.PredefinedPreprocessedFileDatasetFetcher,
             random_state=random_state,
             dataset="Avila",
-        ),
-        "Covertype": utils.init(
-            scikit_learn.ScikitLearnDatasetFetcher,
-            random_state=random_state,
-            dataset="Covertype",
-        ),
-        "Iris": utils.init(
-            scikit_learn.ScikitLearnDatasetFetcher,
-            random_state=random_state,
-            dataset="Iris",
         ),
         "RCV1_v2": utils.init(
             disk.PredefinedTextFileDatasetFetcher,
@@ -116,6 +101,21 @@ def get_mapper(random_state: int = 0) -> Callable[..., base.DatasetFetcher]:
             random_state=random_state,
             path="emotion",
         ),
+        "20NewsGroups": utils.init(
+            scikit_learn.ScikitLearnDatasetFetcher,
+            random_state=random_state,
+            dataset="20NewsGroups",
+        ),
+        "Covertype": utils.init(
+            scikit_learn.ScikitLearnDatasetFetcher,
+            random_state=random_state,
+            dataset="Covertype",
+        ),
+        "Iris": utils.init(
+            scikit_learn.ScikitLearnDatasetFetcher,
+            random_state=random_state,
+            dataset="Iris",
+        ),
     }
 
     return mapper
@@ -138,7 +138,7 @@ def get_dataset(
     Returns
     -------
     Tuple[Iterable[Any], Iterable[Any], np.ndarray, np.ndarray, np.ndarray]
-        The arrays for X_train, y_train, X_test, and y_test, along with the set of categories.
+        The arrays for X_train, X_test, y_train, and y_test, along with the set of categories.
 
     Raises
     ------
