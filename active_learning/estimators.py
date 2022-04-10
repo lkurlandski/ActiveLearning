@@ -157,8 +157,8 @@ def get_MultiOutputToMultiLabelClassifier(
             probas = super().predict_proba(X)
             if not all(p.shape == (X.shape[0], 2) for p in probas):
                 raise ValueError(
-                    "Expected every probability to have shape (n_samples, 2) not "
-                    f"{(X.shape[0], 2)}"
+                    f"Expected every individual probability to have shape {(X.shape[0], 2)},"
+                    f" but predict_proba() returned shape {np.array(probas).shape}."
                 )
             probas = [p[:, 1] for p in probas]
             probas = np.vstack(probas).T

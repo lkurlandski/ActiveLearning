@@ -19,7 +19,7 @@ from typing import Any, Callable, Generator, Iterator, Iterable, List, Tuple
 
 import numpy as np
 import psutil
-import scipy.sparse
+from scipy import sparse
 
 
 def tree(
@@ -178,7 +178,7 @@ def nbytes(a: Any) -> int:
 
     if isinstance(a, np.ndarray):
         return a.nbytes
-    if scipy.sparse.issparse(a):
+    if sparse.issparse(a):
         return a.data.nbytes + a.indptr.nbytes + a.indices.nbytes
 
     raise ValueError(f"Type not recognized: {type(a)}")

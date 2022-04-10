@@ -4,6 +4,8 @@ TODO
 ----
 - Once random_state is configured as a global variable, expose the mapper outside of its function
     to support vertification from outside this module.
+- Determine the version of 20NewsGroups used by scikit-learn. Download and process it to promote
+    streaming this dataset from disk.
 
 FIXME
 -----
@@ -35,6 +37,11 @@ def get_mapper(random_state: int = 0) -> Callable[..., base.DatasetFetcher]:
     """
 
     mapper = {
+        "20NewsGroups": utils.init(
+            disk.PredefinedTextFileDatasetFetcher,
+            random_state=random_state,
+            dataset="20NewsGroups",
+        ),
         "Avila": utils.init(
             disk.PredefinedPreprocessedFileDatasetFetcher,
             random_state=random_state,
@@ -100,11 +107,6 @@ def get_mapper(random_state: int = 0) -> Callable[..., base.DatasetFetcher]:
             huggingface.PredefinedClassificationFetcher,
             random_state=random_state,
             path="emotion",
-        ),
-        "20NewsGroups": utils.init(
-            scikit_learn.ScikitLearnDatasetFetcher,
-            random_state=random_state,
-            dataset="20NewsGroups",
         ),
         "Covertype": utils.init(
             scikit_learn.ScikitLearnDatasetFetcher,
