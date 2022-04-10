@@ -1,0 +1,135 @@
+import argparse
+from itertools import product
+from pathlib import Path
+from pprint import pformat
+import subprocess
+from typing import Dict, List, Union
+
+
+# Location of the ActiveLearning directory
+root_path = Path("/home/hpc/kurlanl1/bloodgood/ActiveLearning")
+# Python interpreter path
+python_path = root_path / "env/bin/python"
+# Directory containing slurm utilities
+slurm_path = root_path / "slurm"
+# Location to write slurm scripts for sbatch submission
+slurm_file = slurm_path / "submission.py"
+# Location to put the slurm job.out files
+slurm_jobs_path = slurm_path / "jobs"
+
+
+def main(
+    multi_params: List[Dict[str, Union[str, int]]],
+    learn_: bool,
+    evaluate_: bool,
+    process_: bool,
+    graph_: bool,
+    average_: bool,
+    cpus_per_task: int,
+):
+
+    print(f"multirun -- params:\n{pformat(multi_params)}")
+
+    if average_ and any(learn_, evaluate_, process_, graph_):
+        raise Exception("The averaging program should be run after all runs of pipeline finish.")
+    if any(isinstance(multi_params[k], list) for k in ["output_root", "task", "dataset"]):
+        raise TypeError("Only one option for 'output_root', 'task', and 'dataset' is permitted.")
+
+    slurm_precepts = [
+        f"#!{python_path.as_posix()} -u",
+        f"#SBATCH --chdir={root_path.as_posix()}",
+        f"#SBATCH --output={slurm_jobs_path / 'job.%A.out'}",
+        f"#SBATCH --job-name={multi_params['dataset']}",
+        f"#SBATCH --cpus-per-task={cpus_per_task}",
+        "#SBATCH --constraint=skylake|broadwell",
+        "#SBATCH --partition=long",
+        "from active_learning.active_learners import run",
+    ]
+    slurm_precepts = [s + "\n" for s in slurm_precepts]
+
+    order = [
+        "random_state",
+        "stop_set_size",
+        "batch_size",
+        "query_strategy",
+        "base_learner",
+        "multiclass",
+        "feature_representation",
+    ]
+
+    for combo in product(*[multi_params[k] for k in order]):
+
+        random_state = combo[0]
+        stop_set_size = combo[1]
+        batch_size = combo[2]
+        query_strategy = combo[3]
+        base_learner = combo[4]
+        multiclass = combo[5]
+        feature_representation = combo[6]
+
+        params = {
+            "output_root": multi_params["output_root"],
+            "task": multi_params["task"],
+            "stop_set_size": stop_set_size,
+            "batch_size": batch_size,
+            "query_strategy": query_strategy,
+            "feature_representation": feature_representation,
+            "base_learner": base_learner,
+            "multiclass": multiclass,
+            "dataset": multi_params,
+            "random_state": random_state,
+        }
+        params = {k: str(v) for k, v in params.items()}
+
+        with open(slurm_file, "w", encoding="utf8") as f:
+            f.writelines(slurm_precepts)
+            f.write(f"run.main(pformat{params})")
+
+        result = subprocess.run(["sbatch", slurm_file.as_posix()], capture_output=True, check=True)
+        print(result.stdout.decode().strip())
+
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser()
+
+    parser.add_argument("--learn", action="store_true", help="Perform active learning.")
+    parser.add_argument("--evaluate", action="store_true", help="Evaluate the learned models.")
+    parser.add_argument("--process", action="store_true", help="Process evaluations into tables.")
+    parser.add_argument("--graph", action="store_true", help="Create basic graphs for statistics.")
+    parser.add_argument("--average", action="store_true", help="Average across multiple runs.")
+    parser.add_argument(
+        "--cpus_per_task",
+        action="store",
+        help="Number of cpus required per task minimum number of logical processors (threads).",
+    )
+
+    args = parser.parse_args()
+
+    multi_params__ = {
+        "output_root": "outputs/performance",
+        "task": "cls",
+        "stop_set_size": 0.1,
+        "batch_size": 0.3,
+        "query_strategy": "uncertainty_sampling",
+        "base_learner": "SVC",
+        "multiclass": "ovr",
+        "feature_representation": "tfidf",
+        "dataset": "Reuters",
+        "random_state": 0,
+    }
+
+    learn__ = args.learn or False
+    evaluate__ = args.evaluate or False
+    process__ = args.process or False
+    graph__ = args.graph or False
+    average__ = args.average or False
+
+    main(
+        multi_params__,
+        learn__,
+        evaluate__,
+        process__,
+        graph__,
+        average__,
+        args.cpus_per_task,
+    )
