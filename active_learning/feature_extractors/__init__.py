@@ -71,8 +71,6 @@ def get_features(
         raise KeyError(f"{feature_representation} not recognized.")
 
     feature_extractor = mapper[feature_representation]()
-    print("before feature extract")
     X_train, X_test = feature_extractor.extract_features(X_train, X_test)
-    print("after feature extract")
 
     return X_train, X_test

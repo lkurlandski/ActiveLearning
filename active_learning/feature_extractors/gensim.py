@@ -55,8 +55,6 @@ class GensimFeatureExtractor(FeatureExtractor):
 
     def get_w2v_vectors(self, X_train, X_test):
 
-        print("this is the type of", type(X_train))
-
         X_train_tokens = [sentence.split() for sentence in X_train]
         X_test_tokens = [sentence.split() for sentence in X_test]
 
@@ -65,21 +63,16 @@ class GensimFeatureExtractor(FeatureExtractor):
         X_train_vectors = np.array([np.mean([w2v_model.wv[w] for w in words if w in w2v_model.wv.key_to_index] or [np.zeros(500)], axis=0) for words in X_train])
         X_test_vectors = np.array([np.mean([w2v_model.wv[w] for w in words if w in w2v_model.wv.key_to_index] or [np.zeros(500)], axis=0) for words in X_test])
         
-                
-        print("This is the shape of X_train_vectors", np.asarray(X_train_vectors).shape) 
-        print("This is the shape of X_test_vectors", np.asarray(X_test_vectors).shape)
 
         return X_train_vectors, X_test_vectors
 
     def get_d2v_vectors(self, X_train, X_test):
 
-        print("this is the type", type(X_train))
         X_train_tokens = [sentence.split() for sentence in X_train]
         X_test_tokens = [sentence.split() for sentence in X_test]
         
         X_train_tagged_documents = [TaggedDocument(doc, [i]) for i, doc in enumerate(X_train_tokens)]
 
-        print("this is the type", type(X_train_tagged_documents))
         d2v_model = Doc2Vec(X_train_tagged_documents, vector_size=500, window=2, min_count=1, epochs=20)
 
         X_test_vectors = []
@@ -91,6 +84,4 @@ class GensimFeatureExtractor(FeatureExtractor):
         for doc_id in range(len(X_test_tokens)):
             X_test_vectors.append(d2v_model.infer_vector(X_test_tokens[doc_id]))
         
-        print(np.asarray(X_test_vectors).shape)
-        print(np.asarray(X_train_vectors).shape)
         return np.asarray(X_train_vectors), np.asarray(X_test_vectors)

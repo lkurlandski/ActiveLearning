@@ -32,7 +32,7 @@ def main(averager: bool, local: bool) -> None:
         "output_root": "./new_output",
         "task": "cls",
         "stop_set_size": [0.1],
-        "batch_size": [25],
+        "batch_size": [35],
         "query_strategy": ["uncertainty_batch_sampling"],
         "base_learner": ["SVC"],
         "multiclass": ["ovr"],

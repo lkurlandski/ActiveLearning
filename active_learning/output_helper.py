@@ -48,7 +48,6 @@ class OutputDataContainer:
 
         self.processed_path = self.root / Path("processed")
         self.raw_path = self.root / Path("raw")
-        print("This is root", self.root)
 
         self.raw_stop_set_path = self.raw_path / self.stop_set_str
         self.raw_test_set_path = self.raw_path / self.test_set_str

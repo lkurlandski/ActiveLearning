@@ -86,7 +86,7 @@ def main(
         warnings.filterwarnings("ignore", category=ConvergenceWarning)
         if "active_learning" in flags:
             active_learner.main(experiment_parameters)
-            slurm_handling.move_output()
+            slurm_handling.move_output() 
             experiment_parameters["output_root"] = slurm_handling.user_path
 
     if "processor" in flags:

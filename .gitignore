@@ -11,3 +11,5 @@ dataset_test.py
 active_learning.egg-info/
 build/
 dist/
+new_output/
+*.png
