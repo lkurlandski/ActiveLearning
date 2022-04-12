@@ -99,8 +99,7 @@ class OutputDataContainer:
 
 
 class IndividualOutputDataContainer(OutputDataContainer):
-    """Results from a single random state.
-    """
+    """Results from a single random state."""
 
     def __init__(self, root: Path):
         """Instantiate the container.
@@ -156,10 +155,12 @@ class IndividualOutputDataContainer(OutputDataContainer):
         self.raw_test_set_path.mkdir(exist_ok=exist_ok)
         self.raw_train_set_path.mkdir(exist_ok=exist_ok)
 
+    # FIXME: implement better behavior
     def set_target_vectors(self, y=None):
+        """Set the correct file extension for the target vectors."""
 
         ext = None
-        
+
         if y is not None:
             ext = get_array_file_extension(y)
         else:
@@ -171,6 +172,7 @@ class IndividualOutputDataContainer(OutputDataContainer):
             self.y_test_set_file = (self.root / "y_test_set").with_suffix(ext)
             self.y_unlabeled_pool_file = (self.root / "y_unlabeled_pool").with_suffix(ext)
             self.y_stop_set_file = (self.root / "y_stop_set").with_suffix(ext)
+
 
 class OutputHelper:
     """Manage the paths for a particular set of AL parameters."""
@@ -296,8 +298,10 @@ class RStatesOutputHelper:
 
         return "\n".join(list(utils.tree(self.root)))
 
-def get_array_file_extension(y):
 
+# FIXME: implement better behavior
+def get_array_file_extension(y):
+    """Get the correct file extension for an array."""
     if y.ndim == 1:
         return ".npy"
     if y.ndim == 2:

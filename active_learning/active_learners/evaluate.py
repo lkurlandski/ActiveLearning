@@ -1,4 +1,4 @@
-"""
+"""Evaluate a series of learned models.
 """
 
 import json
@@ -7,8 +7,6 @@ from typing import Any, Dict, Tuple, Union
 
 import joblib
 import numpy as np
-from scipy import sparse
-from scipy.io import mmread
 from sklearn import metrics
 from sklearn.base import BaseEstimator
 
@@ -67,9 +65,18 @@ def evaluate_and_record(
     return preds, report
 
 
-def evaluate_container(container: output_helper.IndividualOutputDataContainer):
+def evaluate_container(container: output_helper.IndividualOutputDataContainer) -> None:
+    """Perform inference upon a container, where trained models can be located.
 
-    unlabeled_pool = learn.Pool(None, None, container.X_unlabeled_pool_file, container.y_unlabeled_pool_file).load()
+    Parameters
+    ----------
+    container : output_helper.IndividualOutputDataContainer
+        A container to contain the various paths and files produced by the experiment.
+    """
+
+    unlabeled_pool = learn.Pool(
+        None, None, container.X_unlabeled_pool_file, container.y_unlabeled_pool_file
+    ).load()
     test_set = learn.Pool(None, None, container.X_test_set_file, container.y_test_set_file).load()
     stop_set = learn.Pool(None, None, container.X_stop_set_file, container.y_stop_set_file).load()
 
@@ -110,7 +117,7 @@ def evaluate_container(container: output_helper.IndividualOutputDataContainer):
 
 
 def main(params: Dict[str, Union[str, int]]):
-    """Process the raw data from an AL experiment for a set of experiment parmameters.
+    """Evaluate saved model from an AL experiment for a set of experiment parmameters.
 
     Parameters
     ----------

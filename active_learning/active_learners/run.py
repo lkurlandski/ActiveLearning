@@ -96,13 +96,13 @@ if __name__ == "__main__":
         "output_root": "outputs/performance",
         "task": "cls",
         "stop_set_size": 0.1,
-        "batch_size": 0.3,
+        "batch_size": 0.07,
         "query_strategy": "uncertainty_sampling",
         "base_learner": "SVC",
         "multiclass": "ovr",
         "feature_representation": "preprocessed",
         "dataset": "Iris",
-        "random_state": 0,
+        "random_state": 1,
     }
 
     main(
