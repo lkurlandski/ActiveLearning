@@ -19,7 +19,7 @@ from matplotlib.figure import Figure
 import matplotlib.pyplot as plt
 import pandas as pd
 
-from active_learning import output_helper
+from active_learning.active_learners import output_helper
 from active_learning import stopping_methods  # pylint: disable=unused-import
 
 # Colors for stopping methods
@@ -125,20 +125,24 @@ def plot_from_dataframe(
     return fig, ax
 
 
-def create_graphs_for_subset(subset_path: Path, stopping_df: pd.DataFrame = None):
+def create_graphs_for_subset(
+    source_subset_path: Path, dest_subset_path: Path, stopping_df: pd.DataFrame = None
+):
     """Create graphs for the various sets which have been analyzed throughout AL.
 
     Parameters
     ----------
-    subset_path : Path
+    source_subset_path : Path
         The path to the subset analysis folder
+    dest_subset_path : Path
+        A corresponding path to place the created graphs in
     stopping_df : pd.DataFrame, optional
         Stopping results for plotting
     """
 
     averages = {"macro_avg", "micro_avg", "weighted_avg", "samples_avg"}
 
-    for data_file in sorted(subset_path.iterdir()):
+    for data_file in sorted(source_subset_path.iterdir()):
 
         df = pd.read_csv(data_file, index_col=0)
 
@@ -149,6 +153,7 @@ def create_graphs_for_subset(subset_path: Path, stopping_df: pd.DataFrame = None
         elif data_file.stem == "hamming_loss":
             y_columns = ["hamming_loss"]
         else:
+            # These refer to various individual categories
             y_columns = ["f1-score"]
 
         fig, ax = plot_from_dataframe(df, x_column="training_data", y_columns=y_columns)
@@ -156,7 +161,7 @@ def create_graphs_for_subset(subset_path: Path, stopping_df: pd.DataFrame = None
         if stopping_df is not None:
             add_stopping_vlines(fig, ax, stopping_df)
 
-        fig.savefig(data_file.with_suffix(".png"), dpi=400)
+        fig.savefig(dest_subset_path / data_file.with_suffix(".png").name, dpi=400)
         plt.close()
         plt.clf()
         plt.cla()
@@ -186,26 +191,26 @@ def create_graphs_for_container(
         stopping_df = None
 
     paths = (
-        container.processed_stop_set_path,
-        container.processed_test_set_path,
-        container.processed_train_set_path,
+        (container.processed_stop_set_path, container.graphs_stop_set_path),
+        (container.processed_test_set_path, container.graphs_test_set_path),
+        (container.processed_train_set_path, container.graphs_train_set_path),
     )
-    for path in paths:
-        create_graphs_for_subset(path, stopping_df)
+    for source_path, dest_path in paths:
+        create_graphs_for_subset(source_path, dest_path, stopping_df)
 
 
-def main(experiment_parameters: Dict[str, Union[str, int]]) -> None:
+def main(params: Dict[str, Union[str, int]]) -> None:
     """Run the graphing algorithm for a set of experiment parmameters.
 
     Parameters
     ----------
-    experiment_parameters : Dict[str, Union[str, int]]
+    params : Dict[str, Union[str, int]]
         A single set of hyperparmaters and for the active learning experiment.
     """
 
     print("Beginning Graphing", flush=True)
 
-    oh = output_helper.OutputHelper(experiment_parameters)
+    oh = output_helper.OutputHelper(params)
     # TODO: Once the stopping methods module is working properly, add the stopping vlines again.
     create_graphs_for_container(
         oh.container,
@@ -214,10 +219,3 @@ def main(experiment_parameters: Dict[str, Union[str, int]]) -> None:
     )
 
     print("Ending Graphing", flush=True)
-
-
-if __name__ == "__main__":
-
-    from active_learning import local
-
-    main(local.experiment_parameters)

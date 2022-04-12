@@ -9,7 +9,7 @@ FIXME
 -
 """
 
-experiment_parameters_iris = {
+params_iris = {
     "output_root": None,
     "task": "cls",
     "stop_set_size": 1000,

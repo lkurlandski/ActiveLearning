@@ -2,7 +2,7 @@
 
 TODO
 ----
-- Implement fixtures to test these classes (using real-world datasets take long to execute).
+-
 
 FIXME
 -----

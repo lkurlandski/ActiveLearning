@@ -9,15 +9,16 @@ FIXME
 -
 """
 
-import json
-from pathlib import Path
 from pprint import pprint  # pylint: disable=unused-import
 import sys  # pylint: disable=unused-import
+
+import json
+from pathlib import Path
 from typing import Dict, List, Union
 
 import pandas as pd
 
-from active_learning import output_helper
+from active_learning.active_learners import output_helper
 
 
 def report_jsons_to_dicts(
@@ -67,9 +68,6 @@ def process_container(container: output_helper.OutputDataContainer):
         The container where the raw data is located and where the processed data should go
     """
 
-    # Keeping this as a pd.Series allows for seemless application to dataframe with different length
-    # num_training_data = pd.read_csv(container.training_data_file)["training_data"]
-
     paths = (
         (container.raw_stop_set_path, container.processed_stop_set_path),
         (container.raw_test_set_path, container.processed_test_set_path),
@@ -115,10 +113,3 @@ def main(experiment_parameters: Dict[str, Union[str, int]]):
     process_container(oh.container)
 
     print("Ending Processing", flush=True)
-
-
-if __name__ == "__main__":
-
-    from active_learning import local
-
-    main(local.experiment_parameters)

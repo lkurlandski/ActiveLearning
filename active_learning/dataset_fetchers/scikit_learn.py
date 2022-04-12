@@ -109,10 +109,6 @@ class ScikitLearnDatasetFetcher(DatasetFetcher):
         if self.dataset == "Iris":
             return sklearn.datasets.load_iris, {}
         if self.dataset == "20NewsGroups":
-            warnings.warn(
-                "WARNING: scikit-learn's implementation of 20NewsGroups does not properly handle"
-                " the multilabel nature of the dataset"
-            )
             return sklearn.datasets.fetch_20newsgroups, {"remove": ("headers", "footers", "quotes")}
 
         raise ValueError(f"{self.dataset} not recongized.")
