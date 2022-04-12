@@ -11,8 +11,8 @@ from sklearn import metrics
 from sklearn.base import BaseEstimator
 
 from active_learning import stat_helper
-from active_learning.active_learners import learn
 from active_learning.active_learners import output_helper
+from active_learning.active_learners import pool
 
 
 def evaluate_and_record(
@@ -74,11 +74,11 @@ def evaluate_container(container: output_helper.IndividualOutputDataContainer) -
         A container to contain the various paths and files produced by the experiment.
     """
 
-    unlabeled_pool = learn.Pool(
-        None, None, container.X_unlabeled_pool_file, container.y_unlabeled_pool_file
+    unlabeled_pool = pool.Pool(
+        X_path=container.X_unlabeled_pool_file, y_path=container.y_unlabeled_pool_file
     ).load()
-    test_set = learn.Pool(None, None, container.X_test_set_file, container.y_test_set_file).load()
-    stop_set = learn.Pool(None, None, container.X_stop_set_file, container.y_stop_set_file).load()
+    test_set = pool.Pool(X_path=container.X_test_set_file, y_path=container.y_test_set_file).load()
+    stop_set = pool.Pool(X_path=container.X_stop_set_file, y_path=container.y_stop_set_file).load()
 
     training_data = 0
     n_iterations = sum(1 for _ in container.model_path.iterdir())

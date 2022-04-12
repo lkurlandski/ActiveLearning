@@ -71,7 +71,7 @@ def main(
     slurm_precepts = [
         f"#!{python_path.as_posix()} -u",
         f"#SBATCH --chdir={root_path.as_posix()}",
-        f"#SBATCH --output={slurm_jobs_path / 'job.%A.out'}",
+        f"#SBATCH --output={slurm_jobs_path / f'job.{dataset}.%A.out'}",
         f"#SBATCH --job-name={multi_params['dataset']}",
         f"#SBATCH --cpus-per-task={cpus_per_task}",
         "#SBATCH --constraint=skylake|broadwell",
@@ -150,15 +150,15 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     multi_params_ = {
-        "output_root": "outputs/performance",
+        "output_root": "outputs/output",
         "task": "cls",
-        "stop_set_size": [0.1, 0.2],
-        "batch_size": [0.1, 0.2],
+        "stop_set_size": [0.1],
+        "batch_size": [0.10],
         "query_strategy": ["uncertainty_sampling"],
         "base_learner": ["SVC"],
         "multiclass": ["ovr"],
-        "feature_representation": ["preprocessed"],
-        "dataset": "Iris",
+        "feature_representation": ["tfidf"],
+        "dataset": "20NewsGroups",
         "random_state": [0],
     }
 

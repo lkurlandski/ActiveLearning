@@ -48,9 +48,9 @@ def get_mapper(random_state: int = 0) -> Callable[..., base.DatasetFetcher]:
             dataset="Avila",
         ),
         "RCV1_v2": utils.init(
-            disk.PredefinedTextFileDatasetFetcher,
+            disk.RandomizedTextFileDatasetFetcher,
             random_state=random_state,
-            dataset="RCV1_v2",
+            dataset="RCV1_v2/train",
             categories=[
                 "CCAT",
                 "GCAT",

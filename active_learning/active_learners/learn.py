@@ -4,18 +4,15 @@ TODO
 ----
 - Implement a label-encoding strategy for the target array.
 - Introduce checks to ensure the base learner can accept sparse arrays and such.
-- The stopping methods definitely need some refinement.
 
 FIXME
 -----
-- Once the stopping methods are fixed add the stopping method back in.
+-
 """
 
-from __future__ import annotations
 from pprint import pprint  # pylint: disable=unused-import
 import sys  # pylint: disable=unused-import
 
-from dataclasses import dataclass
 import datetime
 from pathlib import Path
 import random
@@ -28,7 +25,7 @@ from modAL.models import ActiveLearner
 from modAL.uncertainty import entropy_sampling, margin_sampling, uncertainty_sampling
 import numpy as np
 from scipy import sparse
-from scipy.io import mmwrite, mmread
+
 from sklearn.base import BaseEstimator
 from sklearn.utils.multiclass import unique_labels, type_of_target
 
@@ -37,6 +34,7 @@ from active_learning import stat_helper
 from active_learning import dataset_fetchers
 from active_learning import feature_extractors
 from active_learning.active_learners import output_helper
+from active_learning.active_learners import pool
 
 
 query_strategies = {
@@ -45,100 +43,6 @@ query_strategies = {
     "uncertainty_batch_sampling": uncertainty_batch_sampling,
     "uncertainty_sampling": uncertainty_sampling,
 }
-
-
-# TODO: implement as a class... with @classmethod for load
-@dataclass
-class Pool:
-    """A simple encapsulation of a pool of data.
-
-    Attributes
-    ----------
-    X : Union[np.ndarray, sparse.csr_matrix]
-        The features of the data, defaults to None.
-    y: Union[np.ndarray, sparse.csr_matrix]
-        The labels of the data, defaults to None.
-    X_path: Path
-        A path associated with the features, defaults to None. Supported file extensions are
-            .mtx and .npy.
-    y_path: Path
-        A path associated with the labels, defaults to None. Supported file extensions are
-            .mtx and .npy.
-    """
-
-    X: Union[np.ndarray, sparse.csr_matrix] = None
-    y: Union[np.ndarray, sparse.csr_matrix] = None
-    X_path: Path = None
-    y_path: Path = None
-
-    def save(self) -> None:
-        """Save the data to file.
-
-        Raises
-        ------
-        Exception
-            If X_path or y_path is None.
-        Exception
-            If X_path has an incompatible extension, and the protocol to save it is unknown.
-        Exception
-            If y_path has an incompatible extension, and the protocol to save it is unknown.
-        """
-
-        if self.X_path is None or self.y_path is None:
-            raise Exception()
-
-        if self.X.ndim == 2 and self.X_path.suffix == ".mtx":
-            mmwrite(self.X_path, self.X)
-        else:
-            raise Exception(f"Extension {self.X_path.name} incompatible with ndim {self.X.ndim}.")
-
-        if self.y.ndim == 2 and self.y_path.suffix == ".mtx":
-            mmwrite(self.y_path, self.y)
-        elif self.y.ndim == 1 and self.y_path.suffix == ".npy":
-            np.save(self.y_path, self.y)
-        else:
-            raise Exception(f"Extension {self.y_path.name} incompatible with ndim {self.y.ndim}.")
-
-    def load(self) -> Pool:
-        """Load the data from a file.
-
-        Returns
-        -------
-        Pool
-            An instance of Pool with populated X and y data.
-
-        Raises
-        ------
-        Exception
-            If X_path or y_path is None.
-        Exception
-            If X_path has an incompatible extension, and the protocol to load it is unknown.
-        Exception
-            If y_path has an incompatible extension, and the protocol to load it is unknown.
-        """
-
-        if self.X_path is None or self.y_path is None:
-            raise Exception()
-
-        if self.X_path.suffix == ".mtx":
-            self.X = mmread(self.X_path)
-            if sparse.isspmatrix_coo(self.X):
-                self.X = sparse.csr_matrix(self.X)
-        elif self.X_path.suffix == ".npy":
-            self.X = np.load(self.X_path)
-        else:
-            raise Exception(f"Extension {self.X_path.name} incompatible with known read methods.")
-
-        if self.y_path.suffix == ".mtx":
-            self.y = mmread(self.y_path)
-            if sparse.isspmatrix_coo(self.y):
-                self.y = sparse.csr_matrix(self.y)
-        elif self.y_path.suffix == ".npy":
-            self.y = np.load(self.y_path)
-        else:
-            raise Exception(f"Extension {self.y_path.name} incompatible with known read methods.")
-
-        return self
 
 
 def update(start_time: float, unlabeled_init_size: int, unlabeled_size: int, i: int) -> None:
@@ -235,12 +139,12 @@ def learn(
     estimator: BaseEstimator,
     query_strategy: Callable,
     batch_size: int,
-    unlabeled_pool: Pool,
+    unlabeled_pool: pool.Pool,
     *,
     model_path: Path = None,
     batch_path: Path = None,
-    test_set: Pool = None,
-    stop_set: Pool = None,
+    test_set: pool.Pool = None,
+    stop_set: pool.Pool = None,
 ):
     """Perform active learning and save a limited amount of information to files.
 
@@ -252,15 +156,15 @@ def learn(
         A modAL compatible query strategy.
     batch_size : int
         The number of examples to select for labeling at each iteration.
-    unlabeled_pool : Pool
+    unlabeled_pool : pool.Pool
         The initial unlabeled pool of training data.
     model_path : Path, optional
         A location to save trained models to, by default None.
     batch_path : Path, optional
         A location to save the examples queried for labeling to, by default None.
-    test_set : Pool, optional
+    test_set : pool.Pool, optional
         A test set, which will be saved in a compressed format, by default None.
-    stop_set : Pool, optional
+    stop_set : pool.Pool, optional
         A stop set, which will be saved in a compressed format, by default None.
     """
 
@@ -373,16 +277,16 @@ def main(params: Dict[str, Union[str, int]]) -> None:
     # Setup output directory structure
     oh = output_helper.OutputHelper(params)
     oh.setup()
-    oh.container.set_target_vectors(y_unlabeled_pool)
+    oh.container.set_target_vector_ext(output_helper.get_array_file_ext(y_unlabeled_pool))
 
-    unlabeled_pool = Pool(
+    unlabeled_pool = pool.Pool(
         X_unlabeled_pool,
         y_unlabeled_pool,
         oh.container.X_unlabeled_pool_file,
         oh.container.y_unlabeled_pool_file,
     )
-    test_set = Pool(X_test, y_test, oh.container.X_test_set_file, oh.container.y_test_set_file)
-    stop_set = Pool(
+    test_set = pool.Pool(X_test, y_test, oh.container.X_test_set_file, oh.container.y_test_set_file)
+    stop_set = pool.Pool(
         X_stop_set, y_stop_set, oh.container.X_stop_set_file, oh.container.y_stop_set_file
     )
 

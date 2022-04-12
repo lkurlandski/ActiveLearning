@@ -1,11 +1,16 @@
 #!/home/hpc/kurlanl1/bloodgood/ActiveLearning/env/bin/python -u
 
 #SBATCH --chdir=/home/hpc/kurlanl1/bloodgood/ActiveLearning
-#SBATCH --output=/home/hpc/kurlanl1/bloodgood/ActiveLearning/slurm/jobs/job.%A.out
+#SBATCH --output=/home/hpc/kurlanl1/bloodgood/ActiveLearning/slurm/jobs/job.20NewsGroups.%A.out
 #SBATCH --constraint=skylake|broadwell
-#SBATCH --job-name=classification
+#SBATCH --job-name=20NewsGroups
 #SBATCH --partition=long
 #SBATCH --cpus-per-task=1
+
+"""Interface to the features of this module that can be used with python or sbatch.
+
+To interface properly with SLURM, the top of the file should contain the SLURM instructions.
+"""
 
 import argparse
 from pprint import pformat
@@ -93,16 +98,16 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     params_ = {
-        "output_root": "outputs/performance",
+        "output_root": "outputs/test",
         "task": "cls",
         "stop_set_size": 0.1,
-        "batch_size": 0.07,
+        "batch_size": 0.01,
         "query_strategy": "uncertainty_sampling",
         "base_learner": "SVC",
         "multiclass": "ovr",
-        "feature_representation": "preprocessed",
-        "dataset": "Iris",
-        "random_state": 1,
+        "feature_representation": "tfidf",
+        "dataset": "20NewsGroups",
+        "random_state": 0,
     }
 
     main(

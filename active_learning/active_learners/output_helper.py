@@ -15,6 +15,9 @@ from pathlib import Path
 import shutil
 from typing import Dict, List, Union
 
+from scipy import sparse
+import numpy as np
+
 from active_learning import utils
 
 
@@ -58,15 +61,8 @@ class OutputDataContainer:
 
         return "\n".join(list(utils.tree(self.root)))
 
-    def setup(self, remove_existing: bool = False, exist_ok: bool = True) -> None:
+    def setup(self) -> None:
         """Create, remove, and set up the output paths for this experiment.
-
-        Parameters
-        ----------
-        remove_existing : bool, optional
-            If True, removes the existing structure, by default False
-        exist_ok : bool, optional
-            If True, does not raise errors if directory exists, by default True
 
         Raises
         ------
@@ -77,19 +73,15 @@ class OutputDataContainer:
         if not self.root.exists():
             raise FileNotFoundError(f"The root directory must exist: {self.root.as_posix()}")
 
-        if remove_existing:
-            shutil.rmtree(self.root)
-            self.root.mkdir()
+        self.processed_path.mkdir(exist_ok=True)
+        self.processed_stop_set_path.mkdir(exist_ok=True)
+        self.processed_test_set_path.mkdir(exist_ok=True)
+        self.processed_train_set_path.mkdir(exist_ok=True)
 
-        self.processed_path.mkdir(exist_ok=exist_ok)
-        self.processed_stop_set_path.mkdir(exist_ok=exist_ok)
-        self.processed_test_set_path.mkdir(exist_ok=exist_ok)
-        self.processed_train_set_path.mkdir(exist_ok=exist_ok)
-
-        self.graphs_path.mkdir(exist_ok=exist_ok)
-        self.graphs_stop_set_path.mkdir(exist_ok=exist_ok)
-        self.graphs_test_set_path.mkdir(exist_ok=exist_ok)
-        self.graphs_train_set_path.mkdir(exist_ok=exist_ok)
+        self.graphs_path.mkdir(exist_ok=True)
+        self.graphs_stop_set_path.mkdir(exist_ok=True)
+        self.graphs_test_set_path.mkdir(exist_ok=True)
+        self.graphs_train_set_path.mkdir(exist_ok=True)
 
     def teardown(self):
         """Remove everything this object represents."""
@@ -112,14 +104,16 @@ class IndividualOutputDataContainer(OutputDataContainer):
 
         super().__init__(root)
 
-        # Feature vector is a two dimensional dense/sparse matrix
+        # Feature vector is a two dimensional dense/sparse matrix, so we use the mtx extension
         self.X_unlabeled_pool_file = self.root / Path("X_unlabeled_pool.mtx")
         self.X_test_set_file = self.root / Path("X_test_set.mtx")
         self.X_stop_set_file = self.root / Path("X_stop_set.mtx")
 
         # Target vector can be one dimensional array or two dimensional dense/sparse matrix
-        # FIXME: implement better behavior
-        self.set_target_vectors()
+        self.y_test_set_file = self.root / "y_test_set"
+        self.y_unlabeled_pool_file = self.root / "y_unlabeled_pool"
+        self.y_stop_set_file = self.root / "y_stop_set"
+        self.set_target_vector_ext()
 
         self.model_path = self.root / Path("models")
         self.batch_path = self.root / Path("batch")
@@ -129,15 +123,8 @@ class IndividualOutputDataContainer(OutputDataContainer):
         self.raw_test_set_path = self.raw_path / self.test_set_str
         self.raw_train_set_path = self.raw_path / self.train_set_str
 
-    def setup(self, remove_existing: bool = False, exist_ok: bool = True):
+    def setup(self) -> None:
         """Create, remove, and set up the output paths for this experiment.
-
-        Parameters
-        ----------
-        remove_existing : bool, optional
-            If True, removes the existing structure, by default False
-        exist_ok : bool, optional
-            If True, does not raise errors if directory exists, by default True
 
         Raises
         ------
@@ -145,33 +132,45 @@ class IndividualOutputDataContainer(OutputDataContainer):
             If the root does not exist
         """
 
-        super().setup(remove_existing, exist_ok)
+        super().setup()
 
-        self.model_path.mkdir(exist_ok=exist_ok)
-        self.batch_path.mkdir(exist_ok=exist_ok)
+        self.model_path.mkdir(exist_ok=True)
+        self.batch_path.mkdir(exist_ok=True)
 
-        self.raw_path.mkdir(exist_ok=exist_ok)
-        self.raw_stop_set_path.mkdir(exist_ok=exist_ok)
-        self.raw_test_set_path.mkdir(exist_ok=exist_ok)
-        self.raw_train_set_path.mkdir(exist_ok=exist_ok)
+        self.raw_path.mkdir(exist_ok=True)
+        self.raw_stop_set_path.mkdir(exist_ok=True)
+        self.raw_test_set_path.mkdir(exist_ok=True)
+        self.raw_train_set_path.mkdir(exist_ok=True)
 
-    # FIXME: implement better behavior
-    def set_target_vectors(self, y=None):
-        """Set the correct file extension for the target vectors."""
+    def set_target_vector_ext(self, ext: str = None) -> bool:
+        """Set the correct file extension for the target vectors.
 
-        ext = None
+        Arguments
+        ---------
+        ext : str
+            The extension to use for the target vectors, either ".mtx" or ".npy". If None, will
+                glob for existing files and use the extensions of them, if found.
 
-        if y is not None:
-            ext = get_array_file_extension(y)
-        else:
-            y_unlabeled_pool_file = list(self.root.glob("y_unlabeled_pool.*"))
-            if y_unlabeled_pool_file:
-                ext = y_unlabeled_pool_file[0].suffix
+        Returns
+        -------
+        bool
+            True if an extension can be added to the target vector files and False otherwise.
+        """
 
         if ext is not None:
-            self.y_test_set_file = (self.root / "y_test_set").with_suffix(ext)
-            self.y_unlabeled_pool_file = (self.root / "y_unlabeled_pool").with_suffix(ext)
-            self.y_stop_set_file = (self.root / "y_stop_set").with_suffix(ext)
+            self.y_test_set_file = self.y_test_set_file.with_suffix(ext)
+            self.y_unlabeled_pool_file = self.y_unlabeled_pool_file.with_suffix(ext)
+            self.y_stop_set_file = self.y_stop_set_file.with_suffix(ext)
+            return True
+
+        matches = list(self.root.glob(f"{self.y_test_set_file.name}.*"))
+        if matches:
+            self.y_test_set_file = self.y_test_set_file.with_suffix(matches[0].suffix)
+            self.y_unlabeled_pool_file = self.y_unlabeled_pool_file.with_suffix(matches[0].suffix)
+            self.y_stop_set_file = self.y_stop_set_file.with_suffix(matches[0].suffix)
+            return True
+
+        return False
 
 
 class OutputHelper:
@@ -219,15 +218,8 @@ class OutputHelper:
 
         return "\n".join(list(utils.tree(self.root)))
 
-    def setup(self, remove_existing: bool = False, exist_ok: bool = True) -> None:
+    def setup(self) -> None:
         """Create, remove, and set up the output paths for this experiment.
-
-        Parameters
-        ----------
-        remove_existing : bool, optional
-            If True, removes the existing structure, by default False
-        exist_ok : bool, optional
-            If True, does not raise errors if directory exists, by default True
 
         Raises
         ------
@@ -238,26 +230,22 @@ class OutputHelper:
         if not self.root.exists():
             raise FileNotFoundError(f"The root directory must exist: {self.root.as_posix()}")
 
-        if remove_existing:
-            shutil.rmtree(self.root)
-            self.root.mkdir()
+        self.root.mkdir(exist_ok=True)
+        self.task_path.mkdir(exist_ok=True)
+        self.stop_set_size_path.mkdir(exist_ok=True)
+        self.batch_size_path.mkdir(exist_ok=True)
+        self.query_strategy_path.mkdir(exist_ok=True)
+        self.base_learner_path.mkdir(exist_ok=True)
+        self.multiclass_path.mkdir(exist_ok=True)
+        self.feature_representation_path.mkdir(exist_ok=True)
+        self.dataset_path.mkdir(exist_ok=True)
 
-        self.root.mkdir(exist_ok=exist_ok)
-        self.task_path.mkdir(exist_ok=exist_ok)
-        self.stop_set_size_path.mkdir(exist_ok=exist_ok)
-        self.batch_size_path.mkdir(exist_ok=exist_ok)
-        self.query_strategy_path.mkdir(exist_ok=exist_ok)
-        self.base_learner_path.mkdir(exist_ok=exist_ok)
-        self.multiclass_path.mkdir(exist_ok=exist_ok)
-        self.feature_representation_path.mkdir(exist_ok=exist_ok)
-        self.dataset_path.mkdir(exist_ok=exist_ok)
+        self.ind_rstates_path.mkdir(exist_ok=True)
+        self.output_path.mkdir(exist_ok=True)
+        self.container.setup()
 
-        self.ind_rstates_path.mkdir(exist_ok=exist_ok)
-        self.output_path.mkdir(exist_ok=exist_ok)
-        self.container.setup(remove_existing, exist_ok)
-
-        self.avg_rstates_path.mkdir(exist_ok=exist_ok)
-        self.avg_container.setup(remove_existing, exist_ok)
+        self.avg_rstates_path.mkdir(exist_ok=True)
+        self.avg_container.setup()
 
     def teardown(self):
         """Remove everything this object represents."""
@@ -299,11 +287,27 @@ class RStatesOutputHelper:
         return "\n".join(list(utils.tree(self.root)))
 
 
-# FIXME: implement better behavior
-def get_array_file_extension(y):
-    """Get the correct file extension for an array."""
-    if y.ndim == 1:
+def get_array_file_ext(a: Union[sparse.csr_matrix, np.ndarray]) -> str:
+    """Get the correct file extension for saving an array.
+
+    Parameters
+    ----------
+    a : Union[sp.csr_matrix, np.ndarray]
+        The array to analyze and determine the correct extension for.
+
+    Returns
+    -------
+    str
+        The extension, either .mtx or .npy.
+
+    Raises
+    ------
+    ValueError
+        If the number of dimensions is not 1 or 2.
+    """
+
+    if a.ndim == 1:
         return ".npy"
-    if y.ndim == 2:
+    if a.ndim == 2:
         return ".mtx"
-    return ""
+    raise ValueError(f"Expected a one or two dimensional matrix, not {a.ndim} dimensional.")
