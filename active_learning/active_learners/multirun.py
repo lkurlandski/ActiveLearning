@@ -1,9 +1,12 @@
+"""Run multiple experimental configurations using SLURM (with some restrictions).
+"""
+
 import argparse
 from itertools import product
 from pathlib import Path
 from pprint import pformat
 import subprocess
-from typing import Dict, List, Union
+from typing import Any, Dict, List
 
 
 # Location of the ActiveLearning directory
@@ -19,21 +22,51 @@ slurm_jobs_path = slurm_path / "jobs"
 
 
 def main(
-    multi_params: List[Dict[str, Union[str, int]]],
-    learn_: bool,
-    evaluate_: bool,
-    process_: bool,
-    graph_: bool,
-    average_: bool,
+    multi_params: Dict[str, List[Any]],
+    learn: bool,
+    evaluate: bool,
+    process: bool,
+    graph: bool,
+    average: bool,
     cpus_per_task: int,
-):
+) -> None:
+    """Create and submit individual submissions scripts for different experimental configurations.
+
+    Parameters
+    ----------
+    multi_params : Dict[str, List[Any]]
+        A dictionary of lists to represent a series of experimental parameters to run.
+    learn : bool
+        If true, runs the active learning process.
+    evaluate : bool
+        If true, runs the evaluation process.
+    process : bool
+        If true, runs the processing process.
+    graph : bool
+        If true, runs the graphing process.
+    average : bool
+        If true, runs the averaging process.
+    cpus_per_task : int
+        Number of cpus to allocate to SLURM using sbatch.
+
+    Raises
+    ------
+    Exception
+        If the both averaging program and any other programs are requested.
+    TypeError
+        If the multiple output_roots, tasks or datasets are passed as parameters.
+    """
 
     print(f"multirun -- params:\n{pformat(multi_params)}")
 
-    if average_ and any(learn_, evaluate_, process_, graph_):
+    if average and any(learn, evaluate, process, graph):
         raise Exception("The averaging program should be run after all runs of pipeline finish.")
     if any(isinstance(multi_params[k], list) for k in ["output_root", "task", "dataset"]):
         raise TypeError("Only one option for 'output_root', 'task', and 'dataset' is permitted.")
+
+    dataset = multi_params["dataset"]
+    output_root = multi_params["output_root"]
+    task = multi_params["task"]
 
     slurm_precepts = [
         f"#!{python_path.as_posix()} -u",
@@ -68,22 +101,32 @@ def main(
         feature_representation = combo[6]
 
         params = {
-            "output_root": multi_params["output_root"],
-            "task": multi_params["task"],
+            "output_root": output_root,
+            "task": task,
             "stop_set_size": stop_set_size,
             "batch_size": batch_size,
             "query_strategy": query_strategy,
             "feature_representation": feature_representation,
             "base_learner": base_learner,
             "multiclass": multiclass,
-            "dataset": multi_params,
+            "dataset": dataset,
             "random_state": random_state,
         }
         params = {k: str(v) for k, v in params.items()}
 
         with open(slurm_file, "w", encoding="utf8") as f:
             f.writelines(slurm_precepts)
-            f.write(f"run.main(pformat{params})")
+            f.write(
+                f"run.main(\n"
+                f"    {pformat(params, indent=8)},\n"
+                f"    {learn},\n"
+                f"    {evaluate},\n"
+                f"    {process},\n"
+                f"    {graph},\n"
+                f"    {average},\n"
+                ")"
+                "\n"
+            )
 
         result = subprocess.run(["sbatch", slurm_file.as_posix()], capture_output=True, check=True)
         print(result.stdout.decode().strip())
@@ -100,36 +143,31 @@ if __name__ == "__main__":
     parser.add_argument(
         "--cpus_per_task",
         action="store",
+        default=1,
         help="Number of cpus required per task minimum number of logical processors (threads).",
     )
 
     args = parser.parse_args()
 
-    multi_params__ = {
+    multi_params_ = {
         "output_root": "outputs/performance",
         "task": "cls",
-        "stop_set_size": 0.1,
-        "batch_size": 0.3,
-        "query_strategy": "uncertainty_sampling",
-        "base_learner": "SVC",
-        "multiclass": "ovr",
-        "feature_representation": "tfidf",
-        "dataset": "Reuters",
-        "random_state": 0,
+        "stop_set_size": [0.1, 0.2],
+        "batch_size": [0.1, 0.2],
+        "query_strategy": ["uncertainty_sampling"],
+        "base_learner": ["SVC"],
+        "multiclass": ["ovr"],
+        "feature_representation": ["preprocessed"],
+        "dataset": "Iris",
+        "random_state": [0],
     }
 
-    learn__ = args.learn or False
-    evaluate__ = args.evaluate or False
-    process__ = args.process or False
-    graph__ = args.graph or False
-    average__ = args.average or False
-
     main(
-        multi_params__,
-        learn__,
-        evaluate__,
-        process__,
-        graph__,
-        average__,
+        multi_params_,
+        args.learn,
+        args.evaluate,
+        args.process,
+        args.graph,
+        args.average,
         args.cpus_per_task,
     )

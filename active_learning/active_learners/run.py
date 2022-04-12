@@ -1,11 +1,11 @@
 #!/home/hpc/kurlanl1/bloodgood/ActiveLearning/env/bin/python -u
 
-# SBATCH --chdir=/home/hpc/kurlanl1/bloodgood/ActiveLearning
-# SBATCH --output=/home/hpc/kurlanl1/bloodgood/ActiveLearning/slurm/jobs/job.%A.out
-# SBATCH --job-name=20NewsGroups
-# SBATCH --constraint=skylake|broadwell
-# SBATCH --partition=long
-# SBATCH --cpus-per-task=20
+#SBATCH --chdir=/home/hpc/kurlanl1/bloodgood/ActiveLearning
+#SBATCH --output=/home/hpc/kurlanl1/bloodgood/ActiveLearning/slurm/jobs/job.%A.out
+#SBATCH --constraint=skylake|broadwell
+#SBATCH --job-name=classification
+#SBATCH --partition=long
+#SBATCH --cpus-per-task=1
 
 import argparse
 from pprint import pformat
@@ -29,7 +29,30 @@ def main(
     graph_: bool,
     average_: bool,
 ):
+    """Create and submit individual submissions scripts for different experimental configurations.
 
+    Parameters
+    ----------
+    params : Dict[str, List[Any]]
+        A single set of experimental parameters.
+    learn : bool
+        If true, runs the active learning process.
+    evaluate : bool
+        If true, runs the evaluation process.
+    process : bool
+        If true, runs the processing process.
+    graph : bool
+        If true, runs the graphing process.
+    average : bool
+        If true, runs the averaging process.
+    cpus_per_task : int
+        Number of cpus to allocate to SLURM using sbatch.
+
+    Raises
+    ------
+    Exception
+        If the both averaging program and any other programs are requested.
+    """
     print("Tasks to run: ", flush=True)
     print(f"\tlearn: {learn_}", flush=True)
     print(f"\t:evaluate {evaluate_}", flush=True)
@@ -69,11 +92,11 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
 
-    params__ = {
+    params_ = {
         "output_root": "outputs/performance",
         "task": "cls",
         "stop_set_size": 0.1,
-        "batch_size": 0.4,
+        "batch_size": 0.3,
         "query_strategy": "uncertainty_sampling",
         "base_learner": "SVC",
         "multiclass": "ovr",
@@ -82,17 +105,11 @@ if __name__ == "__main__":
         "random_state": 0,
     }
 
-    learn__ = args.learn or False
-    evaluate__ = args.evaluate or False
-    process__ = args.process or False
-    graph__ = args.graph or False
-    average__ = args.average or False
-
     main(
-        params__,
-        learn__,
-        evaluate__,
-        process__,
-        graph__,
-        average__,
+        params_,
+        args.learn,
+        args.evaluate,
+        args.process,
+        args.graph,
+        args.average,
     )
