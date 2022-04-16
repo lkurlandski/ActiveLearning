@@ -100,14 +100,14 @@ if __name__ == "__main__":
     params_ = {
         "output_root": "outputs/test",
         "task": "cls",
-        "stop_set_size": 0.1,
+        "early_stop_mode": "exponential",
+        "first_batch_mode": "random",
         "batch_size": 1,
         "query_strategy": "uncertainty_sampling",
         "base_learner": "SVC",
-        "multiclass": "ovr",
         "feature_representation": "preprocessed",
         "dataset": "Iris",
-        "random_state": 0,
+        "random_state": 1,
     }
 
     main(

@@ -191,7 +191,6 @@ def create_graphs_for_container(
         stopping_df = None
 
     paths = (
-        (container.processed_stop_set_path, container.graphs_stop_set_path),
         (container.processed_test_set_path, container.graphs_test_set_path),
         (container.processed_train_set_path, container.graphs_train_set_path),
     )

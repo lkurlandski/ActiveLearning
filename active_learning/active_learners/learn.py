@@ -27,6 +27,7 @@ from modAL.uncertainty import entropy_sampling, margin_sampling, uncertainty_sam
 import numpy as np
 from scipy import sparse
 from sklearn.base import BaseEstimator
+from sklearn.multiclass import OneVsRestClassifier
 from sklearn.utils.multiclass import unique_labels, type_of_target
 
 from active_learning import estimators
@@ -109,12 +110,6 @@ def get_first_batch(y: Union[np.ndarray, sparse.csr_matrix], protocol: str, k: i
     """
 
     if protocol == "random":
-        if k == 1:
-            warnings.warn(
-                "WARNING: a bug in scikit-learn causes problems downstream if the initial batch"
-                " only contains one element. Using two elements in the initial batch instead."
-            )
-            k = 2
         idx = np.array(random.sample(list(range(y.shape[0])), k))
         return idx
 
@@ -213,6 +208,25 @@ def learn(
     idx = get_first_batch(unlabeled_pool.y, protocol=first_batch_mode, k=batch_size)
     learner = ActiveLearner(estimator=estimator, query_strategy=query_strategy)
     learner.teach(unlabeled_pool.X[idx], unlabeled_pool.y[idx])
+    
+    # Scikit-learn OneVsRestClassifier has a small bug you can read about here:
+        # https://github.com/scikit-learn/scikit-learn/issues/21869
+        # This is a reasonable workaround to the problem.
+    if (
+        isinstance(learner.estimator, OneVsRestClassifier) and
+        type_of_target(unlabeled_pool.y) == "multiclass" and
+        len(set(unlabeled_pool.y[idx])) == 1
+        ):
+
+        warnings.warn("Implementing a solution to a bug from scikit-learn.")
+        
+        while len(set(unlabeled_pool.y[idx])) == 1:
+            idx = get_first_batch(
+                unlabeled_pool.y,
+                protocol=first_batch_mode,
+                k=max(batch_size, 2)
+            )
+        learner.teach(unlabeled_pool.X[idx], unlabeled_pool.y[idx])
 
     # Set up the Stabilizing Predictions stopping method, if requested
     early_stop_mode_triggered = False
@@ -321,6 +335,6 @@ def main(params: Dict[str, Union[str, int]]) -> None:
         model_path=oh.container.model_path,
         batch_path=oh.container.batch_path,
         test_set=test_set,
-        first_batch_mode="random",
-        early_stop_mode="finish"
+        first_batch_mode= params["first_batch_mode"],
+        early_stop_mode=params["early_stop_mode"]
     )
