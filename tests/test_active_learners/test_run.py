@@ -4,7 +4,6 @@
 from copy import deepcopy
 
 from active_learning.active_learners import run
-from active_learning import utils
 from tests import params_iris
 
 

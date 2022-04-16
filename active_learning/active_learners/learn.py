@@ -18,6 +18,7 @@ from pathlib import Path
 import random
 import time
 from typing import Callable, Dict, Union
+import warnings
 
 import joblib
 from modAL.batch import uncertainty_batch_sampling
@@ -25,7 +26,6 @@ from modAL.models import ActiveLearner
 from modAL.uncertainty import entropy_sampling, margin_sampling, uncertainty_sampling
 import numpy as np
 from scipy import sparse
-
 from sklearn.base import BaseEstimator
 from sklearn.utils.multiclass import unique_labels, type_of_target
 
@@ -35,6 +35,7 @@ from active_learning import dataset_fetchers
 from active_learning import feature_extractors
 from active_learning.active_learners import output_helper
 from active_learning.active_learners import pool
+from active_learning.stopping_criteria import stabilizing_predictions
 
 
 query_strategies = {
@@ -45,7 +46,7 @@ query_strategies = {
 }
 
 
-def update(start_time: float, unlabeled_init_size: int, unlabeled_size: int, i: int) -> None:
+def update(start_time: float, unlabeled_init_size: int, unlabeled_size: int, batch_size: int, i: int) -> None:
     """Print an update of AL progress.
 
     Parameters
@@ -56,6 +57,8 @@ def update(start_time: float, unlabeled_init_size: int, unlabeled_size: int, i: 
         Size of the unlabeled pool before the iterative process
     unlabeled_size : int
         The current unlabeled pool
+    batch_size : int
+        The number of examples selected at each iteration for labeling.
     i : int
         The current iteration of AL
     accuracy : float
@@ -73,6 +76,7 @@ def update(start_time: float, unlabeled_init_size: int, unlabeled_size: int, i: 
         f"    |U_0|: {unlabeled_init_size}"
         f"    |U|: {str(unlabeled_size).zfill(pool_zfill)}"
         f"    |L|: {str(unlabeled_init_size - unlabeled_size).zfill(pool_zfill)}",
+        f"    |B|: {batch_size}",
         flush=True,
     )
 
@@ -105,6 +109,12 @@ def get_first_batch(y: Union[np.ndarray, sparse.csr_matrix], protocol: str, k: i
     """
 
     if protocol == "random":
+        if k == 1:
+            warnings.warn(
+                "WARNING: a bug in scikit-learn causes problems downstream if the initial batch"
+                " only contains one element. Using two elements in the initial batch instead."
+            )
+            k = 2
         idx = np.array(random.sample(list(range(y.shape[0])), k))
         return idx
 
@@ -135,6 +145,19 @@ def get_first_batch(y: Union[np.ndarray, sparse.csr_matrix], protocol: str, k: i
     raise ValueError(f"protocol: {protocol} not recognized.")
 
 
+def get_batch_size(batch_size, unlabeled_pool_size, early_stop_mode_triggered, early_stop_mode) -> int:
+
+    if early_stop_mode_triggered:
+        if early_stop_mode == "exponential":
+            batch_size = batch_size * 2
+        elif early_stop_mode == "finish":
+            batch_size = unlabeled_pool_size
+
+    batch_size = unlabeled_pool_size if batch_size > unlabeled_pool_size else batch_size
+
+    return batch_size
+
+
 def learn(
     estimator: BaseEstimator,
     query_strategy: Callable,
@@ -144,7 +167,9 @@ def learn(
     model_path: Path = None,
     batch_path: Path = None,
     test_set: pool.Pool = None,
-    stop_set: pool.Pool = None,
+    first_batch_mode: str = "random",
+    early_stop_mode: str = "complete",
+    
 ):
     """Perform active learning and save a limited amount of information to files.
 
@@ -164,22 +189,19 @@ def learn(
         A location to save the examples queried for labeling to, by default None.
     test_set : pool.Pool, optional
         A test set, which will be saved in a compressed format, by default None.
-    stop_set : pool.Pool, optional
-        A stop set, which will be saved in a compressed format, by default None.
+
+    # FIXME: document
     """
 
-    def get_batch_size(batch_size) -> int:
-        """Compute the new batch size for the current iteration."""
-        if batch_size > unlabeled_pool.y.shape[0]:
-            batch_size = unlabeled_pool.y.shape[0]
-        return batch_size
+    if first_batch_mode not in {"random", "k_per_class"}:
+        raise ValueError()
+    if early_stop_mode not in {"complete", "exponential", "finish"}:
+        raise ValueError()
 
     # Save the sets to perform inference downstream
     unlabeled_pool.save()
     if test_set is not None:
         test_set.save()
-    if stop_set is not None:
-        stop_set.save()
 
     start = time.time()
     print(f"{str(datetime.timedelta(seconds=(round(time.time() - start))))} -- Starting AL Loop")
@@ -188,15 +210,31 @@ def learn(
     i = 0
 
     # Perform the 0th iteration of active learning
-    idx = get_first_batch(unlabeled_pool.y, protocol="random", k=batch_size)
+    idx = get_first_batch(unlabeled_pool.y, protocol=first_batch_mode, k=batch_size)
     learner = ActiveLearner(estimator=estimator, query_strategy=query_strategy)
     learner.teach(unlabeled_pool.X[idx], unlabeled_pool.y[idx])
+
+    # Set up the Stabilizing Predictions stopping method, if requested
+    early_stop_mode_triggered = False
+    stopper = None
+    if early_stop_mode is not None:
+        stopper = stabilizing_predictions.StabilizingPredictions(
+            windows=3,
+            threshold=0.99,
+            initial_unlabeled_pool=unlabeled_pool.X,
+            stop_set_size=1000
+        )
 
     while unlabeled_pool.y.shape[0] > 0:
 
         # Retrain the learner during every iteration, except the 0th one
         if i > 0:
-            batch_size = get_batch_size(batch_size)
+            batch_size = get_batch_size(
+                batch_size,
+                unlabeled_pool.y.shape[0],
+                early_stop_mode_triggered,
+                early_stop_mode
+            )
             idx, query_sample = learner.query(unlabeled_pool.X, n_instances=batch_size)
             query_labels = unlabeled_pool.y[idx]
             learner.teach(query_sample, query_labels)
@@ -211,8 +249,14 @@ def learn(
         unlabeled_pool.y = stat_helper.remove_ids_from_array(unlabeled_pool.y, idx)
 
         # Perform end-of-iteration tasks
-        update(start, unlabeled_init_size, unlabeled_pool.y.shape[0], i)
+        update(start, unlabeled_init_size, unlabeled_pool.y.shape[0], batch_size, i)
         i += 1
+
+        if early_stop_mode != "complete" and not early_stop_mode_triggered:
+            stopper.update(model=learner, predict=lambda model, X : model.predict(X))
+            if stopper.is_stop():
+                print(f"Early stoppping triggered with mode: {early_stop_mode}")
+                early_stop_mode_triggered = True
 
     # End the al experience
     end = time.time()
@@ -233,16 +277,11 @@ def main(params: Dict[str, Union[str, int]]) -> None:
     # Seed random, numpy.random, and get a numpy randomizer
     random.seed(random_state)
     np.random.seed(random_state)
-    rng = np.random.default_rng(random_state)
 
     # Get the dataset and perform the feature extraction
-    (
-        X_unlabeled_pool,
-        X_test,
-        y_unlabeled_pool,
-        y_test,
-        _,
-    ) = dataset_fetchers.get_dataset(params["dataset"], stream=True, random_state=random_state)
+    X_unlabeled_pool, X_test, y_unlabeled_pool, y_test, _, = dataset_fetchers.get_dataset(
+        params["dataset"], stream=True, random_state=random_state
+    )
     X_unlabeled_pool, X_test = feature_extractors.get_features(
         X_unlabeled_pool, X_test, params["feature_representation"]
     )
@@ -252,19 +291,6 @@ def main(params: Dict[str, Union[str, int]]) -> None:
     tmp = float(params["batch_size"])
     batch_size = int(tmp) if tmp.is_integer() else int(tmp * unlabeled_init_size)
     batch_size = max(1, batch_size)
-
-    # Get the stop set size (handle proportions and absolute values)
-    tmp = float(params["stop_set_size"])
-    stop_set_size = int(tmp) if tmp.is_integer() else int(tmp * unlabeled_init_size)
-    stop_set_size = max(1, stop_set_size)
-
-    # Select a stop set for stabilizing predictions
-    stop_set_size = min(stop_set_size, unlabeled_init_size)
-    stop_set_idx = rng.choice(unlabeled_init_size, size=stop_set_size, replace=False)
-    X_stop_set, y_stop_set = (
-        X_unlabeled_pool[stop_set_idx],
-        y_unlabeled_pool[stop_set_idx],
-    )
 
     # Get the modAL compatible estimator and query strategy to use
     estimator = estimators.get_estimator(
@@ -286,17 +312,15 @@ def main(params: Dict[str, Union[str, int]]) -> None:
         oh.container.y_unlabeled_pool_file,
     )
     test_set = pool.Pool(X_test, y_test, oh.container.X_test_set_file, oh.container.y_test_set_file)
-    stop_set = pool.Pool(
-        X_stop_set, y_stop_set, oh.container.X_stop_set_file, oh.container.y_stop_set_file
-    )
 
     learn(
         estimator,
         query_strategy,
         batch_size,
-        unlabeled_pool=unlabeled_pool,
+        unlabeled_pool,
         model_path=oh.container.model_path,
         batch_path=oh.container.batch_path,
         test_set=test_set,
-        stop_set=stop_set,
+        first_batch_mode="random",
+        early_stop_mode="finish"
     )

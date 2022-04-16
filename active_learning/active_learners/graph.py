@@ -20,7 +20,7 @@ import matplotlib.pyplot as plt
 import pandas as pd
 
 from active_learning.active_learners import output_helper
-from active_learning import stopping_methods  # pylint: disable=unused-import
+#from active_learning import stopping_methods  # pylint: disable=unused-import
 
 # Colors for stopping methods
 colors_stopping = ["lime", "blue", "megenta", "midnightblue"]

@@ -101,12 +101,12 @@ if __name__ == "__main__":
         "output_root": "outputs/test",
         "task": "cls",
         "stop_set_size": 0.1,
-        "batch_size": 0.01,
+        "batch_size": 1,
         "query_strategy": "uncertainty_sampling",
         "base_learner": "SVC",
         "multiclass": "ovr",
-        "feature_representation": "tfidf",
-        "dataset": "20NewsGroups",
+        "feature_representation": "preprocessed",
+        "dataset": "Iris",
         "random_state": 0,
     }
 
