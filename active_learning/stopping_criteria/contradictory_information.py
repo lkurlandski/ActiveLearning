@@ -12,9 +12,8 @@ from active_learning.stopping_criteria.base import StoppingCriteria
 
 
 class ContradictoryInformation(StoppingCriteria):
-
     def __init__(self, windows: int = 3):
-        
+
         self.windows = windows
         self.conf_scores = []
 
@@ -33,11 +32,14 @@ class ContradictoryInformation(StoppingCriteria):
         if len(self.conf_scores) < self.windows:
             return False
 
-        for prev, curr in zip(self.conf_scores[-self.windows-1:], self.conf_scores[-self.windows:]):
+        for prev, curr in zip(
+            self.conf_scores[-self.windows - 1 :], self.conf_scores[-self.windows :]
+        ):
             if not curr < prev:
                 return False
 
         return True
+
 
 if __name__ == "__main__":
     pass

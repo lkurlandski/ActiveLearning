@@ -48,7 +48,11 @@ query_strategies = {
 
 
 def update(
-    start_time: float, unlabeled_init_size: int, unlabeled_size: int, batch_size: int, i: int
+    start_time: float,
+    unlabeled_init_size: int,
+    unlabeled_size: int,
+    batch_size: int,
+    i: int,
 ) -> None:
     """Print an update of AL progress.
 
@@ -246,7 +250,10 @@ def learn(
         # Retrain the learner during every iteration, except the 0th one
         if i > 0:
             batch_size = get_batch_size(
-                batch_size, unlabeled_pool.y.shape[0], early_stop_mode_triggered, early_stop_mode
+                batch_size,
+                unlabeled_pool.y.shape[0],
+                early_stop_mode_triggered,
+                early_stop_mode,
             )
             idx, query_sample = learner.query(unlabeled_pool.X, n_instances=batch_size)
             query_labels = unlabeled_pool.y[idx]
@@ -266,7 +273,7 @@ def learn(
         i += 1
 
         if early_stop_mode != "complete" and not early_stop_mode_triggered:
-            stopper.update_from_model_and_predict(
+            stopper.update_from_model(
                 model=learner,
                 predict=lambda model, X: model.predict(X),
                 initial_unlabeled_pool=initial_unlabeled_pool,

@@ -14,12 +14,17 @@ from active_learning import stat_helper
 from active_learning.active_learners import output_helper
 from active_learning.active_learners import pool
 from active_learning.stopping_criteria.base import StoppingCriteria
-from active_learning.stopping_criteria.contradictory_information import ContradictoryInformation
-from active_learning.stopping_criteria.stabilizing_predictions import StabilizingPredictions
+from active_learning.stopping_criteria.contradictory_information import (
+    ContradictoryInformation,
+)
+from active_learning.stopping_criteria.stabilizing_predictions import (
+    StabilizingPredictions,
+)
 
 
 def test_stopping_criteria(
-    criteria: List[StoppingCriteria], container: output_helper.IndividualOutputDataContainer
+    criteria: List[StoppingCriteria],
+    container: output_helper.IndividualOutputDataContainer,
 ) -> None:
 
     start = time.time()
@@ -56,7 +61,11 @@ def test_stopping_criteria(
 
             if c.has_stopped:
                 df = pd.DataFrame(
-                    {"criteria": [str(c)], "iteration": [i], "training_data": [training_data]}
+                    {
+                        "criteria": [str(c)],
+                        "iteration": [i],
+                        "training_data": [training_data],
+                    }
                 )
                 results = results.append(df)
 
