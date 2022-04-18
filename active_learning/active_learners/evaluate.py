@@ -83,7 +83,7 @@ def evaluate_container(container: output_helper.IndividualOutputDataContainer) -
     test_set = pool.Pool(X_path=container.X_test_set_file, y_path=container.y_test_set_file).load()
 
     start = time.time()
-    print(f"{str(datetime.timedelta(seconds=(round(time.time() - start))))} -- Starting AL Loop")
+    print(f"{str(datetime.timedelta(seconds=(round(time.time() - start))))} -- Starting Evaluation")
 
     unlabeled_pool_init_size = unlabeled_pool.y.shape[0]
     training_data = 0
@@ -116,7 +116,8 @@ def evaluate_container(container: output_helper.IndividualOutputDataContainer) -
         learn.update(start, unlabeled_pool_init_size, unlabeled_pool.y.shape[0], idx.shape[0], i)
 
     end = time.time()
-    print(f"{str(datetime.timedelta(seconds=(round(end - start))))} -- Ending Active Learning")
+    print(f"{str(datetime.timedelta(seconds=(round(end - start))))} -- Ending Evaluation")
+
 
 def main(params: Dict[str, Union[str, int]]):
     """Evaluate saved model from an AL experiment for a set of experiment parmameters.
@@ -127,9 +128,5 @@ def main(params: Dict[str, Union[str, int]]):
         A single set of hyperparmaters and for the active learning experiment.
     """
 
-    print("Beginning Evalulation", flush=True)
-
     oh = output_helper.OutputHelper(params)
     evaluate_container(oh.container)
-
-    print("Ending Evalulation", flush=True)

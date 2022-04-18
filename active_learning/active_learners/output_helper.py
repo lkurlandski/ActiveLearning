@@ -40,8 +40,7 @@ class OutputDataContainer:
         self.root = Path(root)
 
         self.training_data_file = self.root / Path("training_data.csv")
-        self.stopping_results_json_file = self.root / Path("stopping_results.json")
-        self.stopping_results_csv_file = self.root / Path("stopping_results.csv")
+        self.stopping_results_file = self.root / Path("stopping_results.csv")
 
         self.processed_path = self.root / Path("processed")
         self.processed_test_set_path = self.processed_path / self.test_set_str
@@ -179,7 +178,8 @@ class OutputHelper:
         params: Dict[str, str] = {k: str(v) for k, v in params.items()}
 
         self.root = Path(params["output_root"])
-        self.dataset_path = (self.root
+        self.dataset_path = (
+            self.root
             / params["task"]
             / params["early_stop_mode"]
             / params["first_batch_mode"]

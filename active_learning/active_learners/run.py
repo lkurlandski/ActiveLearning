@@ -1,11 +1,11 @@
 #!/home/hpc/kurlanl1/bloodgood/ActiveLearning/env/bin/python -u
 
-#SBATCH --chdir=/home/hpc/kurlanl1/bloodgood/ActiveLearning
-#SBATCH --output=/home/hpc/kurlanl1/bloodgood/ActiveLearning/slurm/jobs/job.20NewsGroups.%A.out
-#SBATCH --constraint=skylake|broadwell
-#SBATCH --job-name=20NewsGroups
-#SBATCH --partition=long
-#SBATCH --cpus-per-task=1
+# SBATCH --chdir=/home/hpc/kurlanl1/bloodgood/ActiveLearning
+# SBATCH --output=/home/hpc/kurlanl1/bloodgood/ActiveLearning/slurm/jobs/job.20NewsGroups.%A.out
+# SBATCH --constraint=skylake|broadwell
+# SBATCH --job-name=20NewsGroups
+# SBATCH --partition=long
+# SBATCH --cpus-per-task=1
 
 """Interface to the features of this module that can be used with python or sbatch.
 
@@ -24,6 +24,7 @@ from active_learning.active_learners import evaluate
 from active_learning.active_learners import graph
 from active_learning.active_learners import learn
 from active_learning.active_learners import process
+from active_learning.active_learners import stopping
 
 
 def main(
@@ -32,6 +33,7 @@ def main(
     evaluate_: bool,
     process_: bool,
     graph_: bool,
+    stopping_: bool,
     average_: bool,
 ):
     """Create and submit individual submissions scripts for different experimental configurations.
@@ -48,6 +50,8 @@ def main(
         If true, runs the processing process.
     graph : bool
         If true, runs the graphing process.
+    stopping : bool
+        If true, runs the stopping process.
     average : bool
         If true, runs the averaging process.
     cpus_per_task : int
@@ -60,10 +64,12 @@ def main(
     """
     print("Tasks to run: ", flush=True)
     print(f"\tlearn: {learn_}", flush=True)
-    print(f"\t:evaluate {evaluate_}", flush=True)
-    print(f"\t:process {process_}", flush=True)
-    print(f"\t:graph {graph_}", flush=True)
-    print(f"Experimental parameters:\n{pformat(params)}")
+    print(f"\tevaluate: {evaluate_}", flush=True)
+    print(f"\tprocess: {process_}", flush=True)
+    print(f"\tgraph: {graph_}", flush=True)
+    print(f"\tstopping: {stopping_}", flush=True)
+    print(f"\taverage: {average_}", flush=True)
+    print(f"\nExperimental parameters:\n{pformat(params)}")
 
     if average_ and any((learn_, evaluate_, process_, graph_)):
         raise Exception("The averaging program should be run after all runs of pipeline finish.")
@@ -82,6 +88,9 @@ def main(
     if graph_:
         graph.main(params)
 
+    if stopping_:
+        stopping.main(params)
+
     if average_:
         average.main(params)
 
@@ -93,6 +102,7 @@ if __name__ == "__main__":
     parser.add_argument("--evaluate", action="store_true", help="Evaluate the learned models.")
     parser.add_argument("--process", action="store_true", help="Process evaluations into tables.")
     parser.add_argument("--graph", action="store_true", help="Create basic graphs for statistics.")
+    parser.add_argument("--stopping", action="store_true", help="Analyze stopping criteria.")
     parser.add_argument("--average", action="store_true", help="Average across multiple runs.")
 
     args = parser.parse_args()
@@ -107,7 +117,7 @@ if __name__ == "__main__":
         "base_learner": "SVC",
         "feature_representation": "preprocessed",
         "dataset": "Iris",
-        "random_state": 1,
+        "random_state": 0,
     }
 
     main(
@@ -116,5 +126,6 @@ if __name__ == "__main__":
         args.evaluate,
         args.process,
         args.graph,
+        args.stopping,
         args.average,
     )

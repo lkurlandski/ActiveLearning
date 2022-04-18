@@ -47,7 +47,9 @@ query_strategies = {
 }
 
 
-def update(start_time: float, unlabeled_init_size: int, unlabeled_size: int, batch_size: int, i: int) -> None:
+def update(
+    start_time: float, unlabeled_init_size: int, unlabeled_size: int, batch_size: int, i: int
+) -> None:
     """Print an update of AL progress.
 
     Parameters
@@ -140,7 +142,9 @@ def get_first_batch(y: Union[np.ndarray, sparse.csr_matrix], protocol: str, k: i
     raise ValueError(f"protocol: {protocol} not recognized.")
 
 
-def get_batch_size(batch_size, unlabeled_pool_size, early_stop_mode_triggered, early_stop_mode) -> int:
+def get_batch_size(
+    batch_size, unlabeled_pool_size, early_stop_mode_triggered, early_stop_mode
+) -> int:
 
     if early_stop_mode_triggered:
         if early_stop_mode == "exponential":
@@ -164,7 +168,6 @@ def learn(
     test_set: pool.Pool = None,
     first_batch_mode: str = "random",
     early_stop_mode: str = "complete",
-    
 ):
     """Perform active learning and save a limited amount of information to files.
 
@@ -185,7 +188,6 @@ def learn(
     test_set : pool.Pool, optional
         A test set, which will be saved in a compressed format, by default None.
 
-    # FIXME: document
     """
 
     if first_batch_mode not in {"random", "k_per_class"}:
@@ -208,46 +210,43 @@ def learn(
     idx = get_first_batch(unlabeled_pool.y, protocol=first_batch_mode, k=batch_size)
     learner = ActiveLearner(estimator=estimator, query_strategy=query_strategy)
     learner.teach(unlabeled_pool.X[idx], unlabeled_pool.y[idx])
-    
-    # Scikit-learn OneVsRestClassifier has a small bug you can read about here:
-        # https://github.com/scikit-learn/scikit-learn/issues/21869
-        # This is a reasonable workaround to the problem.
-    if (
-        isinstance(learner.estimator, OneVsRestClassifier) and
-        type_of_target(unlabeled_pool.y) == "multiclass" and
-        len(set(unlabeled_pool.y[idx])) == 1
-        ):
 
-        warnings.warn("Implementing a solution to a bug from scikit-learn.")
-        
+    # Scikit-learn OneVsRestClassifier has a small bug you can read about here:
+    # https://github.com/scikit-learn/scikit-learn/issues/21869
+    # This is a reasonable workaround to the problem.
+    if (
+        isinstance(learner.estimator, OneVsRestClassifier)
+        and type_of_target(unlabeled_pool.y) == "multiclass"
+        and len(set(unlabeled_pool.y[idx])) == 1
+    ):
+
+        warnings.warn("Implementing a solution for a bug from scikit-learn.")
+
         while len(set(unlabeled_pool.y[idx])) == 1:
-            idx = get_first_batch(
-                unlabeled_pool.y,
-                protocol=first_batch_mode,
-                k=max(batch_size, 2)
-            )
+            idx = get_first_batch(unlabeled_pool.y, protocol=first_batch_mode, k=max(batch_size, 2))
         learner.teach(unlabeled_pool.X[idx], unlabeled_pool.y[idx])
 
     # Set up the Stabilizing Predictions stopping method, if requested
     early_stop_mode_triggered = False
     stopper = None
-    if early_stop_mode is not None:
-        stopper = stabilizing_predictions.StabilizingPredictions(
-            windows=3,
-            threshold=0.99,
-            initial_unlabeled_pool=unlabeled_pool.X,
-            stop_set_size=1000
-        )
+    if early_stop_mode is not "complete":
+        # TODO: implement multilabel stabilizing predictions
+        if unlabeled_pool.y.ndim > 1:
+            print("Stabilizing predictions not implemented for multilabel problems.")
+            stopper = None
+        else:
+            stopper = stabilizing_predictions.StabilizingPredictions(
+                windows=3, threshold=0.99, stop_set_size=1000
+            )
+            initial_unlabeled_pool = unlabeled_pool.X.copy()
 
+    # Begin active learning loop
     while unlabeled_pool.y.shape[0] > 0:
 
         # Retrain the learner during every iteration, except the 0th one
         if i > 0:
             batch_size = get_batch_size(
-                batch_size,
-                unlabeled_pool.y.shape[0],
-                early_stop_mode_triggered,
-                early_stop_mode
+                batch_size, unlabeled_pool.y.shape[0], early_stop_mode_triggered, early_stop_mode
             )
             idx, query_sample = learner.query(unlabeled_pool.X, n_instances=batch_size)
             query_labels = unlabeled_pool.y[idx]
@@ -267,12 +266,16 @@ def learn(
         i += 1
 
         if early_stop_mode != "complete" and not early_stop_mode_triggered:
-            stopper.update(model=learner, predict=lambda model, X : model.predict(X))
-            if stopper.is_stop():
-                print(f"Early stoppping triggered with mode: {early_stop_mode}")
+            stopper.update_from_model_and_predict(
+                model=learner,
+                predict=lambda model, X: model.predict(X),
+                initial_unlabeled_pool=initial_unlabeled_pool,
+            )
+            if stopper.has_stopped:
+                print(f"Early stoppping triggered at iteration {i} with mode: {early_stop_mode}")
                 early_stop_mode_triggered = True
 
-    # End the al experience
+    # End active learning loop
     end = time.time()
     print(f"{str(datetime.timedelta(seconds=(round(end - start))))} -- Ending Active Learning")
 
@@ -293,9 +296,13 @@ def main(params: Dict[str, Union[str, int]]) -> None:
     np.random.seed(random_state)
 
     # Get the dataset and perform the feature extraction
-    X_unlabeled_pool, X_test, y_unlabeled_pool, y_test, _, = dataset_fetchers.get_dataset(
-        params["dataset"], stream=True, random_state=random_state
-    )
+    (
+        X_unlabeled_pool,
+        X_test,
+        y_unlabeled_pool,
+        y_test,
+        _,
+    ) = dataset_fetchers.get_dataset(params["dataset"], stream=True, random_state=random_state)
     X_unlabeled_pool, X_test = feature_extractors.get_features(
         X_unlabeled_pool, X_test, params["feature_representation"]
     )
@@ -335,6 +342,6 @@ def main(params: Dict[str, Union[str, int]]) -> None:
         model_path=oh.container.model_path,
         batch_path=oh.container.batch_path,
         test_set=test_set,
-        first_batch_mode= params["first_batch_mode"],
-        early_stop_mode=params["early_stop_mode"]
+        first_batch_mode=params["first_batch_mode"],
+        early_stop_mode=params["early_stop_mode"],
     )
