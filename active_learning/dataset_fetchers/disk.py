@@ -3,7 +3,6 @@
 TODO
 ----
 - Determine if data should be extracted from raw or normalized then change dataset_path accordingly.
-- Add support for multilabel classification in the TextDatasetFetchers.
 - If a subset of categories is selected, documents that do not belong in any of those selected
     categories are completely ignored. Is this the desired behavior? If not, should be ammended.
 - Add a feature to control the size of the test set for datasets with predefined train test splits,
@@ -15,19 +14,22 @@ FIXME
 """
 
 from abc import abstractmethod
+from collections import OrderedDict
 from pathlib import Path
 from pprint import pprint  # pylint: disable=unused-import
 import sys  # pylint: disable=unused-import
-from typing import Any, Generator, List, Tuple, Union
+from typing import Any, Dict, Generator, Iterable, List, Tuple, Union
 import warnings
 
 import numpy as np
-import sklearn.datasets
-import sklearn.utils
+from scipy import sparse
+from sklearn.datasets import load_files
 from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import MultiLabelBinarizer
 
 from active_learning import stat_helper
 from active_learning.dataset_fetchers.base import DatasetFetcher
+from active_learning.dataset_fetchers.utils import paths_to_contents_generator
 
 
 class FileDatasetFetcher(DatasetFetcher):
@@ -62,8 +64,8 @@ class PreprocessedFileDatasetFetcher(FileDatasetFetcher):
     ) -> Tuple[
         Generator[Any, None, None],
         Generator[Any, None, None],
-        Generator[Any, None, None],
-        Generator[Any, None, None],
+        np.ndarray,
+        np.ndarray,
         np.ndarray,
     ]:
 
@@ -74,8 +76,8 @@ class PreprocessedFileDatasetFetcher(FileDatasetFetcher):
         return (
             (x for x in X_train),
             (x for x in X_test),
-            (y for y in y_train),
-            (y for y in y_test),
+            y_train,
+            y_test,
             target_names,
         )
 
@@ -100,6 +102,7 @@ class PredefinedPreprocessedFileDatasetFetcher(PreprocessedFileDatasetFetcher):
         X_train, y_train = stat_helper.shuffle_corresponding_arrays(
             X_train, y_train, self.random_state
         )
+
         target_names = np.unique(np.concatenate((y_train, y_test)))
 
         return X_train, X_test, y_train, y_test, target_names
@@ -137,6 +140,7 @@ class RandomizedPreprocessedFileDatasetFetcher(PreprocessedFileDatasetFetcher):
         X_train, X_test, y_train, y_test = train_test_split(
             X, y, test_size=self.test_size, random_state=self.random_state
         )
+
         target_names = np.unique(np.concatenate((y_train, y_test)))
 
         return X_train, X_test, y_train, y_test, target_names
@@ -170,8 +174,8 @@ class TextFileDatasetFetcher(FileDatasetFetcher):
         return (
             list(X_train),
             list(X_test),
-            np.array(list(y_train)),
-            np.array(list(y_test)),
+            y_train,
+            y_test,
             np.array(target_names),
         )
 
@@ -180,14 +184,62 @@ class TextFileDatasetFetcher(FileDatasetFetcher):
     ) -> Tuple[
         Generator[str, None, None],
         Generator[str, None, None],
-        Generator[Any, None, None],
-        Generator[Any, None, None],
+        np.ndarray,
+        np.ndarray,
         np.ndarray,
     ]:
 
         X_train, X_test, y_train, y_test, target_names = self.load_dataset()
 
         return X_train, X_test, y_train, y_test, np.array(target_names)
+
+    @staticmethod
+    def change_representation_if_mulitlabel(
+        X: Iterable[str], y: Iterable[Any]
+    ) -> Tuple[Iterable[str], Union[Iterable[Any], sparse.csr_matrix]]:
+        """Detect duplicate files with different labels and restructure to support multilabel.
+
+        Parameters
+        ----------
+        X : Iterable[str]
+            Paths to documents of text.
+        y : Iterable[Any]
+            Corresponding labels for the files.
+
+        Returns
+        -------
+        Tuple[Iterable[str], Union[Iterable[Any], sparse.csr_matrix]]
+            The original data if no duplicate files were detected; else the data restructured to
+                support multilabel classification.
+        """
+
+        # Return original data if no documents are represented multiple times under different labels
+        if len(np.unique([Path(x).name for x in X])) == len(X):
+            return X, y
+
+        # Map between document name and the labels associated with the document
+        tracker: Dict[str, List] = OrderedDict()
+        for path, label in zip(X, y):
+            name = Path(path).name
+            if name not in tracker:
+                tracker[name] = [label]
+            else:
+                tracker[name].append(label)
+
+        # Rebuild the document-label arrays, using full document path
+        X_, y_ = [], []
+        accounted = set()
+        for x in map(Path, X):
+            if x.name not in accounted:
+                accounted.add(x.name)
+                X_.append(x.as_posix())
+                y_.append(tracker[x.name])
+
+        # Convert target into one-hot encoded 2D array
+        mlb = MultiLabelBinarizer(sparse_output=True)
+        y_ = mlb.fit_transform(y_)
+
+        return X_, y_
 
     def recursively_load_files(
         self, path: Path, categories: Union[List[str], None]
@@ -232,14 +284,17 @@ class TextFileDatasetFetcher(FileDatasetFetcher):
             return False
 
         if not contains_directories(path):
-            bunch = sklearn.datasets.load_files(
+            bunch = load_files(
                 path,
                 categories=categories,
                 load_content=False,
                 random_state=self.random_state,
             )
 
-            return bunch["filenames"], bunch["target"], bunch["target_names"]
+            X, y = bunch["filenames"].tolist(), bunch["target"]
+            X, y = self.change_representation_if_mulitlabel(X, y)
+
+            return X, y, bunch["target_names"]
 
         X = []
         y = []
@@ -256,28 +311,7 @@ class TextFileDatasetFetcher(FileDatasetFetcher):
             target_names.append(p.name)
             i += 1
 
-        return X, y, target_names
-
-    @staticmethod
-    def X_y_to_generators(
-        X: List[str], y: List[Any]
-    ) -> Tuple[Generator[str, None, None], Generator[Any, None, None]]:
-        """Convert a training corpus of filenames and its corresponding format to documents.
-
-        Parameters
-        ----------
-        X : List[str]
-            Filenames to read and return as generator.
-        y : List[Any]
-            Labels for the filenames.
-
-        Returns
-        -------
-        Tuple[Generator[str, None, None], Generator[Any, None, None]]
-            A generator of documents and a generator of labels.
-        """
-
-        return (open(f, "rb").read().decode("utf8", "replace") for f in X), (i for i in y)
+        return X, np.array(y), target_names
 
     @abstractmethod
     def load_dataset(
@@ -285,8 +319,8 @@ class TextFileDatasetFetcher(FileDatasetFetcher):
     ) -> Tuple[
         Generator[Any, None, None],
         Generator[Any, None, None],
-        Generator[Any, None, None],
-        Generator[Any, None, None],
+        np.ndarray,
+        np.ndarray,
         np.ndarray,
     ]:
         """Load a classification dataset from files on disk.
@@ -301,8 +335,8 @@ class TextFileDatasetFetcher(FileDatasetFetcher):
         Tuple[
                 Generator[Any, None, None],
                 Generator[Any, None, None],
-                Generator[Any, None, None],
-                Generator[Any, None, None],
+                np.ndarray,
+                np.ndarray,
                 np.ndarray,
             ]
             Train data, test data, train labels, test labels, and target names.
@@ -324,8 +358,8 @@ class PredefinedTextFileDatasetFetcher(TextFileDatasetFetcher):
     ) -> Tuple[
         Generator[str, None, None],
         Generator[str, None, None],
-        Generator[Any, None, None],
-        Generator[Any, None, None],
+        np.ndarray,
+        np.ndarray,
         np.ndarray,
     ]:
 
@@ -335,10 +369,11 @@ class PredefinedTextFileDatasetFetcher(TextFileDatasetFetcher):
         X_test, y_test, target_names_test = self.recursively_load_files(
             self.test_path, self.categories
         )
+
         target_names = np.unique(np.concatenate((target_names_train, target_names_test)))
 
-        X_train, y_train = self.X_y_to_generators(X_train, y_train)
-        X_test, y_test = self.X_y_to_generators(X_test, y_test)
+        X_train = paths_to_contents_generator(X_train)
+        X_test = paths_to_contents_generator(X_test)
 
         return X_train, X_test, y_train, y_test, target_names
 
@@ -377,8 +412,8 @@ class RandomizedTextFileDatasetFetcher(TextFileDatasetFetcher):
     ) -> Tuple[
         Generator[str, None, None],
         Generator[str, None, None],
-        Generator[Any, None, None],
-        Generator[Any, None, None],
+        np.ndarray,
+        np.ndarray,
         np.ndarray,
     ]:
 
@@ -387,7 +422,7 @@ class RandomizedTextFileDatasetFetcher(TextFileDatasetFetcher):
             X, y, random_state=self.random_state, test_size=self.test_size
         )
 
-        X_train, y_train = self.X_y_to_generators(X_train, y_train)
-        X_test, y_test = self.X_y_to_generators(X_test, y_test)
+        X_train = paths_to_contents_generator(X_train)
+        X_test = paths_to_contents_generator(X_test)
 
         return X_train, X_test, y_train, y_test, target_names

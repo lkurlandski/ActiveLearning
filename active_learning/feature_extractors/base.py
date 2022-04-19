@@ -15,7 +15,7 @@ import sys  # pylint: disable=unused-import
 from typing import Any, Iterable, Tuple, Union
 
 import numpy as np
-from scipy.sparse import spmatrix
+from scipy import sparse
 
 
 class FeatureExtractor(ABC):
@@ -24,7 +24,7 @@ class FeatureExtractor(ABC):
     @abstractmethod
     def extract_features(
         self, X_train: Iterable[Any], X_test: Iterable[Any]
-    ) -> Tuple[Union[np.ndarray, spmatrix], Union[np.ndarray, spmatrix]]:
+    ) -> Tuple[Union[np.ndarray, sparse.csr_matrix], Union[np.ndarray, sparse.csr_matrix]]:
         """Extract the features from a dataset.
 
         Parameters
@@ -36,7 +36,7 @@ class FeatureExtractor(ABC):
 
         Returns
         -------
-        Tuple[Union[np.ndarray, spmatrix], Union[np.ndarray, spmatrix]]
+        Tuple[Union[np.ndarray, sparse.csr_matrix], Union[np.ndarray, sparse.csr_matrix]]
             Numeric representation of the train and test data.
         """
         ...

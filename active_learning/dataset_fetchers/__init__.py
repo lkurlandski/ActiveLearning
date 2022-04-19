@@ -2,9 +2,10 @@
 
 TODO
 ----
-- Add multilabel support for RCV1, Reuters, and WebKB.
 - Once random_state is configured as a global variable, expose the mapper outside of its function
-    to support varification from outside this module.
+    to support vertification from outside this module.
+- Determine the version of 20NewsGroups used by scikit-learn. Download and process it to promote
+    streaming this dataset from disk.
 
 FIXME
 -----
@@ -46,20 +47,10 @@ def get_mapper(random_state: int = 0) -> Callable[..., base.DatasetFetcher]:
             random_state=random_state,
             dataset="Avila",
         ),
-        "Covertype": utils.init(
-            scikit_learn.ScikitLearnDatasetFetcher,
-            random_state=random_state,
-            dataset="Covertype",
-        ),
-        "Iris": utils.init(
-            scikit_learn.ScikitLearnDatasetFetcher,
-            random_state=random_state,
-            dataset="Iris",
-        ),
         "RCV1_v2": utils.init(
-            disk.PredefinedTextFileDatasetFetcher,
+            disk.RandomizedTextFileDatasetFetcher,
             random_state=random_state,
-            dataset="RCV1_v2",
+            dataset="RCV1_v2/train",
             categories=[
                 "CCAT",
                 "GCAT",
@@ -80,6 +71,7 @@ def get_mapper(random_state: int = 0) -> Callable[..., base.DatasetFetcher]:
             categories=[
                 "acq",
                 "corn",
+                "crude",
                 "earn",
                 "grain",
                 "interest",
@@ -96,7 +88,7 @@ def get_mapper(random_state: int = 0) -> Callable[..., base.DatasetFetcher]:
             categories=["student", "faculty", "course", "project"],
         ),
         "glue": utils.init(
-            huggingface.PredefinedClassificationFetcher,
+            huggingface.RandomizedClassificationFetcher,
             random_state=random_state,
             path="glue",
             name="sst2",
@@ -116,6 +108,16 @@ def get_mapper(random_state: int = 0) -> Callable[..., base.DatasetFetcher]:
             random_state=random_state,
             path="emotion",
         ),
+        "Covertype": utils.init(
+            scikit_learn.ScikitLearnDatasetFetcher,
+            random_state=random_state,
+            dataset="Covertype",
+        ),
+        "Iris": utils.init(
+            scikit_learn.ScikitLearnDatasetFetcher,
+            random_state=random_state,
+            dataset="Iris",
+        ),
     }
 
     return mapper
@@ -123,7 +125,7 @@ def get_mapper(random_state: int = 0) -> Callable[..., base.DatasetFetcher]:
 
 def get_dataset(
     dataset: str, stream: bool, random_state: int
-) -> Tuple[Iterable[Any], Iterable[Any], Iterable[Any], Iterable[Any], np.ndarray]:
+) -> Tuple[Iterable[Any], Iterable[Any], np.ndarray, np.ndarray, np.ndarray]:
     """Return any implemented dataset.
 
     Parameters
@@ -137,8 +139,8 @@ def get_dataset(
 
     Returns
     -------
-    Tuple[Iterable[Any], Iterable[Any], Iterable[Any], Iterable[Any], np.ndarray]
-        The arrays for X_train, y_train, X_test, and y_test, along with the set of categories.
+    Tuple[Iterable[Any], Iterable[Any], np.ndarray, np.ndarray, np.ndarray]
+        The arrays for X_train, X_test, y_train, and y_test, along with the set of categories.
 
     Raises
     ------

@@ -9,15 +9,16 @@ FIXME
 -
 """
 
-import json
-from pathlib import Path
 from pprint import pprint  # pylint: disable=unused-import
 import sys  # pylint: disable=unused-import
+
+import json
+from pathlib import Path
 from typing import Dict, List, Union
 
 import pandas as pd
 
-from active_learning import output_helper
+from active_learning.active_learners import output_helper
 
 
 def report_jsons_to_dicts(
@@ -41,12 +42,7 @@ def report_jsons_to_dicts(
         with open(p, "r", encoding="utf8") as f:
             d = json.load(f)
         for k, v in d.items():
-            if isinstance(v, float):
-                if k in data:
-                    data[k].append(v)
-                else:
-                    data[k] = [v]
-            elif isinstance(v, dict):
+            if isinstance(v, dict):
                 if k not in data:
                     data[k] = {}
                 for k2, v2 in v.items():
@@ -54,29 +50,13 @@ def report_jsons_to_dicts(
                         data[k][k2].append(v2)
                     else:
                         data[k][k2] = [v2]
+            else:
+                if k in data:
+                    data[k].append(v)
+                else:
+                    data[k] = [v]
 
     return data
-
-
-def dict_of_dfs_to_csvs(dfs: Dict[str, pd.DataFrame], processed_path: Path) -> None:
-    """Convert the processed dataframes into csv files.
-
-    Parameters
-    ----------
-    oh : output_helper.OutputHelper
-        OutputHelper for this experiment
-    dfs : Dict[str, pd.DataFrame]
-        Named dataframes of data
-    subset : str
-        one of train, test, or stop_set to refer to a particular data location
-    """
-
-    for k, df in dfs.items():
-        if k in {"accuracy", "macro_avg", "weighted_avg"}:
-            path = processed_path / output_helper.OutputDataContainer.overall_str / f"{k}.csv"
-        else:
-            path = processed_path / output_helper.OutputDataContainer.ind_cat_str / f"{k}.csv"
-        df.to_csv(path)
 
 
 def process_container(container: output_helper.OutputDataContainer):
@@ -88,9 +68,6 @@ def process_container(container: output_helper.OutputDataContainer):
         The container where the raw data is located and where the processed data should go
     """
 
-    # Keeping this as a pd.Series allows for seemless application to dataframe with different length
-    num_training_data = pd.read_csv(container.training_data_file)["training_data"]
-
     paths = (
         (container.raw_stop_set_path, container.processed_stop_set_path),
         (container.raw_test_set_path, container.processed_test_set_path),
@@ -100,10 +77,25 @@ def process_container(container: output_helper.OutputDataContainer):
         reports = list(raw_path.iterdir())
         data = report_jsons_to_dicts(reports)
         dfs = {k.replace(" ", "_"): pd.DataFrame(v) for k, v in data.items()}
-        for df in dfs.values():
-            df.insert(0, "training_data", num_training_data)
+
+        dfs["training_data"] = dfs["training_data"].rename(columns={0: "training_data"})
+        dfs["training_data"].insert(0, "iteration", dfs["iteration"][0])
+        del dfs["iteration"]
+
+        for k, df in dfs.items():
+            if k == "training_data":
+                continue
+            df.insert(0, "training_data", dfs["training_data"]["training_data"])
+            df.insert(0, "iteration", dfs["training_data"]["iteration"])
+
         dfs["accuracy"] = dfs["accuracy"].rename(columns={0: "accuracy"})
-        dict_of_dfs_to_csvs(dfs, processed_path)
+        dfs["hamming_loss"] = dfs["hamming_loss"].rename(columns={0: "hamming_loss"})
+
+        for k, df in dfs.items():
+            if k == "training_data":
+                continue
+            df.to_csv(processed_path / f"{k}.csv")
+    dfs["training_data"].to_csv(container.training_data_file)
 
 
 def main(experiment_parameters: Dict[str, Union[str, int]]):
@@ -121,10 +113,3 @@ def main(experiment_parameters: Dict[str, Union[str, int]]):
     process_container(oh.container)
 
     print("Ending Processing", flush=True)
-
-
-if __name__ == "__main__":
-
-    from active_learning import local
-
-    main(local.experiment_parameters)

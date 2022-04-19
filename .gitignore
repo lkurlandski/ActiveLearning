@@ -2,6 +2,7 @@ env
 config_files/*.json
 slurm/jobs/*
 slurm/scripts/*
+slurm/submission.py
 output*/*
 .vscode/*
 **/__pycache__
