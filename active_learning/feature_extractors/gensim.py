@@ -15,9 +15,11 @@ from typing import Iterable, List, Tuple
 import collections
 
 import numpy as np
+from nltk.tokenize import wordpunct_tokenize
 from transformers import pipeline
 from gensim.models import Word2Vec
 from gensim.models.doc2vec import Doc2Vec, TaggedDocument
+from gensim.models import FastText
 
 from active_learning.feature_extractors.base import FeatureExtractor
 
@@ -49,27 +51,34 @@ class GensimFeatureExtractor(FeatureExtractor):
             return self.get_w2v_vectors(X_train, X_test)
         elif self.model == "d2v":
             return self.get_d2v_vectors(X_train, X_test)
+        elif self.model == "fasttext":
+            return self.get_fasttext_vectors(X_train, X_test)
         else:
             pass
             #raise some error
 
     def get_w2v_vectors(self, X_train, X_test):
 
-        X_train_tokens = [sentence.split() for sentence in X_train]
-        X_test_tokens = [sentence.split() for sentence in X_test]
+        X_train_tokens = []
+        for doc in X_train:
+            X_train_tokens.append(wordpunct_tokenize(doc))
 
-        w2v_model = Word2Vec(sentences=X_train, vector_size=500, min_count=1, window=15, epochs=20)
+        X_test_tokens = []
+        for doc in X_test:
+            X_test_tokens.append(wordpunct_tokenize(doc))
 
-        X_train_vectors = np.array([np.mean([w2v_model.wv[w] for w in words if w in w2v_model.wv.key_to_index] or [np.zeros(500)], axis=0) for words in X_train])
-        X_test_vectors = np.array([np.mean([w2v_model.wv[w] for w in words if w in w2v_model.wv.key_to_index] or [np.zeros(500)], axis=0) for words in X_test])
-        
+        w2v_model = Word2Vec(sentences=X_train_tokens, vector_size=500, min_count=1, window=15, epochs=20)
+
+        X_train_vectors = np.array([np.mean([w2v_model.wv[w] for w in words if w in w2v_model.wv.key_to_index] or [np.zeros(500)], axis=0) for words in X_train_tokens])
+        X_test_vectors = np.array([np.mean([w2v_model.wv[w] for w in words if w in w2v_model.wv.key_to_index] or [np.zeros(500)], axis=0) for words in X_test_tokens])
 
         return X_train_vectors, X_test_vectors
 
     def get_d2v_vectors(self, X_train, X_test):
 
-        X_train_tokens = [sentence.split() for sentence in X_train]
-        X_test_tokens = [sentence.split() for sentence in X_test]
+        X_train_tokens = []
+        for doc in X_train:
+            X_train_tokens.append(wordpunct_tokenize(doc))
         
         X_train_tagged_documents = [TaggedDocument(doc, [i]) for i, doc in enumerate(X_train_tokens)]
 
@@ -85,3 +94,19 @@ class GensimFeatureExtractor(FeatureExtractor):
             X_test_vectors.append(d2v_model.infer_vector(X_test_tokens[doc_id]))
         
         return np.asarray(X_train_vectors), np.asarray(X_test_vectors)
+
+    def get_fasttext_vectors(self, X_train, X_test):
+        X_train_tokens = []
+        for doc in X_train:
+            X_train_tokens.append(wordpunct_tokenize(doc))
+
+        X_test_tokens = []
+        for doc in X_test:
+            X_test_tokens.append(wordpunct_tokenize(doc))
+
+        fasttext_model = FastText(sentences=X_train_tokens, vector_size=500, min_count=1, window=15, epochs=20)
+
+        X_train_vectors = np.array([np.mean([fasttext_model.wv[w] for w in words], axis=0) for words in X_train_tokens])
+        X_test_vectors = np.array([np.mean([fasttext_model.wv[w] for w in words], axis=0) for words in X_test_tokens])
+
+        return X_train_vectors, X_test_vectors

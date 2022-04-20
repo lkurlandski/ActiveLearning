@@ -1,11 +1,11 @@
-#!/path/to/ActiveLearning/env/bin/python -u
+#!/home/hpc/elphicb1/ActiveLearning/ActiveLearning/env/bin/python -u
 
-#SBATCH --chdir=/path/to/ActiveLearning
-#SBATCH --output=/path/to/ActiveLearning/slurm/jobs/job.name.%A.out
+#SBATCH --chdir=/home/hpc/elphicb1/ActiveLearning/ActiveLearning
+#SBATCH --output=/home/hpc/elphicb1/ActiveLearning/ActiveLearning/slurm/jobs/job.%A.out
 #SBATCH --constraint=skylake|broadwell
 #SBATCH --job-name=name
 #SBATCH --partition=long
-#SBATCH --cpus-per-task=1
+#SBATCH --cpus-per-task=20
 
 """Interface to the features of this module that can be used with python or sbatch.
 
@@ -98,15 +98,15 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     params_ = {
-        "output_root": "outputs/test",
+        "output_root": "/home/hpc/elphicb1/ActiveLearning/ActiveLearning/new_output/cls",
         "task": "cls",
         "stop_set_size": 0.1,
-        "batch_size": 0.01,
+        "batch_size": 0.02,
         "query_strategy": "uncertainty_sampling",
         "base_learner": "SVC",
         "multiclass": "ovr",
-        "feature_representation": "tfidf",
-        "dataset": "20NewsGroups",
+        "feature_representation": "fasttext",
+        "dataset": "emotion",
         "random_state": 0,
     }
 

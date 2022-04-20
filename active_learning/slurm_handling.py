@@ -8,7 +8,7 @@ from active_learning import local
 
 
 user_path = ""
-node_root = "/local/scratch/bloodgood/"
+node_root = "/local/scratch/modal_output/"
 
 
 def move_output():
@@ -26,7 +26,7 @@ def move_output():
             subdirs.append(subdir)
 
     subdir = subdirs[0]
-    subdir_local = user_path + subdir.replace("/local/scratch/bloodgood", "")
+    subdir_local = user_path + subdir.replace("/local/scratch/modal_output", "")
 
     #if the root subdirectory with the dataset exists, delete it
     if Path(subdir_local).exists():

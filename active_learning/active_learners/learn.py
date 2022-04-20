@@ -242,7 +242,7 @@ def main(params: Dict[str, Union[str, int]]) -> None:
         y_unlabeled_pool,
         y_test,
         _,
-    ) = dataset_fetchers.get_dataset(params["dataset"], stream=True, random_state=random_state)
+    ) = dataset_fetchers.get_dataset(params["dataset"], stream=False, random_state=random_state)
     X_unlabeled_pool, X_test = feature_extractors.get_features(
         X_unlabeled_pool, X_test, params["feature_representation"]
     )

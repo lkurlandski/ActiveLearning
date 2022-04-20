@@ -39,6 +39,7 @@ mapper = {
     "roberta": utils.init(huggingface.HuggingFaceFeatureExtractor, model="roberta-base"),
     "w2v": utils.init(gensim.GensimFeatureExtractor, model="w2v"),
     "d2v": utils.init(gensim.GensimFeatureExtractor, model="d2v"),
+    "fasttext": utils.init(gensim.GensimFeatureExtractor, model="fasttext"),
     "distilbert": utils.init(
         huggingface.HuggingFaceFeatureExtractor, model="distilbert-base-uncased"
     ),
