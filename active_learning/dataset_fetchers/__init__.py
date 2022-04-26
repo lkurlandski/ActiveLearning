@@ -108,6 +108,11 @@ def get_mapper(random_state: int = 0) -> Callable[..., base.DatasetFetcher]:
             random_state=random_state,
             path="emotion",
         ),
+        "imdb": utils.init(
+            huggingface.PredefinedClassificationFetcher,
+            random_state=random_state,
+            path="imdb",
+        ), 
         "Covertype": utils.init(
             scikit_learn.ScikitLearnDatasetFetcher,
             random_state=random_state,

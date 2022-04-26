@@ -58,7 +58,6 @@ class GensimFeatureExtractor(FeatureExtractor):
             #raise some error
 
     def get_w2v_vectors(self, X_train, X_test):
-
         X_train_tokens = []
         for doc in X_train:
             X_train_tokens.append(wordpunct_tokenize(doc))
@@ -69,8 +68,8 @@ class GensimFeatureExtractor(FeatureExtractor):
 
         w2v_model = Word2Vec(sentences=X_train_tokens, vector_size=500, min_count=1, window=15, epochs=20)
 
-        X_train_vectors = np.array([np.mean([w2v_model.wv[w] for w in words if w in w2v_model.wv.key_to_index] or [np.zeros(500)], axis=0) for words in X_train_tokens])
-        X_test_vectors = np.array([np.mean([w2v_model.wv[w] for w in words if w in w2v_model.wv.key_to_index] or [np.zeros(500)], axis=0) for words in X_test_tokens])
+        X_train_vectors = self._w2v_vectorize(w2v_model, X_train_tokens)
+        X_test_vectors = self._w2v_vectorize(w2v_model, X_test_tokens)
 
         return X_train_vectors, X_test_vectors
 
@@ -79,6 +78,10 @@ class GensimFeatureExtractor(FeatureExtractor):
         X_train_tokens = []
         for doc in X_train:
             X_train_tokens.append(wordpunct_tokenize(doc))
+
+        X_test_tokens = []
+        for doc in X_test:
+            X_test_tokens.append(wordpunct_tokenize(doc))
         
         X_train_tagged_documents = [TaggedDocument(doc, [i]) for i, doc in enumerate(X_train_tokens)]
 
@@ -106,7 +109,34 @@ class GensimFeatureExtractor(FeatureExtractor):
 
         fasttext_model = FastText(sentences=X_train_tokens, vector_size=500, min_count=1, window=15, epochs=20)
 
-        X_train_vectors = np.array([np.mean([fasttext_model.wv[w] for w in words], axis=0) for words in X_train_tokens])
-        X_test_vectors = np.array([np.mean([fasttext_model.wv[w] for w in words], axis=0) for words in X_test_tokens])
+        X_train_vectors = self._fasttext_vectorize(fasttext_model, X_train_tokens)
+        X_test_vectors = self._fasttext_vectorize(fasttext_model, X_test_tokens)
 
         return X_train_vectors, X_test_vectors
+
+    def _w2v_vectorize(self, model, tokens):
+        sentence_vector = []
+        sentence_vectors = []
+        for sentence in tokens:
+            for token in sentence:
+                if token in model.wv.key_to_index:
+                    sentence_vector.append(model.wv[token])
+                else:
+                    sentence_vector.append(np.zeros(500))
+            sentence_vectors.append(np.mean(sentence_vector, axis=0))
+            sentence_vector.clear()
+
+        print(np.array(sentence_vectors).shape)
+        return np.array(sentence_vectors)
+
+    def _fasttext_vectorize(self, model, tokens):
+        sentence_vector = []
+        sentence_vectors = []
+        for sentence in tokens:
+            for token in sentence:
+                sentence_vector.append(model.wv[token])
+            sentence_vectors.append(np.mean(sentence_vector, axis=0))
+            sentence_vector.clear()
+
+        print(np.array(sentence_vectors).shape)
+        return np.array(sentence_vectors)

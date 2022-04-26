@@ -62,10 +62,12 @@ class ClassificationFetcher(HuggingFaceDatasetFetcher):
         "ag_news": "text",
         "amazon_polarity": "content",  # Also contains a "title" field, which may be useful
         "emotion": "text",
+        "imdb": "text",
     }
 
     def fetch(self) -> Tuple[List[str], List[str], np.ndarray, np.ndarray, np.ndarray]:
 
+        print(type(self))
         X_train, X_test, y_train, y_test, target_names = self.stream()
 
         return (

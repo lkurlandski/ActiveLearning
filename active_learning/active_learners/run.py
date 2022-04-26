@@ -105,8 +105,8 @@ if __name__ == "__main__":
         "query_strategy": "uncertainty_sampling",
         "base_learner": "SVC",
         "multiclass": "ovr",
-        "feature_representation": "fasttext",
-        "dataset": "emotion",
+        "feature_representation": "w2v",
+        "dataset": "imdb",
         "random_state": 0,
     }
 
