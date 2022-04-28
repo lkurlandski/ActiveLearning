@@ -1,8 +1,9 @@
-"""
+"""Experiment with different stopping crteria after active learning commences.
 """
 
 import datetime
-from pprint import pprint
+from pprint import pprint  # pylint: disable=unused-import
+import sys  # pylint: disable=unused-import
 import time
 from typing import Dict, List, Union
 
@@ -14,18 +15,23 @@ from active_learning import stat_helper
 from active_learning.active_learners import output_helper
 from active_learning.active_learners import pool
 from active_learning.stopping_criteria.base import StoppingCriteria
-from active_learning.stopping_criteria.contradictory_information import (
-    ContradictoryInformation,
-)
-from active_learning.stopping_criteria.stabilizing_predictions import (
-    StabilizingPredictions,
-)
+from active_learning.stopping_criteria.changing_confidence import ChangingConfidence
+from active_learning.stopping_criteria.stabilizing_predictions import StabilizingPredictions
 
 
-def test_stopping_criteria(
+def run_stopping_criteria(
     criteria: List[StoppingCriteria],
     container: output_helper.IndividualOutputDataContainer,
 ) -> None:
+    """Run the various stopping criteria and determine when they should stop.
+
+    Parameters
+    ----------
+    criteria : List[StoppingCriteria]
+        A list of stopping criteria to experiment with.
+    container : output_helper.IndividualOutputDataContainer
+        A container containing the experimental outputs to run the stopping criteria on.
+    """
 
     start = time.time()
     print(f"{str(datetime.timedelta(seconds=(round(time.time() - start))))} -- Starting Stopping")
@@ -56,7 +62,7 @@ def test_stopping_criteria(
 
             if isinstance(c, StabilizingPredictions):
                 c.update_from_preds(initial_unlabeled_pool_preds=initial_unlabeled_pool_preds)
-            elif isinstance(c, ContradictoryInformation):
+            elif isinstance(c, ChangingConfidence):
                 pass
 
             if c.has_stopped:
@@ -84,6 +90,13 @@ def test_stopping_criteria(
 
 
 def main(params: Dict[str, Union[str, int]]):
+    """Run the stopping criteria from a set of experimental parameters.
+
+    Parameters
+    ----------
+    params : Dict[str, Union[str, int]]
+        Experimental paramters.
+    """
 
     criteria = []
 
@@ -99,4 +112,4 @@ def main(params: Dict[str, Union[str, int]]):
                 )
 
     oh = output_helper.OutputHelper(params)
-    test_stopping_criteria(criteria, oh.container)
+    run_stopping_criteria(criteria, oh.container)

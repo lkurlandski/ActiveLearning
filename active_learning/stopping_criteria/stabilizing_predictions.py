@@ -1,4 +1,4 @@
-"""
+"""Stopping methods based upon stabilizing predictions.
 """
 
 from __future__ import annotations
@@ -11,10 +11,61 @@ from nltk.metrics.agreement import AnnotationTask
 import numpy as np
 from sklearn.utils.multiclass import type_of_target
 
-from active_learning.stopping_criteria.base import StoppingCriteria
+from active_learning.stopping_criteria.base import StoppingCriteria, get_stop_set_indices
+
+
+def get_agreement_metric(preds: np.ndarray) -> str:
+    """Determine the agreement metric to use for a particular type of target.
+
+    Parameters
+    ----------
+    preds : np.ndarray
+        The predictions that will be used to compute agreement upon.
+
+    Returns
+    -------
+    str
+        A string identifier corresponding to one of the agreement metrics in nltk.metrics.agreement.
+
+    Raises
+    ------
+    ValueError
+        If the type of target is not supported.
+    """
+
+    target_type = type_of_target(preds)
+
+    if target_type == "binary":
+        return "kappa"
+    if target_type == "multiclass":
+        return "kappa"
+    if target_type == "multilabel-indicator":
+        return "alpha"
+
+    raise ValueError(f"Unsupported target type: {target_type}")
 
 
 class StabilizingPredictions(StoppingCriteria):
+    """Stabilizing Predictions stopping method.
+
+    Attributes
+    ----------
+    windows : int
+        The number of previous agreement scores to consider when determining whether to stop.
+    threshold : float
+        The threshold that the mean agreement must exceed to stop.
+    stop_set_size : Union[float, int]
+        The size of the stop set. This is only used if the stop set is not supplied as an argument
+            to one of the update methods.
+    agreement_metric : str
+        An agreement metric to use when determining agreement between consecutive models.
+    stop_set_indices : Optional[np.ndarray]
+        The indices of the stop set in the initial unlabeled pool.
+    prv_stop_set_preds : np.ndarray
+        The previous model's predictions on the stop set.
+    agreement_scores : List[float]
+        The list agreement scores since the beginning of AL.
+    """
 
     windows: int
     threshold: float
@@ -31,6 +82,21 @@ class StabilizingPredictions(StoppingCriteria):
         stop_set_size: Union[float, int],
         agreement_metric: Optional[str] = None,
     ) -> None:
+        """Instantiate an instance of the StabilizingPredictions class.
+
+        Parameters
+        ----------
+        windows : int
+            The number of previous agreement scores to consider when determining whether to stop.
+        threshold : float
+            The threshold that the mean agreement must exceed to stop.
+        stop_set_size : Union[float, int]
+            The size of the stop set.
+        agreement_metric : Optional[str]
+            An agreement metric to use when determining agreement between consecutive models.
+                If None, the agreement metric defaults to kappa in the binary/multiclass case and
+                alpha in the multilabel case.
+        """
 
         super().__init__()
 
@@ -57,12 +123,32 @@ class StabilizingPredictions(StoppingCriteria):
         stop_set_preds: Optional[np.ndarray] = None,
         initial_unlabeled_pool_preds: Optional[np.ndarray] = None,
     ) -> StabilizingPredictions:
+        """Update the stopping method from pre-computed predictions.
 
-        # Handle improper arguments
-        if stop_set_preds is None and initial_unlabeled_pool_preds is None:
-            raise ValueError()
-        if stop_set_preds is not None and initial_unlabeled_pool_preds is not None:
-            raise ValueError()
+        Parameters
+        ----------
+        stop_set_preds : Optional[np.ndarray], optional
+            Predictions on a pre-selected stop set, by default None
+        initial_unlabeled_pool_preds : Optional[np.ndarray], optional
+            Predictions on the entire unlabeled pool, by default None
+
+        Returns
+        -------
+        StabilizingPredictions
+            An updated instance of the StabilizingPredictions class.
+
+        Raises
+        ------
+        ValueError
+            If both stop_set_preds and initial_unlabeled_pool_preds are None or both are not None.
+        """
+
+        if (stop_set_preds is None and initial_unlabeled_pool_preds is None) or (
+            stop_set_preds is not None and initial_unlabeled_pool_preds is not None
+        ):
+            raise ValueError(
+                "Only one of stop_set_preds or initial_unlabeled_pool_preds should be supplied."
+            )
 
         # Convert to np arrays if lists were supplied
         if isinstance(stop_set_preds, list):
@@ -70,19 +156,18 @@ class StabilizingPredictions(StoppingCriteria):
         if isinstance(initial_unlabeled_pool_preds, list):
             initial_unlabeled_pool_preds = np.array(initial_unlabeled_pool_preds)
 
-        # Acquire the predictions on the stop set, preds
+        # Acquire the predictions on the stop set
         if stop_set_preds is None:
-            if self.stop_set_indices is None:
-                self.set_stop_set_indices(initial_unlabeled_pool_preds.shape[0])
+            # Set the stop set indices if they have not been set yet
+            self.stop_set_indices = (
+                get_stop_set_indices(self.stop_set_size, initial_unlabeled_pool_preds.shape[0])
+                if self.stop_set_indices is None
+                else self.stop_set_indices
+            )
+            # Select the stop set predictions
             stop_set_preds = initial_unlabeled_pool_preds[self.stop_set_indices]
 
-        # Check dimensions of input
-        if stop_set_preds.ndim > 2:
-            raise ValueError()
-
-        # Determine the agreement metric, if None exists, and the agreement score
-        if self.agreement_metric is None:
-            self.set_agreement_metric(stop_set_preds)
+        # Determine the agreement score
         agreement = self.get_agreement(stop_set_preds)
 
         # Update the agreement scores and set the has stopped parameter
@@ -100,31 +185,48 @@ class StabilizingPredictions(StoppingCriteria):
         stop_set: Optional[np.ndarray] = None,
         initial_unlabeled_pool: Optional[np.ndarray] = None,
     ) -> StabilizingPredictions:
+        """Update the stopping method by computing predictions on the stop set.
 
-        if stop_set is None and initial_unlabeled_pool is None:
-            raise ValueError()
-        if stop_set is not None and initial_unlabeled_pool is not None:
-            raise ValueError()
+        Parameters
+        ----------
+        model : Callable[..., np.ndarray]
+            A model that can be used to make predictions on the unlabeled pool.
+        predict : Callable[..., np.ndarray]
+            A function that takes a model and a dataset and returns predictions.
+        stop_set : Optional[np.ndarray], optional
+            A pre-selected stop set, by default None
+        initial_unlabeled_pool : Optional[np.ndarray], optional
+            The entire unlabeled pool, by default None
+
+        Returns
+        -------
+        StabilizingPredictions
+            An updated instance of the StabilizingPredictions class.
+
+        Raises
+        ------
+        ValueError
+            If both stop_set and initial_unlabeled_pool are None or both are not None.
+        """
+
+        if (stop_set is None and initial_unlabeled_pool is None) or (
+            stop_set is not None and initial_unlabeled_pool is not None
+        ):
+            raise ValueError("Only one of stop_set or initial_unlabeled_pool should be supplied.")
 
         if stop_set is None:
             stop_set = initial_unlabeled_pool[0 : self.stop_set_size]
         stop_set_preds = predict(model, stop_set)
         return self.update_from_preds(stop_set_preds=stop_set_preds)
 
-    def set_stop_set_indices(self, initial_unlabaled_pool_size):
-
-        if self.stop_set_size is None:
-            self.stop_set_size = "?"
-            return self
-
-        size = float(self.stop_set_size)
-        size = int(size) if size.is_integer() else int(size * initial_unlabaled_pool_size)
-        size = min(size, initial_unlabaled_pool_size)
-        self.stop_set_indices = np.random.choice(initial_unlabaled_pool_size, size, replace=False)
-
-        return self
-
     def set_has_stopped(self) -> StabilizingPredictions:
+        """Update the instances's has_stopped attribute based on the current agreement scores.
+
+        Returns
+        -------
+        StabilizingPredictions
+            Updated instance of self.
+        """
 
         if len(self.agreement_scores[1:]) < self.windows:
             self.has_stopped = False
@@ -135,22 +237,25 @@ class StabilizingPredictions(StoppingCriteria):
 
         return self
 
-    def set_agreement_metric(self, preds) -> StabilizingPredictions:
+    def get_agreement(self, stop_set_preds: np.ndarray) -> float:
+        """Get the agreement between the previous and current stop set predictions.
 
-        target_type = type_of_target(preds)
+        Parameters
+        ----------
+        stop_set_preds : np.ndarray
+            The current stop set predictions.
 
-        if target_type == "binary":
-            self.agreement_metric = "kappa"
-        elif target_type == "multiclass":
-            self.agreement_metric = "kappa"
-        elif target_type == "multilabel-indicator":
-            self.agreement_metric = "alpha"
-        else:
-            raise ValueError()
+        Returns
+        -------
+        float
+            The agreement score.
 
-        return self
+        Raises
+        ------
+        ValueError
+            If the agreement metric is unknown by the system.
+        """
 
-    def get_agreement(self, stop_set_preds):
         def data(multilabel: bool) -> List[Tuple[int, int, Union[int, frozenset]]]:
             """Extract data compatible with nltk's AnnotationTask from stop set predictions.
 
@@ -180,6 +285,13 @@ class StabilizingPredictions(StoppingCriteria):
 
             return dat
 
+        # Set the agreement metric if it hasn't been set yet
+        self.agreement_metric = (
+            get_agreement_metric(stop_set_preds)
+            if self.agreement_metric is None
+            else self.agreement_metric
+        )
+
         if self.prv_stop_set_preds is None:
             return np.NaN
         if np.array_equal(self.prv_stop_set_preds, stop_set_preds):
@@ -187,11 +299,11 @@ class StabilizingPredictions(StoppingCriteria):
 
         if self.agreement_metric == "kappa":
             return AnnotationTask(data(False), binary_distance).kappa()
-        elif self.agreement_metric == "S":
+        if self.agreement_metric == "S":
             return AnnotationTask(data(False), binary_distance).S()
-        elif self.agreement_metric == "pi":
+        if self.agreement_metric == "pi":
             return AnnotationTask(data(True), masi_distance).pi()
-        elif self.agreement_metric == "alpha":
+        if self.agreement_metric == "alpha":
             return AnnotationTask(data(True), masi_distance).alpha()
-        else:
-            raise ValueError()
+
+        raise ValueError(f"Unknown agreement metric: {self.agreement_metric}")

@@ -1,11 +1,12 @@
 #!/home/hpc/kurlanl1/bloodgood/ActiveLearning/env/bin/python -u
 
-# SBATCH --chdir=/home/hpc/kurlanl1/bloodgood/ActiveLearning
-# SBATCH --output=/home/hpc/kurlanl1/bloodgood/ActiveLearning/slurm/jobs/job.20NewsGroups.%A.out
-# SBATCH --constraint=skylake|broadwell
-# SBATCH --job-name=20NewsGroups
-# SBATCH --partition=long
-# SBATCH --cpus-per-task=1
+#SBATCH --chdir=/home/hpc/kurlanl1/bloodgood/ActiveLearning
+#SBATCH --output=/home/hpc/kurlanl1/bloodgood/ActiveLearning/slurm/jobs/Performance/ntasks=n_categories,ncpus=5/job.glue.%A.out
+#SBATCH --constraint=skylake|broadwell
+#SBATCH --job-name=glue
+#SBATCH --partition=long
+#SBATCH --cpus-per-task=1
+#SBATCH --ntasks=5
 
 """Interface to the features of this module that can be used with python or sbatch.
 
@@ -54,8 +55,6 @@ def main(
         If true, runs the stopping process.
     average : bool
         If true, runs the averaging process.
-    cpus_per_task : int
-        Number of cpus to allocate to SLURM using sbatch.
 
     Raises
     ------
@@ -70,9 +69,6 @@ def main(
     print(f"\tstopping: {stopping_}", flush=True)
     print(f"\taverage: {average_}", flush=True)
     print(f"\nExperimental parameters:\n{pformat(params)}")
-
-    if average_ and any((learn_, evaluate_, process_, graph_)):
-        raise Exception("The averaging program should be run after all runs of pipeline finish.")
 
     with warnings.catch_warnings():
         warnings.filterwarnings("ignore", category=ConvergenceWarning)
@@ -108,15 +104,15 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     params_ = {
-        "output_root": "outputs/test",
+        "output_root": "outputs/reproduce",
         "task": "cls",
-        "early_stop_mode": "exponential",
+        "early_stop_mode": "none",
         "first_batch_mode": "random",
-        "batch_size": 1,
+        "batch_size": 0.005,
         "query_strategy": "uncertainty_sampling",
         "base_learner": "SVC",
-        "feature_representation": "preprocessed",
-        "dataset": "Iris",
+        "feature_representation": "count",
+        "dataset": "20NewsGroups-multiclass",
         "random_state": 0,
     }
 

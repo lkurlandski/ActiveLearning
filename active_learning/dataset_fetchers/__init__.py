@@ -118,6 +118,11 @@ def get_mapper(random_state: int = 0) -> Callable[..., base.DatasetFetcher]:
             random_state=random_state,
             dataset="Iris",
         ),
+        "20NewsGroups-multiclass": utils.init(
+            scikit_learn.ScikitLearnDatasetFetcher,
+            random_state=random_state,
+            dataset="20NewsGroups",
+        ),
     }
 
     return mapper

@@ -47,6 +47,12 @@ query_strategies = {
 }
 
 
+valid_early_stop_modes = {"exponential", "finish", "none"}
+
+
+valid_first_batch_modes = {"random", "k_per_class"}
+
+
 def update(
     start_time: float,
     unlabeled_init_size: int,
@@ -147,8 +153,26 @@ def get_first_batch(y: Union[np.ndarray, sparse.csr_matrix], protocol: str, k: i
 
 
 def get_batch_size(
-    batch_size, unlabeled_pool_size, early_stop_mode_triggered, early_stop_mode
+    batch_size: int, unlabeled_pool_size: int, early_stop_mode_triggered: bool, early_stop_mode: str
 ) -> int:
+    """Gets the batch size at the current iteration of AL.
+
+    Parameters
+    ----------
+    batch_size : int
+        The previous batch size.
+    unlabeled_pool_size : int
+        The current size of the unlabeled pool.
+    early_stop_mode_triggered : bool
+        Whether or not the optional early stopping mode has been triggered.
+    early_stop_mode : str
+        The mode of early stopping. One of {"exponential", "finish", "none"}.
+
+    Returns
+    -------
+    int
+        The batch size to use at the current iteration of AL.
+    """
 
     if early_stop_mode_triggered:
         if early_stop_mode == "exponential":
@@ -161,6 +185,52 @@ def get_batch_size(
     return batch_size
 
 
+def adjust_first_batch_if_nessecary(
+    idx: np.ndarray,
+    estimator: BaseEstimator,
+    y_unlabeled_pool: Union[np.ndarray, sparse.csr_matrix],
+    batch_size: int,
+    first_batch_mode: str,
+) -> np.ndarray:
+    """Ammend the first batch to correct for a scikit-learn bug in the OneVsRestClassifier.
+
+    Scikit-learn OneVsRestClassifier has a bug that causes a division error when only one class
+        is present in the training data. This is a reasonable workaround that will repeatedly select
+        a random batch until the batch contains at least two distinct classes. You can read about
+        the bug at this issue: https://github.com/scikit-learn/scikit-learn/issues/21869. The bug
+        only appears under a particular set of circumstances.
+
+    Parameters
+    ----------
+    estimator : BaseEstimator
+        Scikit-learn estimator.
+    y_unlabeled_pool : Union[np.ndarray, sparse.csr_matrix]
+        The unlabeled pool, used to determine the type of target.
+    batch_size : int
+        Desired initial batch size.
+    first_batch_mode : str
+        The mode of the first batch.
+
+    Returns
+    -------
+    np.ndarray
+        The batch indices for the 0th iteration of AL.
+    """
+
+    if (
+        isinstance(estimator, OneVsRestClassifier)
+        and type_of_target(y_unlabeled_pool) == "multiclass"
+        and len(set(y_unlabeled_pool[idx])) == 1
+    ):
+
+        warnings.warn("Implementing a solution for a bug from scikit-learn.")
+
+        while len(set(y_unlabeled_pool[idx])) == 1:
+            idx = get_first_batch(y_unlabeled_pool, protocol=first_batch_mode, k=max(batch_size, 2))
+
+    return idx
+
+
 def learn(
     estimator: BaseEstimator,
     query_strategy: Callable,
@@ -171,7 +241,7 @@ def learn(
     batch_path: Path = None,
     test_set: pool.Pool = None,
     first_batch_mode: str = "random",
-    early_stop_mode: str = "complete",
+    early_stop_mode: str = "none",
 ):
     """Perform active learning and save a limited amount of information to files.
 
@@ -186,18 +256,27 @@ def learn(
     unlabeled_pool : pool.Pool
         The initial unlabeled pool of training data.
     model_path : Path, optional
-        A location to save trained models to, by default None.
+        A location to save trained models to, by default None, which means no models are saved.
     batch_path : Path, optional
-        A location to save the examples queried for labeling to, by default None.
+        A location to save the examples queried for labeling to, by default None, which means no
+            batch files are saved.
     test_set : pool.Pool, optional
-        A test set, which will be saved in a compressed format, by default None.
-
+        A test set, which will be saved in a compressed format, by default None, which means no
+            test set is saved.
+    first_batch_mode : str, optional
+        Determines how the first batch is selected, by default "random".
+    early_stop_mode : str, optional
+        Determines how the batch size is adjusted, by default "none".
     """
 
-    if first_batch_mode not in {"random", "k_per_class"}:
-        raise ValueError()
-    if early_stop_mode not in {"complete", "exponential", "finish"}:
-        raise ValueError()
+    if first_batch_mode not in valid_first_batch_modes:
+        raise ValueError(
+            f"first_batch_mode must be one of {valid_first_batch_modes}, not {first_batch_mode}."
+        )
+    if early_stop_mode not in valid_early_stop_modes:
+        raise ValueError(
+            f"early_stop_mode must be one of {valid_early_stop_modes}, not {early_stop_mode}."
+        )
 
     # Save the sets to perform inference downstream
     unlabeled_pool.save()
@@ -210,39 +289,22 @@ def learn(
     unlabeled_init_size = unlabeled_pool.y.shape[0]
     i = 0
 
-    # Perform the 0th iteration of active learning
-    idx = get_first_batch(unlabeled_pool.y, protocol=first_batch_mode, k=batch_size)
-    learner = ActiveLearner(estimator=estimator, query_strategy=query_strategy)
-    learner.teach(unlabeled_pool.X[idx], unlabeled_pool.y[idx])
-
-    # Scikit-learn OneVsRestClassifier has a small bug you can read about here:
-    # https://github.com/scikit-learn/scikit-learn/issues/21869
-    # This is a reasonable workaround to the problem.
-    if (
-        isinstance(learner.estimator, OneVsRestClassifier)
-        and type_of_target(unlabeled_pool.y) == "multiclass"
-        and len(set(unlabeled_pool.y[idx])) == 1
-    ):
-
-        warnings.warn("Implementing a solution for a bug from scikit-learn.")
-
-        while len(set(unlabeled_pool.y[idx])) == 1:
-            idx = get_first_batch(unlabeled_pool.y, protocol=first_batch_mode, k=max(batch_size, 2))
-        learner.teach(unlabeled_pool.X[idx], unlabeled_pool.y[idx])
-
     # Set up the Stabilizing Predictions stopping method, if requested
     early_stop_mode_triggered = False
-    stopper = None
-    if early_stop_mode is not "complete":
-        # TODO: implement multilabel stabilizing predictions
-        if unlabeled_pool.y.ndim > 1:
-            print("Stabilizing predictions not implemented for multilabel problems.")
-            stopper = None
-        else:
-            stopper = stabilizing_predictions.StabilizingPredictions(
-                windows=3, threshold=0.99, stop_set_size=1000
-            )
-            initial_unlabeled_pool = unlabeled_pool.X.copy()
+    stopper, initial_unlabeled_pool = None, None
+    if early_stop_mode != "none":
+        stopper = stabilizing_predictions.StabilizingPredictions(
+            windows=3, threshold=0.99, stop_set_size=1000
+        )
+        initial_unlabeled_pool = unlabeled_pool.X.copy()
+
+    # Perform the 0th iteration of active learning
+    idx = get_first_batch(unlabeled_pool.y, protocol=first_batch_mode, k=batch_size)
+    idx = adjust_first_batch_if_nessecary(
+        idx, estimator, unlabeled_pool.y, batch_size, first_batch_mode
+    )
+    learner = ActiveLearner(estimator=estimator, query_strategy=query_strategy)
+    learner.teach(unlabeled_pool.X[idx], unlabeled_pool.y[idx])
 
     # Begin active learning loop
     while unlabeled_pool.y.shape[0] > 0:
@@ -272,7 +334,7 @@ def learn(
         update(start, unlabeled_init_size, unlabeled_pool.y.shape[0], batch_size, i)
         i += 1
 
-        if early_stop_mode != "complete" and not early_stop_mode_triggered:
+        if early_stop_mode != "none" and not early_stop_mode_triggered:
             stopper.update_from_model(
                 model=learner,
                 predict=lambda model, X: model.predict(X),
