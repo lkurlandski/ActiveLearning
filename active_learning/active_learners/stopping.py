@@ -5,23 +5,26 @@ import datetime
 from pprint import pprint  # pylint: disable=unused-import
 import sys  # pylint: disable=unused-import
 import time
-from typing import Dict, List, Union
+from typing import List
 
 import joblib
 import numpy as np
 import pandas as pd
 
 from active_learning import stat_helper
-from active_learning.active_learners import output_helper
-from active_learning.active_learners import pool
 from active_learning.stopping_criteria.base import StoppingCriteria
-from active_learning.stopping_criteria.changing_confidence import ChangingConfidence
-from active_learning.stopping_criteria.stabilizing_predictions import StabilizingPredictions
+from active_learning.stopping_criteria import StabilizingPredictions
+from active_learning.active_learners.helpers import (
+    IndividualOutputDataContainer,
+    OutputHelper,
+    Params,
+    Pool,
+)
 
 
 def run_stopping_criteria(
     criteria: List[StoppingCriteria],
-    container: output_helper.IndividualOutputDataContainer,
+    container: IndividualOutputDataContainer,
 ) -> None:
     """Run the various stopping criteria and determine when they should stop.
 
@@ -29,17 +32,17 @@ def run_stopping_criteria(
     ----------
     criteria : List[StoppingCriteria]
         A list of stopping criteria to experiment with.
-    container : output_helper.IndividualOutputDataContainer
+    container : IndividualOutputDataContainer
         A container containing the experimental outputs to run the stopping criteria on.
     """
-
+    print("-" * 80, flush=True)
     start = time.time()
-    print(f"{str(datetime.timedelta(seconds=(round(time.time() - start))))} -- Starting Stopping")
+    print("0:00:00 -- Starting Stopping", flush=True)
 
-    unlabeled_pool = pool.Pool(
+    unlabeled_pool = Pool(
         X_path=container.X_unlabeled_pool_file, y_path=container.y_unlabeled_pool_file
     ).load()
-    initial_unlabeled_pool = pool.Pool(X=unlabeled_pool.X.copy(), y=unlabeled_pool.y.copy)
+    initial_unlabeled_pool = Pool(X=unlabeled_pool.X.copy(), y=unlabeled_pool.y.copy)
 
     results = pd.DataFrame(columns=["iteration", "training_data"])
     training_data = 0
@@ -62,8 +65,6 @@ def run_stopping_criteria(
 
             if isinstance(c, StabilizingPredictions):
                 c.update_from_preds(initial_unlabeled_pool_preds=initial_unlabeled_pool_preds)
-            elif isinstance(c, ChangingConfidence):
-                pass
 
             if c.has_stopped:
                 df = pd.DataFrame(
@@ -85,19 +86,19 @@ def run_stopping_criteria(
     )
     results.to_csv(container.stopping_results_file)
 
-    end = time.time()
-    print(f"{str(datetime.timedelta(seconds=(round(end - start))))} -- Ending Stopping")
+    diff = datetime.timedelta(seconds=(round(time.time() - start)))
+    print(f"{diff} -- Ending Stopping", flush=True)
+    print("-" * 80, flush=True)
 
 
-def main(params: Dict[str, Union[str, int]]):
+def main(params: Params) -> None:
     """Run the stopping criteria from a set of experimental parameters.
 
     Parameters
     ----------
-    params : Dict[str, Union[str, int]]
+    params : Params
         Experimental paramters.
     """
-
     criteria = []
 
     for windows in (1, 2, 3, 4):
@@ -111,5 +112,5 @@ def main(params: Dict[str, Union[str, int]]):
                     )
                 )
 
-    oh = output_helper.OutputHelper(params)
+    oh = OutputHelper(params)
     run_stopping_criteria(criteria, oh.container)

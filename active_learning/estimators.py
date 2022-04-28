@@ -33,6 +33,15 @@ from sklearn.svm import SVC
 from active_learning import utils
 
 
+valid_base_learners = {
+    "ExtraTreesClassifier",
+    "GradientBoostingClassifier",
+    "RandomForestClassifier",
+    "MLPClassifier",
+    "SVC",
+}
+
+
 inherintly_multiclass = {
     "BernoulliNB",
     "DecisionTreeClassifier",

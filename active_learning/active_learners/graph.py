@@ -1,17 +1,19 @@
 """Create plots for the output data.
 """
 
+import datetime
 from pathlib import Path
 from pprint import pprint  # pylint: disable=unused-import
 import sys  # pylint: disable=unused-import
-from typing import Dict, List, Tuple, Union
+import time
+from typing import List, Tuple
 
 from matplotlib.axes import Axes
 from matplotlib.figure import Figure
 import matplotlib.pyplot as plt
 import pandas as pd
 
-from active_learning.active_learners import output_helper
+from active_learning.active_learners.helpers import OutputHelper, OutputDataContainer, Params
 from active_learning import stopping_criteria
 
 
@@ -162,28 +164,31 @@ def create_graphs_for_subset(
 
 
 def create_graphs_for_container(
-    container: output_helper.OutputDataContainer,
+    container: OutputDataContainer,
     stp_mthd: List[stopping_criteria.StoppingCriteria] = None,
 ):
     """Create graphs for a particular data container.
 
     Parameters
     ----------
-    container : output_helper.OutputDataContainer
+    container : OutputDataContainer
         The data container to extract the data from and create graphs for.
     stp_mthd : List[stopping_criteria.StoppingCriteria], optional
         A list of stopping methods that should be have their vertical lines plotted in the curve.
     """
+    print("-" * 80, flush=True)
+    start = time.time()
+    print("0:00:00 -- Starting Graphing", flush=True)
 
     stopping_df = None
     if stp_mthd is not None:
         if Path(container.stopping_results_file).exists():
             stopping_df = pd.read_csv(container.stopping_results_file, index_col=0)
             if stp_mthd is not None:
-                regex = "|".join(map(str, stp_mthd)).replace("(", "\(").replace(")", "\)")
-                stopping_df = stopping_df[stopping_df["criteria"].str.contains(f"({regex})")]
+                regex = "|".join(map(str, stp_mthd)).replace("(", r"\(").replace(")", r"\)")
+                stopping_df = stopping_df[stopping_df["criteria"].str.contains(f"(?:{regex})")]
         else:
-            print(f"Could not find the stopping results file. Skipping stopping vlines.")
+            print("Could not find the stopping results file. Skipping stopping vlines.")
 
     paths = (
         (container.processed_test_set_path, container.graphs_test_set_path),
@@ -192,19 +197,20 @@ def create_graphs_for_container(
     for source_path, dest_path in paths:
         create_graphs_for_subset(source_path, dest_path, stopping_df)
 
+    diff = datetime.timedelta(seconds=(round(time.time() - start)))
+    print(f"{diff} -- Ending Graphing", flush=True)
+    print("-" * 80, flush=True)
 
-def main(params: Dict[str, Union[str, int]]) -> None:
+
+def main(params: Params) -> None:
     """Run the graphing algorithm for a set of experiment parmameters.
 
     Parameters
     ----------
-    params : Dict[str, Union[str, int]]
+    params : Params
         A single set of hyperparmaters and for the active learning experiment.
     """
-
-    print("Beginning Graphing", flush=True)
-
-    oh = output_helper.OutputHelper(params)
+    oh = OutputHelper(params)
 
     stp_mthd = [
         stopping_criteria.StabilizingPredictions(
@@ -213,14 +219,12 @@ def main(params: Dict[str, Union[str, int]]) -> None:
             stop_set_size=0.8,
             agreement_metric="kappa",
         ),
-        # stopping_criteria.StabilizingPredictions(
-        #     windows=3,
-        #     threshold=0.98,
-        #     stop_set_size=.8,
-        #     agreement_metric="kappa",
-        # ),
+        stopping_criteria.StabilizingPredictions(
+            windows=3,
+            threshold=0.98,
+            stop_set_size=0.8,
+            agreement_metric="kappa",
+        ),
     ]
 
     create_graphs_for_container(oh.container, stp_mthd)
-
-    print("Ending Graphing", flush=True)

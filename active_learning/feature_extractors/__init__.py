@@ -1,12 +1,4 @@
 """Extract features from complex data objects, such as text documents.
-
-TODO
-----
--
-
-FIXME
------
--
 """
 
 from pprint import pprint  # pylint: disable=unused-import
@@ -26,6 +18,20 @@ from active_learning.feature_extractors import huggingface
 from active_learning.feature_extractors import preprocessed
 from active_learning.feature_extractors import scikit_learn
 from active_learning import utils
+
+
+valid_feature_reps = {
+    "preprocessed",
+    "count",
+    "hash",
+    "tfidf",
+    "bert",
+    "roberta",
+    "distilbert",
+    "bert-cased",
+    "albert",
+    "distilroberta",
+}
 
 
 mapper: Dict[str, Callable[..., base.FeatureExtractor]]

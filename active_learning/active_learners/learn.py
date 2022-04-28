@@ -4,10 +4,6 @@ TODO
 ----
 - Implement a label-encoding strategy for the target array.
 - Introduce checks to ensure the base learner can accept sparse arrays and such.
-
-FIXME
------
--
 """
 
 from pprint import pprint  # pylint: disable=unused-import
@@ -17,7 +13,7 @@ import datetime
 from pathlib import Path
 import random
 import time
-from typing import Callable, Dict, Union
+from typing import Callable, Union
 import warnings
 
 import joblib
@@ -34,8 +30,8 @@ from active_learning import estimators
 from active_learning import stat_helper
 from active_learning import dataset_fetchers
 from active_learning import feature_extractors
-from active_learning.active_learners import output_helper
-from active_learning.active_learners import pool
+from active_learning import utils
+from active_learning.active_learners.helpers import Params, Pool, OutputHelper
 from active_learning.stopping_criteria import stabilizing_predictions
 
 
@@ -45,12 +41,6 @@ query_strategies = {
     "uncertainty_batch_sampling": uncertainty_batch_sampling,
     "uncertainty_sampling": uncertainty_sampling,
 }
-
-
-valid_early_stop_modes = {"exponential", "finish", "none"}
-
-
-valid_first_batch_modes = {"random", "k_per_class"}
 
 
 def update(
@@ -235,11 +225,11 @@ def learn(
     estimator: BaseEstimator,
     query_strategy: Callable,
     batch_size: int,
-    unlabeled_pool: pool.Pool,
+    unlabeled_pool: Pool,
     *,
     model_path: Path = None,
     batch_path: Path = None,
-    test_set: pool.Pool = None,
+    test_set: Pool = None,
     first_batch_mode: str = "random",
     early_stop_mode: str = "none",
 ):
@@ -253,14 +243,14 @@ def learn(
         A modAL compatible query strategy.
     batch_size : int
         The number of examples to select for labeling at each iteration.
-    unlabeled_pool : pool.Pool
+    unlabeled_pool : Pool
         The initial unlabeled pool of training data.
     model_path : Path, optional
         A location to save trained models to, by default None, which means no models are saved.
     batch_path : Path, optional
         A location to save the examples queried for labeling to, by default None, which means no
             batch files are saved.
-    test_set : pool.Pool, optional
+    test_set : Pool, optional
         A test set, which will be saved in a compressed format, by default None, which means no
             test set is saved.
     first_batch_mode : str, optional
@@ -268,23 +258,14 @@ def learn(
     early_stop_mode : str, optional
         Determines how the batch size is adjusted, by default "none".
     """
-
-    if first_batch_mode not in valid_first_batch_modes:
-        raise ValueError(
-            f"first_batch_mode must be one of {valid_first_batch_modes}, not {first_batch_mode}."
-        )
-    if early_stop_mode not in valid_early_stop_modes:
-        raise ValueError(
-            f"early_stop_mode must be one of {valid_early_stop_modes}, not {early_stop_mode}."
-        )
+    print("-" * 80, flush=True)
+    start = time.time()
+    print("0:00:00 -- Starting Active Learning", flush=True)
 
     # Save the sets to perform inference downstream
     unlabeled_pool.save()
     if test_set is not None:
         test_set.save()
-
-    start = time.time()
-    print(f"{str(datetime.timedelta(seconds=(round(time.time() - start))))} -- Starting AL Loop")
 
     unlabeled_init_size = unlabeled_pool.y.shape[0]
     i = 0
@@ -345,24 +326,23 @@ def learn(
                 early_stop_mode_triggered = True
 
     # End active learning loop
-    end = time.time()
-    print(f"{str(datetime.timedelta(seconds=(round(end - start))))} -- Ending Active Learning")
+    diff = datetime.timedelta(seconds=(round(time.time() - start)))
+    print(f"{diff} -- Ending Active Learning", flush=True)
+    print("-" * 80, flush=True)
 
 
-def main(params: Dict[str, Union[str, int]]) -> None:
+def main(params: Params) -> None:
     """Run the active learning algorithm for a set of experiment parmameters.
 
     Parameters
     ----------
-    params : Dict[str, Union[str, int]]
-        A single set of hyperparmaters and for the active learning experiment.
+    params : Params
+        Parameters for the experiment.
     """
 
-    random_state = int(params["random_state"])
-
     # Seed random, numpy.random, and get a numpy randomizer
-    random.seed(random_state)
-    np.random.seed(random_state)
+    random.seed(params.random_state)
+    np.random.seed(params.random_state)
 
     # Get the dataset and perform the feature extraction
     (
@@ -371,37 +351,39 @@ def main(params: Dict[str, Union[str, int]]) -> None:
         y_unlabeled_pool,
         y_test,
         _,
-    ) = dataset_fetchers.get_dataset(params["dataset"], stream=True, random_state=random_state)
+    ) = dataset_fetchers.get_dataset(params.dataset, stream=True, random_state=params.random_state)
     X_unlabeled_pool, X_test = feature_extractors.get_features(
-        X_unlabeled_pool, X_test, params["feature_representation"]
+        X_unlabeled_pool, X_test, params.feature_representation
     )
     unlabeled_init_size = y_unlabeled_pool.shape[0]
 
     # Get the batch size (handle proportions and absolute values)
-    tmp = float(params["batch_size"])
-    batch_size = int(tmp) if tmp.is_integer() else int(tmp * unlabeled_init_size)
+    if isinstance(params.batch_size, float):
+        batch_size = int(params.batch_size * unlabeled_init_size)
+    else:
+        batch_size = params.batch_size
     batch_size = max(1, batch_size)
 
     # Get the modAL compatible estimator and query strategy to use
     estimator = estimators.get_estimator(
-        params["base_learner"],
+        params.base_learner,
         type_of_target(y_unlabeled_pool),
-        random_state=random_state,
+        random_state=params.random_state,
     )
-    query_strategy = query_strategies[params["query_strategy"]]
+    query_strategy = query_strategies[params.query_strategy]
 
     # Setup output directory structure
-    oh = output_helper.OutputHelper(params)
+    oh = OutputHelper(params)
     oh.setup()
-    oh.container.set_target_vector_ext(output_helper.get_array_file_ext(y_unlabeled_pool))
+    oh.container.set_target_vector_ext(utils.get_array_file_ext(y_unlabeled_pool))
 
-    unlabeled_pool = pool.Pool(
+    unlabeled_pool = Pool(
         X_unlabeled_pool,
         y_unlabeled_pool,
         oh.container.X_unlabeled_pool_file,
         oh.container.y_unlabeled_pool_file,
     )
-    test_set = pool.Pool(X_test, y_test, oh.container.X_test_set_file, oh.container.y_test_set_file)
+    test_set = Pool(X_test, y_test, oh.container.X_test_set_file, oh.container.y_test_set_file)
 
     learn(
         estimator,
@@ -411,6 +393,6 @@ def main(params: Dict[str, Union[str, int]]) -> None:
         model_path=oh.container.model_path,
         batch_path=oh.container.batch_path,
         test_set=test_set,
-        first_batch_mode=params["first_batch_mode"],
-        early_stop_mode=params["early_stop_mode"],
+        first_batch_mode=params.first_batch_mode,
+        early_stop_mode=params.early_stop_mode,
     )

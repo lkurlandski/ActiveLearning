@@ -22,6 +22,22 @@ from active_learning.dataset_fetchers import base, disk, scikit_learn, huggingfa
 from active_learning import utils
 
 
+valid_datasets = {
+    "20NewsGroups-multilabel",
+    "Avila",
+    "RCV1_v2",
+    "Reuters",
+    "WebKB",
+    "glue",
+    "ag_news",
+    "amazon_polarity",
+    "emotion",
+    "Covertype",
+    "Iris",
+    "20NewsGroups-singlelabel",
+}
+
+
 def get_mapper(random_state: int = 0) -> Callable[..., base.DatasetFetcher]:
     """Get the mapper to assist with instantiating the correct DatasetFetcher.
 

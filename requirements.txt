@@ -1,5 +1,5 @@
 absl-py==1.0.0
--e git+https://nlp-ml.hpc.tcnj.edu:8080/kurlanl1/ActiveLearning.git@78036ba462b1bc15e0e2224babc072ce878d9b28#egg=active_learning
+-e git+https://nlp-ml.hpc.tcnj.edu:8080/kurlanl1/ActiveLearning.git@83421fd769df70462b23793ea13ae020e3eb6659#egg=active_learning
 aiohttp==3.8.1
 aiosignal==1.2.0
 astroid==2.9.3
@@ -55,6 +55,7 @@ multidict==6.0.2
 multiprocess==0.70.12.2
 mypy-extensions==0.4.3
 nest-asyncio==1.5.4
+nltk==3.7
 numpy==1.21.5
 oauthlib==3.2.0
 opt-einsum==3.3.0
