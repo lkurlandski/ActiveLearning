@@ -1,12 +1,4 @@
 """Average the data across multiple sampling versions.
-
-TODO
-----
--
-
-FIXME
------
--
 """
 
 from pprint import pformat, pprint  # pylint: disable=unused-import
@@ -60,16 +52,16 @@ def average_stopping(
         The average output container
     """
 
-    stopping_files = [c.stopping_results_csv_file for c in in_containers]
+    stopping_files = [c.stopping_results_file for c in in_containers]
     files_exist = [file.exists() for file in stopping_files]
     if not any(files_exist):
         return
     if not all(files_exist):
         raise FileNotFoundError(f"Need all stopping files to exist:\n{pformat(stopping_files)}")
 
-    stopping_dfs = [pd.read_csv(c.stopping_results_csv_file, index_col=0) for c in in_containers]
+    stopping_dfs = [pd.read_csv(c.stopping_results_file, index_col=0) for c in in_containers]
     mean_stopping_df = stat_helper.mean_dataframes(stopping_dfs)
-    mean_stopping_df.to_csv(out_container.stopping_results_csv_file)
+    mean_stopping_df.to_csv(out_container.stopping_results_file)
 
 
 def average_container(
@@ -101,7 +93,7 @@ def main(params: Dict[str, Union[str, int]]) -> None:
 
     print("Beginning Averaging", flush=True)
 
-    if params["early_stop_mode"] != "complete":
+    if params["early_stop_mode"] != "none":
         raise Exception(
             "Averaging across random states when and early mode was enabled not supported...yet."
         )
@@ -112,7 +104,6 @@ def main(params: Dict[str, Union[str, int]]) -> None:
     graph.create_graphs_for_container(
         roh.avg_rstates_container,
         None,
-        False,  # [repr(stopping_methods.StabilizingPredictions())],
     )
 
     print("Ending Averaging", flush=True)
