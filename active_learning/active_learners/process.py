@@ -59,7 +59,7 @@ def report_jsons_to_dicts(
     return data
 
 
-def process_container(container: output_helper.OutputDataContainer):
+def process_container(container: output_helper.IndividualOutputDataContainer):
     """Process the raw data in a particular container.
 
     Parameters
@@ -69,7 +69,6 @@ def process_container(container: output_helper.OutputDataContainer):
     """
 
     paths = (
-        (container.raw_stop_set_path, container.processed_stop_set_path),
         (container.raw_test_set_path, container.processed_test_set_path),
         (container.raw_train_set_path, container.processed_train_set_path),
     )

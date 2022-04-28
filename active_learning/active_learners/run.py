@@ -6,6 +6,7 @@
 #SBATCH --job-name=name
 #SBATCH --partition=long
 #SBATCH --cpus-per-task=1
+#SBATCH --ntasks=5
 
 """Interface to the features of this module that can be used with python or sbatch.
 
@@ -24,6 +25,7 @@ from active_learning.active_learners import evaluate
 from active_learning.active_learners import graph
 from active_learning.active_learners import learn
 from active_learning.active_learners import process
+from active_learning.active_learners import stopping
 
 
 def main(
@@ -32,6 +34,7 @@ def main(
     evaluate_: bool,
     process_: bool,
     graph_: bool,
+    stopping_: bool,
     average_: bool,
 ):
     """Create and submit individual submissions scripts for different experimental configurations.
@@ -48,10 +51,10 @@ def main(
         If true, runs the processing process.
     graph : bool
         If true, runs the graphing process.
+    stopping : bool
+        If true, runs the stopping process.
     average : bool
         If true, runs the averaging process.
-    cpus_per_task : int
-        Number of cpus to allocate to SLURM using sbatch.
 
     Raises
     ------
@@ -60,13 +63,12 @@ def main(
     """
     print("Tasks to run: ", flush=True)
     print(f"\tlearn: {learn_}", flush=True)
-    print(f"\t:evaluate {evaluate_}", flush=True)
-    print(f"\t:process {process_}", flush=True)
-    print(f"\t:graph {graph_}", flush=True)
-    print(f"Experimental parameters:\n{pformat(params)}")
-
-    if average_ and any((learn_, evaluate_, process_, graph_)):
-        raise Exception("The averaging program should be run after all runs of pipeline finish.")
+    print(f"\tevaluate: {evaluate_}", flush=True)
+    print(f"\tprocess: {process_}", flush=True)
+    print(f"\tgraph: {graph_}", flush=True)
+    print(f"\tstopping: {stopping_}", flush=True)
+    print(f"\taverage: {average_}", flush=True)
+    print(f"\nExperimental parameters:\n{pformat(params)}")
 
     with warnings.catch_warnings():
         warnings.filterwarnings("ignore", category=ConvergenceWarning)
@@ -82,6 +84,9 @@ def main(
     if graph_:
         graph.main(params)
 
+    if stopping_:
+        stopping.main(params)
+
     if average_:
         average.main(params)
 
@@ -93,20 +98,21 @@ if __name__ == "__main__":
     parser.add_argument("--evaluate", action="store_true", help="Evaluate the learned models.")
     parser.add_argument("--process", action="store_true", help="Process evaluations into tables.")
     parser.add_argument("--graph", action="store_true", help="Create basic graphs for statistics.")
+    parser.add_argument("--stopping", action="store_true", help="Analyze stopping criteria.")
     parser.add_argument("--average", action="store_true", help="Average across multiple runs.")
 
     args = parser.parse_args()
 
     params_ = {
-        "output_root": "outputs/test",
+        "output_root": "outputs/reproduce",
         "task": "cls",
-        "stop_set_size": 0.1,
-        "batch_size": 0.01,
+        "early_stop_mode": "none",
+        "first_batch_mode": "random",
+        "batch_size": 0.005,
         "query_strategy": "uncertainty_sampling",
         "base_learner": "SVC",
-        "multiclass": "ovr",
-        "feature_representation": "tfidf",
-        "dataset": "20NewsGroups",
+        "feature_representation": "count",
+        "dataset": "20NewsGroups-multiclass",
         "random_state": 0,
     }
 
@@ -116,5 +122,6 @@ if __name__ == "__main__":
         args.evaluate,
         args.process,
         args.graph,
+        args.stopping,
         args.average,
     )

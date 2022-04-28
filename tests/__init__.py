@@ -1,18 +1,11 @@
 """Assets that can be used across many different tests.
-
-TODO
-----
--
-
-FIXME
------
--
 """
 
 params_iris = {
     "output_root": None,
     "task": "cls",
-    "stop_set_size": 1000,
+    "early_stop_mode": "none",
+    "first_batch_mode": "random",
     "batch_size": 7,
     "query_strategy": "uncertainty_batch_sampling",
     "base_learner": "SVC",

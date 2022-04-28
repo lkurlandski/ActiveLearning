@@ -104,14 +104,19 @@ def test_multilabel_classification_sparse_features_and_labels(tmp_path):
 
 
 def test_with_all_pools(tmp_path):
-    pools: List[pool.Pool] = []
-    for i in range(3):
-        X, y = datasets.make_multilabel_classification(
-            n_samples, n_classes=3, random_state=random_state + 1
-        )
-        path = Path(tmp_path) / str(i)
-        path.mkdir(parents=False)
-        pools.append(pool.Pool(X, y, tmp_path / "X.mtx", tmp_path / "y.mtx"))
+    X, y = datasets.make_multilabel_classification(
+        n_samples, n_classes=3, random_state=random_state + 1
+    )
+    path = tmp_path / "unlabeled_pool"
+    path.mkdir()
+    unlabeled_pool = pool.Pool(X, y, path / "X.mtx", path / "y.mtx")
+
+    X, y = datasets.make_multilabel_classification(
+        n_samples, n_classes=3, random_state=random_state + 1
+    )
+    path = tmp_path / "test_set_pool"
+    path.mkdir()
+    test_set = pool.Pool(X, y, path / "X.mtx", path / "y.mtx")
 
     MultiOutputToMultiLabelClassifier = estimators.get_MultiOutputToMultiLabelClassifier(
         RandomForestClassifier
@@ -121,14 +126,11 @@ def test_with_all_pools(tmp_path):
         estimator,
         query_strategy,
         batch_size,
-        unlabeled_pool=pools[0],
-        test_set=pools[0],
-        stop_set=pools[1],
+        unlabeled_pool,
+        test_set=test_set,
     )
 
-    assert pools[0].X_path.exists()
-    assert pools[0].y_path.exists()
-    assert pools[1].X_path.exists()
-    assert pools[1].y_path.exists()
-    assert pools[2].X_path.exists()
-    assert pools[2].y_path.exists()
+    assert unlabeled_pool.X_path.exists()
+    assert unlabeled_pool.y_path.exists()
+    assert test_set.X_path.exists()
+    assert test_set.y_path.exists()

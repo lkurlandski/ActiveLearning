@@ -10,7 +10,6 @@ FIXME
 -
 """
 
-from copy import deepcopy
 from pathlib import Path
 import shutil
 from typing import Dict, List, Union
@@ -24,10 +23,9 @@ from active_learning import utils
 class OutputDataContainer:
     """Results from one set of experiments or an average across many sets."""
 
-    stop_set_str = "stop_set"
     test_set_str = "test_set"
     train_set_str = "train_set"
-    subsets = (stop_set_str, test_set_str, train_set_str)
+    subsets = (test_set_str, train_set_str)
 
     def __init__(self, root: Path):
         """Instantiate the container.
@@ -41,16 +39,13 @@ class OutputDataContainer:
         self.root = Path(root)
 
         self.training_data_file = self.root / Path("training_data.csv")
-        self.stopping_results_json_file = self.root / Path("stopping_results.json")
-        self.stopping_results_csv_file = self.root / Path("stopping_results.csv")
+        self.stopping_results_file = self.root / Path("stopping_results.csv")
 
         self.processed_path = self.root / Path("processed")
-        self.processed_stop_set_path = self.processed_path / self.stop_set_str
         self.processed_test_set_path = self.processed_path / self.test_set_str
         self.processed_train_set_path = self.processed_path / self.train_set_str
 
         self.graphs_path = self.root / Path("graphs")
-        self.graphs_stop_set_path = self.graphs_path / self.stop_set_str
         self.graphs_test_set_path = self.graphs_path / self.test_set_str
         self.graphs_train_set_path = self.graphs_path / self.train_set_str
 
@@ -74,12 +69,10 @@ class OutputDataContainer:
             raise FileNotFoundError(f"The root directory must exist: {self.root.as_posix()}")
 
         self.processed_path.mkdir(exist_ok=True)
-        self.processed_stop_set_path.mkdir(exist_ok=True)
         self.processed_test_set_path.mkdir(exist_ok=True)
         self.processed_train_set_path.mkdir(exist_ok=True)
 
         self.graphs_path.mkdir(exist_ok=True)
-        self.graphs_stop_set_path.mkdir(exist_ok=True)
         self.graphs_test_set_path.mkdir(exist_ok=True)
         self.graphs_train_set_path.mkdir(exist_ok=True)
 
@@ -117,9 +110,8 @@ class IndividualOutputDataContainer(OutputDataContainer):
 
         self.model_path = self.root / Path("models")
         self.batch_path = self.root / Path("batch")
-
         self.raw_path = self.root / Path("raw")
-        self.raw_stop_set_path = self.raw_path / self.stop_set_str
+
         self.raw_test_set_path = self.raw_path / self.test_set_str
         self.raw_train_set_path = self.raw_path / self.train_set_str
 
@@ -138,7 +130,6 @@ class IndividualOutputDataContainer(OutputDataContainer):
         self.batch_path.mkdir(exist_ok=True)
 
         self.raw_path.mkdir(exist_ok=True)
-        self.raw_stop_set_path.mkdir(exist_ok=True)
         self.raw_test_set_path.mkdir(exist_ok=True)
         self.raw_train_set_path.mkdir(exist_ok=True)
 
@@ -160,14 +151,12 @@ class IndividualOutputDataContainer(OutputDataContainer):
         if ext is not None:
             self.y_test_set_file = self.y_test_set_file.with_suffix(ext)
             self.y_unlabeled_pool_file = self.y_unlabeled_pool_file.with_suffix(ext)
-            self.y_stop_set_file = self.y_stop_set_file.with_suffix(ext)
             return True
 
         matches = list(self.root.glob(f"{self.y_test_set_file.name}.*"))
         if matches:
             self.y_test_set_file = self.y_test_set_file.with_suffix(matches[0].suffix)
             self.y_unlabeled_pool_file = self.y_unlabeled_pool_file.with_suffix(matches[0].suffix)
-            self.y_stop_set_file = self.y_stop_set_file.with_suffix(matches[0].suffix)
             return True
 
         return False
@@ -185,22 +174,20 @@ class OutputHelper:
             Experiment specifications
         """
 
-        # TODO: can this be safely removed? Is it being used anywhere?
-        self.params = params
+        params: Dict[str, str] = {k: str(v) for k, v in params.items()}
 
-        # Path objects require string parameters for everything
-        params: Dict[str, str] = {k: str(v) for k, v in deepcopy(params).items()}
-
-        # Base paths
         self.root = Path(params["output_root"])
-        self.task_path = self.root / params["task"]
-        self.stop_set_size_path = self.task_path / params["stop_set_size"]
-        self.batch_size_path = self.stop_set_size_path / params["batch_size"]
-        self.query_strategy_path = self.batch_size_path / params["query_strategy"]
-        self.base_learner_path = self.query_strategy_path / params["base_learner"]
-        self.multiclass_path = self.base_learner_path / params["multiclass"]
-        self.feature_representation_path = self.multiclass_path / params["feature_representation"]
-        self.dataset_path = self.feature_representation_path / params["dataset"]
+        self.dataset_path = (
+            self.root
+            / params["task"]
+            / params["early_stop_mode"]
+            / params["first_batch_mode"]
+            / params["batch_size"]
+            / params["query_strategy"]
+            / params["base_learner"]
+            / params["feature_representation"]
+            / params["dataset"]
+        )
 
         # Data container for this individual rstates output
         self.ind_rstates_path = self.dataset_path / "ind_rstates"
@@ -231,14 +218,7 @@ class OutputHelper:
             raise FileNotFoundError(f"The root directory must exist: {self.root.as_posix()}")
 
         self.root.mkdir(exist_ok=True)
-        self.task_path.mkdir(exist_ok=True)
-        self.stop_set_size_path.mkdir(exist_ok=True)
-        self.batch_size_path.mkdir(exist_ok=True)
-        self.query_strategy_path.mkdir(exist_ok=True)
-        self.base_learner_path.mkdir(exist_ok=True)
-        self.multiclass_path.mkdir(exist_ok=True)
-        self.feature_representation_path.mkdir(exist_ok=True)
-        self.dataset_path.mkdir(exist_ok=True)
+        self.dataset_path.mkdir(exist_ok=True, parents=True)
 
         self.ind_rstates_path.mkdir(exist_ok=True)
         self.output_path.mkdir(exist_ok=True)

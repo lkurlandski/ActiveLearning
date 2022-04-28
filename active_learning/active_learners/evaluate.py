@@ -1,8 +1,10 @@
 """Evaluate a series of learned models.
 """
 
+import datetime
 import json
 from pathlib import Path
+import time
 from typing import Any, Dict, Tuple, Union
 
 import joblib
@@ -11,6 +13,7 @@ from sklearn import metrics
 from sklearn.base import BaseEstimator
 
 from active_learning import stat_helper
+from active_learning.active_learners import learn
 from active_learning.active_learners import output_helper
 from active_learning.active_learners import pool
 
@@ -78,8 +81,11 @@ def evaluate_container(container: output_helper.IndividualOutputDataContainer) -
         X_path=container.X_unlabeled_pool_file, y_path=container.y_unlabeled_pool_file
     ).load()
     test_set = pool.Pool(X_path=container.X_test_set_file, y_path=container.y_test_set_file).load()
-    stop_set = pool.Pool(X_path=container.X_stop_set_file, y_path=container.y_stop_set_file).load()
 
+    start = time.time()
+    print(f"{str(datetime.timedelta(seconds=(round(time.time() - start))))} -- Starting Evaluation")
+
+    unlabeled_pool_init_size = unlabeled_pool.y.shape[0]
     training_data = 0
     n_iterations = sum(1 for _ in container.model_path.iterdir())
     for i in range(n_iterations):
@@ -106,14 +112,11 @@ def evaluate_container(container: output_helper.IndividualOutputDataContainer) -
             i,
             container.raw_test_set_path,
         )
-        evaluate_and_record(
-            model,
-            stop_set.X,
-            stop_set.y,
-            training_data,
-            i,
-            container.raw_stop_set_path,
-        )
+
+        learn.update(start, unlabeled_pool_init_size, unlabeled_pool.y.shape[0], idx.shape[0], i)
+
+    end = time.time()
+    print(f"{str(datetime.timedelta(seconds=(round(end - start))))} -- Ending Evaluation")
 
 
 def main(params: Dict[str, Union[str, int]]):
@@ -125,9 +128,5 @@ def main(params: Dict[str, Union[str, int]]):
         A single set of hyperparmaters and for the active learning experiment.
     """
 
-    print("Beginning Evalulation", flush=True)
-
     oh = output_helper.OutputHelper(params)
     evaluate_container(oh.container)
-
-    print("Ending Evalulation", flush=True)
