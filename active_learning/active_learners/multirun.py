@@ -10,7 +10,7 @@ from typing import Any, Dict, List
 
 
 # Location of the ActiveLearning directory
-root_path = Path("/home/hpc/kurlanl1/bloodgood/ActiveLearning")
+root_path = Path("/path/to/ActiveLearning")
 # Python interpreter path
 python_path = root_path / "env/bin/python"
 # Directory containing slurm utilities

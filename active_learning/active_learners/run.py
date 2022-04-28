@@ -1,9 +1,9 @@
-#!/home/hpc/kurlanl1/bloodgood/ActiveLearning/env/bin/python -u
+#!/path/to/ActiveLearning/env/bin/python -u
 
-#SBATCH --chdir=/home/hpc/kurlanl1/bloodgood/ActiveLearning
-#SBATCH --output=/home/hpc/kurlanl1/bloodgood/ActiveLearning/slurm/jobs/Performance/ntasks=n_categories,ncpus=5/job.glue.%A.out
+#SBATCH --chdir=/path/to/ActiveLearning
+#SBATCH --output=/path/to/ActiveLearning/slurm/jobs/job.name.%A.out
 #SBATCH --constraint=skylake|broadwell
-#SBATCH --job-name=glue
+#SBATCH --job-name=name
 #SBATCH --partition=long
 #SBATCH --cpus-per-task=1
 #SBATCH --ntasks=5

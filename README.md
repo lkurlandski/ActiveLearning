@@ -29,7 +29,9 @@ python3 -m venv env
 ```
 
 Enter the virtual environment (do this every time you want to use this environment)
-- source env/bin/activate
+```console
+source env/bin/activate
+```
 
 Install the required packages
 ```console
