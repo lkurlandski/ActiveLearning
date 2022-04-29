@@ -1,12 +1,4 @@
-"""Extract features from complex data objects, such as text documents.
-
-TODO
-----
--
-
-FIXME
------
--
+"""Psuedo feature extractor for datasets which have already been preprocessed.
 """
 
 from pprint import pprint  # pylint: disable=unused-import
@@ -39,7 +31,6 @@ class PreprocessedFeatureExtractor(FeatureExtractor):
         Tuple[Iterable[Any], Iterable[Any]]
             Two dimensional feature representations of the input train and test data
         """
-
         X_train = np.array(list(X_train)) if isinstance(X_train, types.GeneratorType) else X_train
         X_test = np.array(list(X_test)) if isinstance(X_test, types.GeneratorType) else X_test
 

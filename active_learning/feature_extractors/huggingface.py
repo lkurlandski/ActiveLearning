@@ -1,12 +1,4 @@
-"""Extract features from complex data objects, such as text documents.
-
-TODO
-----
--
-
-FIXME
------
--
+"""Extract features using HuggingFace Transformers.
 """
 
 from pprint import pprint  # pylint: disable=unused-import

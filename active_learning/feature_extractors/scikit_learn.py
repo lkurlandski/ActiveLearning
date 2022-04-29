@@ -1,17 +1,9 @@
-"""Extract features from complex data objects, such as text documents.
-
-TODO
-----
--
-
-FIXME
------
--
+"""Extract features using scikit-learn vectorizers.
 """
 
 from pprint import pprint  # pylint: disable=unused-import
 import sys  # pylint: disable=unused-import
-from typing import Callable, Iterable, Tuple, Union
+from typing import Iterable, Tuple
 
 from scipy import sparse
 from sklearn.feature_extraction.text import (
@@ -28,27 +20,30 @@ class ScikitLearnTextFeatureExtractor(FeatureExtractor):
 
     def __init__(
         self,
-        vectorizer: Callable[..., Union[CountVectorizer, HashingVectorizer, TfidfVectorizer]],
+        vectorizer: str,
         **kwargs,
     ) -> None:
         """Create instance with a custom vectorizer.
 
         Parameters
         ----------
-        stream : bool
-            Whether or not the input data will be streamed. In the case of text documents,
-                streamed data is expected to be a numpy array of filenames containing raw text. Non-
-                streamed data is expected to be a numpy array of raw text.
-        vectorizer : Callable[..., Union[CountVectorizer, HashingVectorizer, TfidfVectorizer]]
-            A scikit-learn vectorizer to be called/instatiated
+        vectorizer : str
+            A scikit-learn vectorizer to be called/instatiated. One of: 
+                {'CountVectorizer', 'HashingVectorizer', 'TfidfVectorizer'}
 
         Other Parameters
         ----------------
         **kwargs
             Keyword arguments passed to the vectorizer during instantiation
         """
-
-        self.vectorizer = vectorizer(**kwargs)
+        if vectorizer == "CountVectorizer":
+            self.vectorizer = CountVectorizer(**kwargs)
+        elif vectorizer == "HashingVectorizer":
+            self.vectorizer = HashingVectorizer(**kwargs)
+        elif vectorizer == "TfidfVectorizer":
+            self.vectorizer = TfidfVectorizer(**kwargs)
+        else:
+            raise ValueError(f"Unknown vectorizer: {vectorizer}")
 
     def extract_features(
         self, X_train: Iterable[str], X_test: Iterable[str]

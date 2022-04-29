@@ -7,54 +7,34 @@ from typing import Any, Callable, Dict, Iterable, Tuple, Union
 
 import numpy as np
 from scipy import sparse
-from sklearn.feature_extraction.text import (
-    CountVectorizer,
-    HashingVectorizer,
-    TfidfVectorizer,
-)
 
-from active_learning.feature_extractors import base
-from active_learning.feature_extractors import huggingface
-from active_learning.feature_extractors import preprocessed
-from active_learning.feature_extractors import scikit_learn
-from active_learning import utils
+from active_learning.feature_extractors.huggingface import HuggingFaceFeatureExtractor
+from active_learning.feature_extractors.preprocessed import PreprocessedFeatureExtractor
+from active_learning.feature_extractors.scikit_learn import ScikitLearnTextFeatureExtractor
 
 
-valid_feature_reps = {
-    "preprocessed",
-    "count",
-    "hash",
-    "tfidf",
-    "bert",
-    "roberta",
-    "distilbert",
+valid_scikit_learn_reps = {
+    "CountVectorizer",
+    "HashingVectorizer",
+    "TfidfVectorizer",
+}
+
+
+valid_huggingface_reps = {
+    "albert-base-v2",
+    "bert-base-uncased",
     "bert-cased",
-    "albert",
-    "distilroberta",
+    "distilbert-base-uncased",
+    "distilroberta-base",
+    "roberta-base",
 }
 
 
-mapper: Dict[str, Callable[..., base.FeatureExtractor]]
-mapper = {
-    "preprocessed": utils.init(preprocessed.PreprocessedFeatureExtractor),
-    "count": utils.init(scikit_learn.ScikitLearnTextFeatureExtractor, vectorizer=CountVectorizer),
-    "hash": utils.init(scikit_learn.ScikitLearnTextFeatureExtractor, vectorizer=HashingVectorizer),
-    "tfidf": utils.init(scikit_learn.ScikitLearnTextFeatureExtractor, vectorizer=TfidfVectorizer),
-    "bert": utils.init(huggingface.HuggingFaceFeatureExtractor, model="bert-base-uncased"),
-    "roberta": utils.init(huggingface.HuggingFaceFeatureExtractor, model="roberta-base"),
-    "distilbert": utils.init(
-        huggingface.HuggingFaceFeatureExtractor, model="distilbert-base-uncased"
-    ),
-    "bert-cased": utils.init(huggingface.HuggingFaceFeatureExtractor, model="bert-base-cased"),
-    "albert": utils.init(huggingface.HuggingFaceFeatureExtractor, model="albert-base-v2"),
-    "distilroberta": utils.init(
-        huggingface.HuggingFaceFeatureExtractor, model="distilroberta-base"
-    ),
-}
+valid_feature_reps = {"none"}.union(valid_scikit_learn_reps, valid_huggingface_reps)
 
 
 def get_features(
-    X_train: Iterable[Any], X_test: Iterable[Any], feature_representation: str
+    X_train: Iterable[Any], X_test: Iterable[Any], feature_rep: str
 ) -> Tuple[Union[np.ndarray, sparse.csr_matrix], Union[np.ndarray, sparse.csr_matrix]]:
     """Get numerical features from raw data; vectorize the data.
 
@@ -64,24 +44,26 @@ def get_features(
         Raw training data to be vectorized.
     X_train : Iterable[Any]
         Raw testing data to be vectorized.
-    feature_representation : str
+    feature_rep : str
         Code to refer to a feature representation.
 
     Returns
     -------
     Tuple[Union[np.ndarray, sparse.csr_matrix], Union[np.ndarray, sparse.csr_matrix]]
         Numeric representation of the train and test data.
-
-    Raises
-    ------
-    KeyError
-        If the feature representation is not recognized.
     """
+    if feature_rep == "none":
+        feature_extractor = PreprocessedFeatureExtractor()
+    elif feature_rep in valid_scikit_learn_reps:
+        feature_extractor = ScikitLearnTextFeatureExtractor(feature_rep)
+    elif feature_rep in valid_huggingface_reps:
+        feature_extractor = HuggingFaceFeatureExtractor(feature_rep)
+    else:
+        raise ValueError(
+            f"feature rep: {feature_rep} not recognized. "
+            f"Valid representations are: {valid_feature_reps}"
+        )
 
-    if feature_representation not in mapper:
-        raise KeyError(f"{feature_representation} not recognized.")
-
-    feature_extractor = mapper[feature_representation]()
     X_train, X_test = feature_extractor.extract_features(X_train, X_test)
 
     return X_train, X_test

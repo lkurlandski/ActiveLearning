@@ -87,7 +87,7 @@ def main(
         "query_strategy",
         "base_learner",
         "multiclass",
-        "feature_representation",
+        "feature_rep",
     ]
 
     for combo in product(*[multi_params[k] for k in order]):
@@ -98,7 +98,7 @@ def main(
         query_strategy = combo[3]
         base_learner = combo[4]
         multiclass = combo[5]
-        feature_representation = combo[6]
+        feature_rep = combo[6]
 
         params = {
             "output_root": output_root,
@@ -106,7 +106,7 @@ def main(
             "stop_set_size": stop_set_size,
             "batch_size": batch_size,
             "query_strategy": query_strategy,
-            "feature_representation": feature_representation,
+            "feature_rep": feature_rep,
             "base_learner": base_learner,
             "multiclass": multiclass,
             "dataset": dataset,
@@ -157,7 +157,7 @@ if __name__ == "__main__":
         "query_strategy": ["uncertainty_sampling"],
         "base_learner": ["SVC"],
         "multiclass": ["ovr"],
-        "feature_representation": ["tfidf"],
+        "feature_rep": ["tfidf"],
         "dataset": "20NewsGroups",
         "random_state": [0],
     }

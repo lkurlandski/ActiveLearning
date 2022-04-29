@@ -116,10 +116,10 @@ if __name__ == "__main__":
         output_root="outputs/garbage",
         early_stop_mode="none",
         first_batch_mode="random",
-        batch_size=7,
+        batch_size=.6,
         query_strategy="uncertainty_sampling",
         base_learner="SVC",
-        feature_representation="preprocessed",
+        feature_rep="none",
         dataset="Iris",
         random_state=0,
     )
