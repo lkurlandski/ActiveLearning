@@ -44,7 +44,7 @@ def run_stopping_criteria(
     ).load()
     initial_unlabeled_pool = Pool(X=unlabeled_pool.X.copy(), y=unlabeled_pool.y.copy)
 
-    results = pd.DataFrame(columns=["iteration", "training_data"])
+    results = pd.DataFrame(columns=["iteration", "training_data", "criteria"])
     training_data = 0
 
     n_iterations = sum(1 for _ in container.model_path.iterdir())
@@ -69,9 +69,9 @@ def run_stopping_criteria(
             if c.has_stopped:
                 df = pd.DataFrame(
                     {
-                        "criteria": [str(c)],
                         "iteration": [i],
                         "training_data": [training_data],
+                        "criteria": [str(c)],
                     }
                 )
                 results = results.append(df)
@@ -79,11 +79,12 @@ def run_stopping_criteria(
     never_stopped_criteria = [c for c in criteria if not c.has_stopped]
     df = pd.DataFrame(
         {
-            "criteria": [str(c) for c in never_stopped_criteria],
             "iteration": [np.NaN] * len(never_stopped_criteria),
             "training_data": [np.NaN] * len(never_stopped_criteria),
+            "criteria": [str(c) for c in never_stopped_criteria],
         }
     )
+    results = results.append(df)
     results.to_csv(container.stopping_results_file)
 
     diff = datetime.timedelta(seconds=(round(time.time() - start)))

@@ -5,10 +5,12 @@ from __future__ import annotations
 from pprint import pprint  # pylint: disable=unused-import
 import sys  # pylint: disable=unused-import
 from typing import Callable, Dict, List, Tuple, Optional, Union
+import warnings
 
 from nltk.metrics import masi_distance, binary_distance
 from nltk.metrics.agreement import AnnotationTask
 import numpy as np
+from scipy import sparse
 from sklearn.utils.multiclass import type_of_target
 
 from active_learning.stopping_criteria.base import StoppingCriteria, get_stop_set_indices
@@ -155,15 +157,22 @@ class StabilizingPredictions(StoppingCriteria):
             stop_set_preds = np.array(stop_set_preds)
         if isinstance(initial_unlabeled_pool_preds, list):
             initial_unlabeled_pool_preds = np.array(initial_unlabeled_pool_preds)
+        
+        # TODO: add support for sparse matrices instead of casting to dense
+        if isinstance(stop_set_preds, sparse.csr_matrix):
+            stop_set_preds = stop_set_preds.toarray()
+        if isinstance(initial_unlabeled_pool_preds, sparse.csr_matrix):
+            initial_unlabeled_pool_preds = initial_unlabeled_pool_preds.toarray()
 
         # Acquire the predictions on the stop set
         if stop_set_preds is None:
             # Set the stop set indices if they have not been set yet
-            self.stop_set_indices = (
-                get_stop_set_indices(self.stop_set_size, initial_unlabeled_pool_preds.shape[0])
-                if self.stop_set_indices is None
-                else self.stop_set_indices
-            )
+            if self.stop_set_indices is None:
+                self.stop_set_indices = get_stop_set_indices(
+                    self.stop_set_size, initial_unlabeled_pool_preds.shape[0]
+                )
+            else:
+                self.stop_set_indices = self.stop_set_indices
             # Select the stop set predictions
             stop_set_preds = initial_unlabeled_pool_preds[self.stop_set_indices]
 
@@ -297,13 +306,20 @@ class StabilizingPredictions(StoppingCriteria):
         if np.array_equal(self.prv_stop_set_preds, stop_set_preds):
             return 1.0
 
-        if self.agreement_metric == "kappa":
-            return AnnotationTask(data(False), binary_distance).kappa()
-        if self.agreement_metric == "S":
-            return AnnotationTask(data(False), binary_distance).S()
-        if self.agreement_metric == "pi":
-            return AnnotationTask(data(True), masi_distance).pi()
-        if self.agreement_metric == "alpha":
-            return AnnotationTask(data(True), masi_distance).alpha()
+        try:
+            if self.agreement_metric == "kappa":
+                return AnnotationTask(data(False), binary_distance).kappa()
+            if self.agreement_metric == "S":
+                return AnnotationTask(data(False), binary_distance).S()
+            if self.agreement_metric == "pi":
+                return AnnotationTask(data(True), masi_distance).pi()
+            if self.agreement_metric == "alpha":
+                return AnnotationTask(data(True), masi_distance).alpha()
+        except ZeroDivisionError:
+            warnings.warn(
+                "Encountered a ZeroDivisionError computing agreement with "
+                f"{self.agreement_metric}. Returning NaN for now, but someone should investigate."
+            )
+            return np.NaN
 
         raise ValueError(f"Unknown agreement metric: {self.agreement_metric}")
