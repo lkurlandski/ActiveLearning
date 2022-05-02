@@ -24,7 +24,7 @@ cd ActiveLearning
 
 Set up a virtual environment with the correct version of Python
 ```console
-module add python/3.7.5
+module load python/3.7.7
 python3 -m venv env
 ```
 
@@ -213,7 +213,7 @@ Using a uniform coding style across all team members can improve the readability
 - Limit the number of characters per line to 100 (suggest using an IDE extension to put vertical line at this position)
 
 Before committing changes, use black's auto formatter to enforce a uniform coding style
-- black --line-length 100 --exclude active_learning/active_learners/run.py myfile.py
+- black --line-length 100 --exclude active_learning/active_learners/run.py active_learning
 
 Pylint can identify errors in your code and provide other useful feedback. Consider addressing some of pylint's suggestions
 - pylint myfile.py

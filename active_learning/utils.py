@@ -15,7 +15,7 @@ import math
 from pathlib import Path
 from pprint import pprint  # pylint: disable=unused-import
 import sys  # pylint: disable=unused-import
-from typing import Any, Callable, Generator, Iterator, Iterable, List, Tuple
+from typing import Any, Callable, Generator, Iterator, Iterable, List, Tuple, Union
 
 import numpy as np
 import psutil
@@ -231,3 +231,30 @@ def init(cls: type, *args, **kwargs) -> Callable[..., Any]:
     """
 
     return lambda: cls(*args, **kwargs)
+
+
+def get_array_file_ext(a: Union[sparse.csr_matrix, np.ndarray]) -> str:
+    """Get the correct file extension for saving an array.
+
+    Parameters
+    ----------
+    a : Union[sp.csr_matrix, np.ndarray]
+        The array to analyze and determine the correct extension for.
+
+    Returns
+    -------
+    str
+        The extension, either .mtx or .npy.
+
+    Raises
+    ------
+    ValueError
+        If the number of dimensions is not 1 or 2.
+    """
+
+    if a.ndim == 1:
+        return ".npy"
+    if a.ndim == 2:
+        return ".mtx"
+
+    raise ValueError(f"Expected a one or two dimensional matrix, not {a.ndim} dimensional.")

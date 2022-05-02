@@ -1,9 +1,11 @@
 """Evaluate a series of learned models.
 """
 
+import datetime
 import json
 from pathlib import Path
-from typing import Any, Dict, Tuple, Union
+import time
+from typing import Any, Dict, Tuple
 
 import joblib
 import numpy as np
@@ -11,11 +13,16 @@ from sklearn import metrics
 from sklearn.base import BaseEstimator
 
 from active_learning import stat_helper
-from active_learning.active_learners import output_helper
-from active_learning.active_learners import pool
+from active_learning.active_learners.learn import update
+from active_learning.active_learners.helpers import (
+    Params,
+    Pool,
+    IndividualOutputDataContainer,
+    OutputHelper,
+)
 
 
-def evaluate_and_record(
+def get_report(
     learner: BaseEstimator,
     X: np.ndarray,
     y: np.ndarray,
@@ -65,21 +72,24 @@ def evaluate_and_record(
     return preds, report
 
 
-def evaluate_container(container: output_helper.IndividualOutputDataContainer) -> None:
+def evaluate(container: IndividualOutputDataContainer) -> None:
     """Perform inference upon a container, where trained models can be located.
 
     Parameters
     ----------
-    container : output_helper.IndividualOutputDataContainer
+    container : IndividualOutputDataContainer
         A container to contain the various paths and files produced by the experiment.
     """
+    print("-" * 80, flush=True)
+    start = time.time()
+    print("0:00:00 -- Starting Evaluation", flush=True)
 
-    unlabeled_pool = pool.Pool(
+    unlabeled_pool = Pool(
         X_path=container.X_unlabeled_pool_file, y_path=container.y_unlabeled_pool_file
     ).load()
-    test_set = pool.Pool(X_path=container.X_test_set_file, y_path=container.y_test_set_file).load()
-    stop_set = pool.Pool(X_path=container.X_stop_set_file, y_path=container.y_stop_set_file).load()
+    test_set = Pool(X_path=container.X_test_set_file, y_path=container.y_test_set_file).load()
 
+    unlabeled_pool_init_size = unlabeled_pool.y.shape[0]
     training_data = 0
     n_iterations = sum(1 for _ in container.model_path.iterdir())
     for i in range(n_iterations):
@@ -90,7 +100,7 @@ def evaluate_container(container: output_helper.IndividualOutputDataContainer) -
         unlabeled_pool.y = stat_helper.remove_ids_from_array(unlabeled_pool.y, idx)
         training_data += len(idx)
 
-        evaluate_and_record(
+        get_report(
             model,
             unlabeled_pool.X,
             unlabeled_pool.y,
@@ -98,7 +108,7 @@ def evaluate_container(container: output_helper.IndividualOutputDataContainer) -
             i,
             container.raw_train_set_path,
         )
-        evaluate_and_record(
+        get_report(
             model,
             test_set.X,
             test_set.y,
@@ -106,28 +116,21 @@ def evaluate_container(container: output_helper.IndividualOutputDataContainer) -
             i,
             container.raw_test_set_path,
         )
-        evaluate_and_record(
-            model,
-            stop_set.X,
-            stop_set.y,
-            training_data,
-            i,
-            container.raw_stop_set_path,
-        )
+
+        update(start, unlabeled_pool_init_size, unlabeled_pool.y.shape[0], idx.shape[0], i)
+
+    diff = datetime.timedelta(seconds=(round(time.time() - start)))
+    print(f"{diff} -- Ending Evaluation", flush=True)
+    print("-" * 80, flush=True)
 
 
-def main(params: Dict[str, Union[str, int]]):
+def main(params: Params) -> None:
     """Evaluate saved model from an AL experiment for a set of experiment parmameters.
 
     Parameters
     ----------
-    params : Dict[str, Union[str, int]]
-        A single set of hyperparmaters and for the active learning experiment.
+    params : Params
+        Experiment parameters.
     """
-
-    print("Beginning Evalulation", flush=True)
-
-    oh = output_helper.OutputHelper(params)
-    evaluate_container(oh.container)
-
-    print("Ending Evalulation", flush=True)
+    oh = OutputHelper(params)
+    evaluate(oh.container)

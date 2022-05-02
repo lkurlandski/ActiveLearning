@@ -1,14 +1,5 @@
-"""Test the dataset fetchers.
-
-TODO
-----
--
-
-FIXME
------
--
 """
-
+"""
 import types
 
 import numpy as np

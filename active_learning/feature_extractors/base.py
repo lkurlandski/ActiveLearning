@@ -1,12 +1,4 @@
-"""Extract features from complex data objects, such as text documents.
-
-TODO
-----
--
-
-FIXME
------
--
+"""Base class for feature extractors.
 """
 
 from abc import ABC, abstractmethod

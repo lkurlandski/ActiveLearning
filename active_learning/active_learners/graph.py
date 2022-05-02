@@ -1,26 +1,21 @@
 """Create plots for the output data.
-
-TODO
-----
-- Once the stopping methods module is working properly, add the stopping vlines again.
-
-FIXME
------
--
 """
 
+import datetime
 from pathlib import Path
 from pprint import pprint  # pylint: disable=unused-import
 import sys  # pylint: disable=unused-import
-from typing import Dict, List, Tuple, Union
+import time
+from typing import List, Tuple
 
 from matplotlib.axes import Axes
 from matplotlib.figure import Figure
 import matplotlib.pyplot as plt
 import pandas as pd
 
-from active_learning.active_learners import output_helper
-from active_learning import stopping_methods  # pylint: disable=unused-import
+from active_learning.active_learners.helpers import OutputHelper, OutputDataContainer, Params
+from active_learning import stopping_criteria
+
 
 # Colors for stopping methods
 colors_stopping = ["lime", "blue", "megenta", "midnightblue"]
@@ -60,14 +55,14 @@ def add_stopping_vlines(fig: Figure, ax: Axes, stopping_df: pd.DataFrame) -> Tup
         Modified learning curves
     """
 
-    for i, stopping_method in enumerate(stopping_df):
+    for i, (_, row) in enumerate(stopping_df.iterrows()):
         ax.vlines(
-            x=stopping_df.at["annotations", stopping_method],
+            x=row["training_data"],
             ymin=0,
             ymax=1,
             colors=colors_stopping[i],
             linestyle="dashdot",
-            label=stopping_method,
+            label=row["criteria"],
         )
 
     return fig, ax
@@ -169,53 +164,67 @@ def create_graphs_for_subset(
 
 
 def create_graphs_for_container(
-    container: output_helper.OutputDataContainer,
-    stp_mthd: List[str] = None,
-    add_stopping_lines: bool = True,
+    container: OutputDataContainer,
+    stp_mthd: List[stopping_criteria.StoppingCriteria] = None,
 ):
     """Create graphs for a particular data container.
 
     Parameters
     ----------
-    container : output_helper.OutputDataContainer
-        The relevant data container
-    stp_mthd : List[str], optional
-        A list of stopping methods that are column names in stopping_results.csv, for plotting
+    container : OutputDataContainer
+        The data container to extract the data from and create graphs for.
+    stp_mthd : List[stopping_criteria.StoppingCriteria], optional
+        A list of stopping methods that should be have their vertical lines plotted in the curve.
     """
+    print("-" * 80, flush=True)
+    start = time.time()
+    print("0:00:00 -- Starting Graphing", flush=True)
 
-    if add_stopping_lines:
-        stopping_df = pd.read_csv(container.stopping_results_csv_file, index_col=0)
-        if stp_mthd is not None:
-            stopping_df = stopping_df[stp_mthd]
-    else:
-        stopping_df = None
+    stopping_df = None
+    if stp_mthd is not None:
+        if Path(container.stopping_results_file).exists():
+            stopping_df = pd.read_csv(container.stopping_results_file, index_col=0)
+            if stp_mthd is not None:
+                regex = "|".join(map(str, stp_mthd)).replace("(", r"\(").replace(")", r"\)")
+                stopping_df = stopping_df[stopping_df["criteria"].str.contains(f"(?:{regex})")]
+        else:
+            print("Could not find the stopping results file. Skipping stopping vlines.")
 
     paths = (
-        (container.processed_stop_set_path, container.graphs_stop_set_path),
         (container.processed_test_set_path, container.graphs_test_set_path),
         (container.processed_train_set_path, container.graphs_train_set_path),
     )
     for source_path, dest_path in paths:
         create_graphs_for_subset(source_path, dest_path, stopping_df)
 
+    diff = datetime.timedelta(seconds=(round(time.time() - start)))
+    print(f"{diff} -- Ending Graphing", flush=True)
+    print("-" * 80, flush=True)
 
-def main(params: Dict[str, Union[str, int]]) -> None:
+
+def main(params: Params) -> None:
     """Run the graphing algorithm for a set of experiment parmameters.
 
     Parameters
     ----------
-    params : Dict[str, Union[str, int]]
+    params : Params
         A single set of hyperparmaters and for the active learning experiment.
     """
+    oh = OutputHelper(params)
 
-    print("Beginning Graphing", flush=True)
+    stp_mthd = [
+        stopping_criteria.StabilizingPredictions(
+            windows=3,
+            threshold=0.99,
+            stop_set_size=0.8,
+            agreement_metric="kappa",
+        ),
+        stopping_criteria.StabilizingPredictions(
+            windows=3,
+            threshold=0.98,
+            stop_set_size=0.8,
+            agreement_metric="kappa",
+        ),
+    ]
 
-    oh = output_helper.OutputHelper(params)
-    # TODO: Once the stopping methods module is working properly, add the stopping vlines again.
-    create_graphs_for_container(
-        oh.container,
-        None,
-        False,  # [repr(stopping_methods.StabilizingPredictions())],
-    )
-
-    print("Ending Graphing", flush=True)
+    create_graphs_for_container(oh.container, stp_mthd)

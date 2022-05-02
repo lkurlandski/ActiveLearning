@@ -1,16 +1,10 @@
 """Analyze the raw output from active learning and process into useful data files.
-
-TODO
-----
--
-
-FIXME
------
--
 """
 
+import datetime
 from pprint import pprint  # pylint: disable=unused-import
 import sys  # pylint: disable=unused-import
+import time
 
 import json
 from pathlib import Path
@@ -18,7 +12,11 @@ from typing import Dict, List, Union
 
 import pandas as pd
 
-from active_learning.active_learners import output_helper
+from active_learning.active_learners.helpers import (
+    IndividualOutputDataContainer,
+    OutputHelper,
+    Params,
+)
 
 
 def report_jsons_to_dicts(
@@ -59,17 +57,19 @@ def report_jsons_to_dicts(
     return data
 
 
-def process_container(container: output_helper.OutputDataContainer):
+def process_container(container: IndividualOutputDataContainer):
     """Process the raw data in a particular container.
 
     Parameters
     ----------
-    container : output_helper.OutputDataContainer
+    container : IndividualOutputDataContainer
         The container where the raw data is located and where the processed data should go
     """
+    print("-" * 80, flush=True)
+    start = time.time()
+    print("0:00:00 -- Starting Processing", flush=True)
 
     paths = (
-        (container.raw_stop_set_path, container.processed_stop_set_path),
         (container.raw_test_set_path, container.processed_test_set_path),
         (container.raw_train_set_path, container.processed_train_set_path),
     )
@@ -97,19 +97,18 @@ def process_container(container: output_helper.OutputDataContainer):
             df.to_csv(processed_path / f"{k}.csv")
     dfs["training_data"].to_csv(container.training_data_file)
 
+    diff = datetime.timedelta(seconds=(round(time.time() - start)))
+    print(f"{diff} -- Ending Processing", flush=True)
+    print("-" * 80, flush=True)
 
-def main(experiment_parameters: Dict[str, Union[str, int]]):
+
+def main(experiment_parameters: Params):
     """Process the raw data from an AL experiment for a set of experiment parmameters.
 
     Parameters
     ----------
-    experiment_parameters : Dict[str, Union[str, int]]
-        A single set of hyperparmaters and for the active learning experiment.
+    experiment_parameters : Params
+        Experiment paramters.
     """
-
-    print("Beginning Processing", flush=True)
-
-    oh = output_helper.OutputHelper(experiment_parameters)
+    oh = OutputHelper(experiment_parameters)
     process_container(oh.container)
-
-    print("Ending Processing", flush=True)

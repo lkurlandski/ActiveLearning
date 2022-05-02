@@ -1,16 +1,5 @@
 """Test the active learning procedure.
-
-TODO
-----
--
-
-FIXME
------
--
 """
-
-from pathlib import Path
-from typing import List
 
 from scipy import sparse
 from sklearn import datasets
@@ -22,7 +11,7 @@ from modAL.batch import uncertainty_batch_sampling
 
 from active_learning import estimators
 from active_learning.active_learners import learn
-from active_learning.active_learners import pool
+from active_learning.active_learners.helpers import Pool
 
 
 random_state = 0
@@ -34,7 +23,7 @@ query_strategy = uncertainty_batch_sampling
 def test_binary_classification(tmp_path):
     X, y = datasets.make_classification(n_samples, n_classes=2, random_state=random_state)
     estimator = DecisionTreeClassifier(random_state=random_state)
-    unlabeled_pool = pool.Pool(X, y, tmp_path / "X.mtx", tmp_path / "y.npy")
+    unlabeled_pool = Pool(X, y, tmp_path / "X.mtx", tmp_path / "y.npy")
     learn.learn(estimator, query_strategy, batch_size, unlabeled_pool)
 
 
@@ -43,7 +32,7 @@ def test_multiclass_classification(tmp_path):
         n_samples, n_classes=3, n_informative=4, random_state=random_state
     )
     estimator = DecisionTreeClassifier(random_state=random_state)
-    unlabeled_pool = pool.Pool(X, y, tmp_path / "X.mtx", tmp_path / "y.npy")
+    unlabeled_pool = Pool(X, y, tmp_path / "X.mtx", tmp_path / "y.npy")
     learn.learn(estimator, query_strategy, batch_size, unlabeled_pool)
 
 
@@ -53,7 +42,7 @@ def test_multiclass_classification_sparse_features(tmp_path):
     )
     X = sparse.csr_matrix(X)
     estimator = DecisionTreeClassifier(random_state=random_state)
-    unlabeled_pool = pool.Pool(X, y, tmp_path / "X.mtx", tmp_path / "y.npy")
+    unlabeled_pool = Pool(X, y, tmp_path / "X.mtx", tmp_path / "y.npy")
     learn.learn(estimator, query_strategy, batch_size, unlabeled_pool)
 
 
@@ -63,7 +52,7 @@ def test_multilabel_classification(tmp_path):
     )
     estimator = SVC(kernel="linear", probability=True, random_state=random_state)
     estimator = OneVsRestClassifier(estimator)
-    unlabeled_pool = pool.Pool(X, y, tmp_path / "X.mtx", tmp_path / "y.mtx")
+    unlabeled_pool = Pool(X, y, tmp_path / "X.mtx", tmp_path / "y.mtx")
     learn.learn(estimator, query_strategy, batch_size, unlabeled_pool)
 
 
@@ -75,7 +64,7 @@ def test_multilabel_classification_sparse_features(tmp_path):
         RandomForestClassifier
     )
     estimator = MultiOutputToMultiLabelClassifier(random_state=random_state)
-    unlabeled_pool = pool.Pool(X, y, tmp_path / "X.mtx", tmp_path / "y.mtx")
+    unlabeled_pool = Pool(X, y, tmp_path / "X.mtx", tmp_path / "y.mtx")
     learn.learn(estimator, query_strategy, batch_size, unlabeled_pool)
 
 
@@ -85,7 +74,7 @@ def test_multilabel_classification_sparse_labels(tmp_path):
     )
     estimator = SVC(kernel="linear", probability=True, random_state=random_state)
     estimator = OneVsRestClassifier(estimator)
-    unlabeled_pool = pool.Pool(X, y, tmp_path / "X.mtx", tmp_path / "y.mtx")
+    unlabeled_pool = Pool(X, y, tmp_path / "X.mtx", tmp_path / "y.mtx")
     learn.learn(estimator, query_strategy, batch_size, unlabeled_pool)
 
 
@@ -99,19 +88,24 @@ def test_multilabel_classification_sparse_features_and_labels(tmp_path):
     )
     estimator = SVC(kernel="linear", probability=True, random_state=random_state)
     estimator = OneVsRestClassifier(estimator)
-    unlabeled_pool = pool.Pool(X, y, tmp_path / "X.mtx", tmp_path / "y.mtx")
+    unlabeled_pool = Pool(X, y, tmp_path / "X.mtx", tmp_path / "y.mtx")
     learn.learn(estimator, query_strategy, batch_size, unlabeled_pool)
 
 
 def test_with_all_pools(tmp_path):
-    pools: List[pool.Pool] = []
-    for i in range(3):
-        X, y = datasets.make_multilabel_classification(
-            n_samples, n_classes=3, random_state=random_state + 1
-        )
-        path = Path(tmp_path) / str(i)
-        path.mkdir(parents=False)
-        pools.append(pool.Pool(X, y, tmp_path / "X.mtx", tmp_path / "y.mtx"))
+    X, y = datasets.make_multilabel_classification(
+        n_samples, n_classes=3, random_state=random_state + 1
+    )
+    path = tmp_path / "unlabeled_pool"
+    path.mkdir()
+    unlabeled_pool = Pool(X, y, path / "X.mtx", path / "y.mtx")
+
+    X, y = datasets.make_multilabel_classification(
+        n_samples, n_classes=3, random_state=random_state + 1
+    )
+    path = tmp_path / "test_set_pool"
+    path.mkdir()
+    test_set = Pool(X, y, path / "X.mtx", path / "y.mtx")
 
     MultiOutputToMultiLabelClassifier = estimators.get_MultiOutputToMultiLabelClassifier(
         RandomForestClassifier
@@ -121,14 +115,11 @@ def test_with_all_pools(tmp_path):
         estimator,
         query_strategy,
         batch_size,
-        unlabeled_pool=pools[0],
-        test_set=pools[0],
-        stop_set=pools[1],
+        unlabeled_pool,
+        test_set=test_set,
     )
 
-    assert pools[0].X_path.exists()
-    assert pools[0].y_path.exists()
-    assert pools[1].X_path.exists()
-    assert pools[1].y_path.exists()
-    assert pools[2].X_path.exists()
-    assert pools[2].y_path.exists()
+    assert unlabeled_pool.X_path.exists()
+    assert unlabeled_pool.y_path.exists()
+    assert test_set.X_path.exists()
+    assert test_set.y_path.exists()
