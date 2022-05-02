@@ -5,7 +5,7 @@
 #SBATCH --constraint=skylake|broadwell
 #SBATCH --job-name=name
 #SBATCH --partition=long
-#SBATCH --cpus-per-task=20
+#SBATCH --cpus-per-task=6
 
 """Interface to the features of this module that can be used with python or sbatch.
 
@@ -106,7 +106,7 @@ if __name__ == "__main__":
         "base_learner": "SVC",
         "multiclass": "ovr",
         "feature_representation": "w2v",
-        "dataset": "imdb",
+        "dataset": "emotion",
         "random_state": 0,
     }
 

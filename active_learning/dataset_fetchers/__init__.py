@@ -112,6 +112,11 @@ def get_mapper(random_state: int = 0) -> Callable[..., base.DatasetFetcher]:
             huggingface.PredefinedClassificationFetcher,
             random_state=random_state,
             path="imdb",
+        ),
+        "rotten_tomatoes": utils.init(
+            huggingface.PredefinedClassificationFetcher,
+            random_state=random_state,
+            path="rotten_tomatoes",
         ), 
         "Covertype": utils.init(
             scikit_learn.ScikitLearnDatasetFetcher,
