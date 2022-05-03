@@ -1,12 +1,12 @@
 #!/path/to/ActiveLearning/env/bin/python -u
 
-#SBATCH --chdir=/path/to/ActiveLearning
-#SBATCH --output=/path/to/ActiveLearning/slurm/jobs/job.name.%A.out
-#SBATCH --constraint=skylake|broadwell
-#SBATCH --job-name=name
-#SBATCH --partition=long
-#SBATCH --cpus-per-task=1
-#SBATCH --ntasks=1
+# SBATCH --chdir=/path/to/ActiveLearning
+# SBATCH --output=/path/to/ActiveLearning/slurm/jobs/job.name.%A.out
+# SBATCH --constraint=skylake|broadwell
+# SBATCH --job-name=name
+# SBATCH --partition=long
+# SBATCH --cpus-per-task=1
+# SBATCH --ntasks=1
 
 """Interface to the features of this module that can be used with python or sbatch.
 
@@ -21,13 +21,13 @@ import warnings
 
 from sklearn.exceptions import ConvergenceWarning
 
-from active_learning.active_learners import average
-from active_learning.active_learners import evaluate
-from active_learning.active_learners import graph
-from active_learning.active_learners import learn
-from active_learning.active_learners import process
-from active_learning.active_learners import stopping
-from active_learning.active_learners.helpers import Params
+from active_learning.al_pipeline import average
+from active_learning.al_pipeline import evaluate
+from active_learning.al_pipeline import graph
+from active_learning.al_pipeline import learn
+from active_learning.al_pipeline import process
+from active_learning.al_pipeline import stopping
+from active_learning.al_pipeline.helpers import Params
 
 
 def main(
@@ -100,6 +100,7 @@ def main(
     print(f"{diff} -- Ending Active Learning Pipeline", flush=True)
     print("-" * 80, flush=True)
 
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
 
@@ -116,7 +117,7 @@ if __name__ == "__main__":
         output_root="outputs/garbage",
         early_stop_mode="none",
         first_batch_mode="random",
-        batch_size=.6,
+        batch_size=0.6,
         query_strategy="uncertainty_sampling",
         base_learner="SVC",
         feature_rep="none",

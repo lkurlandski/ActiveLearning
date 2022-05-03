@@ -30,7 +30,7 @@ from active_learning import dataset_fetchers
 from active_learning import feature_extractors
 from active_learning import query_strategies
 from active_learning import utils
-from active_learning.active_learners.helpers import Params, Pool, OutputHelper
+from active_learning.al_pipeline.helpers import Params, Pool, OutputHelper
 from active_learning.stopping_criteria import stabilizing_predictions
 
 

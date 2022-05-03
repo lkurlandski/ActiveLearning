@@ -16,7 +16,7 @@ from scipy.io import mmwrite, mmread
 from sklearn.utils import Bunch
 
 from active_learning import utils
-from active_learning.active_learners import (
+from active_learning.al_pipeline import (
     valid_early_stop_modes,
     valid_first_batch_modes,
 )
@@ -136,6 +136,30 @@ class Params(Bunch):
             dataset: {self.dataset}
             random_state: {self.random_state}
             """
+
+    def construct_str(self) -> str:
+        """Return a string that would construct this object if run with a python interpreter.
+
+        Returns
+        -------
+        str
+            A string to construct the object.
+        """
+
+        return (
+            "Params("
+            f"output_root='{self.output_root}', "
+            f"early_stop_mode='{self.early_stop_mode}', "
+            f"first_batch_mode='{self.first_batch_mode}', "
+            f"batch_size={self.batch_size}, "
+            f"query_strategy='{self.query_strategy}', "
+            f"base_learner='{self.base_learner}', "
+            f"feature_rep='{self.feature_rep}', "
+            f"dataset='{self.dataset}', "
+            f"random_state={self.random_state}, "
+            "verify=True"
+            ")"
+        )
 
     def verify(self) -> None:
         """Verify that the supplied parameters are valid.

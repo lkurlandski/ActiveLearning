@@ -4,13 +4,16 @@
 import argparse
 from itertools import product
 from pathlib import Path
-from pprint import pformat
+from pprint import pformat, pprint  # pylint: disable=unused-import
 import subprocess
-from typing import Any, Dict, List
+import sys  # pylint: disable=unused-import
+from typing import Any, Dict, List, Union
+
+from active_learning.al_pipeline.helpers import Params
 
 
 # Location of the ActiveLearning directory
-root_path = Path("/path/to/ActiveLearning")
+root_path = Path("./").resolve()
 # Python interpreter path
 python_path = root_path / "env/bin/python"
 # Directory containing slurm utilities
@@ -22,10 +25,11 @@ slurm_jobs_path = slurm_path / "jobs"
 
 
 def main(
-    multi_params: Dict[str, List[Any]],
+    multi_params: Dict[str, Union[str, List[Any]]],
     learn: bool,
     evaluate: bool,
     process: bool,
+    stopping: bool,
     graph: bool,
     average: bool,
     cpus_per_task: int,
@@ -34,7 +38,7 @@ def main(
 
     Parameters
     ----------
-    multi_params : Dict[str, List[Any]]
+    multi_params : Params
         A dictionary of lists to represent a series of experimental parameters to run.
     learn : bool
         If true, runs the active learning process.
@@ -42,6 +46,8 @@ def main(
         If true, runs the evaluation process.
     process : bool
         If true, runs the processing process.
+    stopping : bool
+        If true, runs the stopping process.
     graph : bool
         If true, runs the graphing process.
     average : bool
@@ -59,14 +65,13 @@ def main(
 
     print(f"multirun -- params:\n{pformat(multi_params)}")
 
-    if average and any(learn, evaluate, process, graph):
+    if average and any(learn, evaluate, process, stopping, graph):
         raise Exception("The averaging program should be run after all runs of pipeline finish.")
-    if any(isinstance(multi_params[k], list) for k in ["output_root", "task", "dataset"]):
+    if any(isinstance(multi_params[k], list) for k in ["output_root", "dataset"]):
         raise TypeError("Only one option for 'output_root', 'task', and 'dataset' is permitted.")
 
     dataset = multi_params["dataset"]
     output_root = multi_params["output_root"]
-    task = multi_params["task"]
 
     slurm_precepts = [
         f"#!{python_path.as_posix()} -u",
@@ -76,52 +81,43 @@ def main(
         f"#SBATCH --cpus-per-task={cpus_per_task}",
         "#SBATCH --constraint=skylake|broadwell",
         "#SBATCH --partition=long",
-        "from active_learning.active_learners import run",
+        "from active_learning.al_pipeline import run",
+        "from active_learning.al_pipeline.helpers import Params",
     ]
     slurm_precepts = [s + "\n" for s in slurm_precepts]
 
     order = [
-        "random_state",
-        "stop_set_size",
+        "early_stop_mode",
+        "first_batch_mode",
         "batch_size",
         "query_strategy",
         "base_learner",
-        "multiclass",
         "feature_rep",
+        "random_state",
     ]
 
     for combo in product(*[multi_params[k] for k in order]):
-
-        random_state = combo[0]
-        stop_set_size = combo[1]
-        batch_size = combo[2]
-        query_strategy = combo[3]
-        base_learner = combo[4]
-        multiclass = combo[5]
-        feature_rep = combo[6]
-
-        params = {
-            "output_root": output_root,
-            "task": task,
-            "stop_set_size": stop_set_size,
-            "batch_size": batch_size,
-            "query_strategy": query_strategy,
-            "feature_rep": feature_rep,
-            "base_learner": base_learner,
-            "multiclass": multiclass,
-            "dataset": dataset,
-            "random_state": random_state,
-        }
-        params = {k: str(v) for k, v in params.items()}
+        params = Params(
+            output_root=output_root,
+            early_stop_mode=combo[0],
+            first_batch_mode=combo[1],
+            batch_size=combo[2],
+            query_strategy=combo[3],
+            base_learner=combo[4],
+            feature_rep=combo[5],
+            dataset=dataset,
+            random_state=combo[6],
+        )
 
         with open(slurm_file, "w", encoding="utf8") as f:
             f.writelines(slurm_precepts)
             f.write(
                 f"run.main(\n"
-                f"    {pformat(params, indent=8)},\n"
+                f"    {params.construct_str()},\n"
                 f"    {learn},\n"
                 f"    {evaluate},\n"
                 f"    {process},\n"
+                f"    {stopping},\n"
                 f"    {graph},\n"
                 f"    {average},\n"
                 ")"
@@ -138,6 +134,7 @@ if __name__ == "__main__":
     parser.add_argument("--learn", action="store_true", help="Perform active learning.")
     parser.add_argument("--evaluate", action="store_true", help="Evaluate the learned models.")
     parser.add_argument("--process", action="store_true", help="Process evaluations into tables.")
+    parser.add_argument("--stopping", action="store_true", help="Analyze stopping criteria.")
     parser.add_argument("--graph", action="store_true", help="Create basic graphs for statistics.")
     parser.add_argument("--average", action="store_true", help="Average across multiple runs.")
     parser.add_argument(
@@ -150,16 +147,15 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     multi_params_ = {
-        "output_root": "outputs/output",
-        "task": "cls",
-        "stop_set_size": [0.1],
-        "batch_size": [0.10],
+        "output_root": "outputs/garbage",
+        "early_stop_mode": ["none"],
+        "first_batch_mode": ["random"],
+        "batch_size": [0.4, 0.5],
         "query_strategy": ["uncertainty_sampling"],
         "base_learner": ["SVC"],
-        "multiclass": ["ovr"],
-        "feature_rep": ["tfidf"],
-        "dataset": "20NewsGroups",
-        "random_state": [0],
+        "feature_rep": ["TfidfVectorizer"],
+        "dataset": "20NewsGroups-singlelabel",
+        "random_state": [0, 1],
     }
 
     main(
@@ -167,6 +163,7 @@ if __name__ == "__main__":
         args.learn,
         args.evaluate,
         args.process,
+        args.stopping,
         args.graph,
         args.average,
         args.cpus_per_task,

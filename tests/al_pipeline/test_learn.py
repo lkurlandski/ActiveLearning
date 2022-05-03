@@ -1,6 +1,7 @@
 """Test the active learning procedure.
 """
 
+import numpy as np
 from scipy import sparse
 from sklearn import datasets
 from sklearn.ensemble import RandomForestClassifier
@@ -10,8 +11,8 @@ from sklearn.multiclass import OneVsRestClassifier
 from modAL.batch import uncertainty_batch_sampling
 
 from active_learning import estimators
-from active_learning.active_learners import learn
-from active_learning.active_learners.helpers import Pool
+from active_learning.al_pipeline import learn
+from active_learning.al_pipeline.helpers import Pool
 
 
 random_state = 0
@@ -123,3 +124,85 @@ def test_with_all_pools(tmp_path):
     assert unlabeled_pool.y_path.exists()
     assert test_set.X_path.exists()
     assert test_set.y_path.exists()
+
+
+def test_get_first_batch_random():
+    protocol = "random"
+
+    _, y = datasets.make_classification(
+        n_samples, n_classes=2, n_informative=4, random_state=random_state
+    )
+    idx = learn.get_first_batch(y, protocol, 10)
+    assert len(idx) == 10
+
+    _, y = datasets.make_classification(
+        n_samples, n_classes=3, n_informative=4, random_state=random_state
+    )
+    idx = learn.get_first_batch(y, protocol, 10)
+    assert len(idx) == 10
+
+    _, y = datasets.make_multilabel_classification(
+        n_samples, n_classes=3, random_state=random_state
+    )
+    idx = learn.get_first_batch(y, protocol, 10)
+    assert len(idx) == 10
+
+    _, y = datasets.make_multilabel_classification(
+        n_samples, n_classes=3, random_state=random_state, sparse=True
+    )
+    idx = learn.get_first_batch(y, protocol, 10)
+    assert len(idx) == 10
+
+def test_get_first_batch_k_per_class():
+    protocol = "k_per_class"
+
+    _, y = datasets.make_classification(
+        n_samples, n_classes=2, n_informative=4, random_state=random_state
+    )
+    idx = learn.get_first_batch(y, protocol, 2)
+    assert len(idx) == 2 * 2
+    assert len(np.unique(y[idx])) == 2
+
+    _, y = datasets.make_classification(
+        n_samples, n_classes=3, n_informative=4, random_state=random_state
+    )
+    idx = learn.get_first_batch(y, protocol, 2)
+    assert len(idx) == 3 * 2
+    assert len(np.unique(y[idx])) == 3
+
+    _, y = datasets.make_multilabel_classification(
+        n_samples, n_classes=4, random_state=random_state
+    )
+    idx = learn.get_first_batch(y, protocol, 2)
+    assert len(idx) == 4 * 2
+    # TODO: add test to check that all classes are present in multilabel case
+
+    _, y = datasets.make_multilabel_classification(
+        n_samples, n_classes=3, random_state=random_state, sparse=True
+    )
+    idx = learn.get_first_batch(y, protocol, 2)
+    assert len(idx) == 3 * 2
+    # TODO: add test to check that all classes are present in multilabel case
+
+
+def test_early_stop_modes_exponential(tmp_path):
+
+    X, y = datasets.make_classification(
+        n_samples, n_classes=3, n_informative=4, random_state=random_state
+    )
+    estimator = DecisionTreeClassifier(random_state=random_state)
+    unlabeled_pool = Pool(X, y, tmp_path / "X.mtx", tmp_path / "y.npy")
+    learn.learn(
+        estimator, query_strategy, batch_size, unlabeled_pool, early_stop_mode="exponential"
+    )
+
+def test_early_stop_modes_finish(tmp_path):
+
+    X, y = datasets.make_classification(
+        n_samples, n_classes=3, n_informative=4, random_state=random_state
+    )
+    estimator = DecisionTreeClassifier(random_state=random_state)
+    unlabeled_pool = Pool(X, y, tmp_path / "X.mtx", tmp_path / "y.npy")
+    learn.learn(
+        estimator, query_strategy, batch_size, unlabeled_pool, early_stop_mode="finish"
+    )

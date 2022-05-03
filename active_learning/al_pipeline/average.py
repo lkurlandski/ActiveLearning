@@ -9,8 +9,8 @@ from typing import List
 
 import pandas as pd
 
-from active_learning.active_learners import graph
-from active_learning.active_learners.helpers import (
+from active_learning.al_pipeline import graph
+from active_learning.al_pipeline.helpers import (
     IndividualOutputDataContainer,
     OutputDataContainer,
     OutputHelper,
