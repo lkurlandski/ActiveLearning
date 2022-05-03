@@ -17,9 +17,7 @@ from typing import Callable, Union
 import warnings
 
 import joblib
-from modAL.batch import uncertainty_batch_sampling
 from modAL.models import ActiveLearner
-from modAL.uncertainty import entropy_sampling, margin_sampling, uncertainty_sampling
 import numpy as np
 from scipy import sparse
 from sklearn.base import BaseEstimator
@@ -30,17 +28,10 @@ from active_learning import estimators
 from active_learning import stat_helper
 from active_learning import dataset_fetchers
 from active_learning import feature_extractors
+from active_learning import query_strategies
 from active_learning import utils
 from active_learning.active_learners.helpers import Params, Pool, OutputHelper
 from active_learning.stopping_criteria import stabilizing_predictions
-
-
-query_strategies = {
-    "entropy_sampling": entropy_sampling,
-    "margin_sampling": margin_sampling,
-    "uncertainty_batch_sampling": uncertainty_batch_sampling,
-    "uncertainty_sampling": uncertainty_sampling,
-}
 
 
 def update(
@@ -370,7 +361,7 @@ def main(params: Params) -> None:
         type_of_target(y_unlabeled_pool),
         random_state=params.random_state,
     )
-    query_strategy = query_strategies[params.query_strategy]
+    query_strategy = query_strategies.get_modAL_query_strategy(params.query_strategy)
 
     # Setup output directory structure
     oh = OutputHelper(params)

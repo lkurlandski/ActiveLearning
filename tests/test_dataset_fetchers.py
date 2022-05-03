@@ -13,7 +13,7 @@ from active_learning.dataset_fetchers import huggingface
 class TestInterface:
     def test_no_stream1(self):
         X_train, X_test, y_train, y_test, target_names = dataset_fetchers.get_dataset(
-            "20NewsGroups", False, 0
+            "20NewsGroups-multilabel", False, 0
         )
 
         assert isinstance(X_train, list)
@@ -24,7 +24,7 @@ class TestInterface:
 
     def test_stream1(self):
         X_train, X_test, y_train, y_test, target_names = dataset_fetchers.get_dataset(
-            "20NewsGroups", True, 0
+            "20NewsGroups-multilabel", True, 0
         )
 
         assert isinstance(X_train, types.GeneratorType)

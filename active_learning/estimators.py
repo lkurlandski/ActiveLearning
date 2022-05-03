@@ -26,9 +26,10 @@ from sklearn.ensemble import (
     GradientBoostingClassifier,
     RandomForestClassifier,
 )
+from sklearn.linear_model import SGDClassifier
 from sklearn.multiclass import OneVsRestClassifier
 from sklearn.neural_network import MLPClassifier
-from sklearn.svm import SVC
+from sklearn.svm import LinearSVC, SVC
 
 from active_learning import utils
 
@@ -38,7 +39,9 @@ valid_base_learners = {
     "GradientBoostingClassifier",
     "RandomForestClassifier",
     "MLPClassifier",
+    "LinearSVC",
     "SVC",
+    "SGDClassifier",
 }
 
 
@@ -230,10 +233,20 @@ def get_mapper(random_state: int) -> Dict[str, Dict[str, Any]]:
             "args": [],
             "kwargs": dict(random_state=random_state),
         },
+        "LinearSVC": {
+            "cls": LinearSVC,
+            "args": [],
+            "kwargs": dict(random_state=random_state),
+        },
         "SVC": {
             "cls": SVC,
             "args": [],
             "kwargs": dict(kernel="linear", probability=True, random_state=random_state),
+        },
+        "SGDClassifier": {
+            "cls": SGDClassifier,
+            "args": [],
+            "kwargs": dict(random_state=random_state, n_jobs=-1),
         },
     }
 

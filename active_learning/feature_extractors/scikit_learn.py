@@ -28,7 +28,7 @@ class ScikitLearnTextFeatureExtractor(FeatureExtractor):
         Parameters
         ----------
         vectorizer : str
-            A scikit-learn vectorizer to be called/instatiated. One of: 
+            A scikit-learn vectorizer to be called/instatiated. One of:
                 {'CountVectorizer', 'HashingVectorizer', 'TfidfVectorizer'}
 
         Other Parameters

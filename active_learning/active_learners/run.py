@@ -129,7 +129,7 @@ if __name__ == "__main__":
         args.learn,
         args.evaluate,
         args.process,
-        args.graph,
         args.stopping,
+        args.graph,
         args.average,
     )

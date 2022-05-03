@@ -5,7 +5,7 @@
 from __future__ import annotations
 from dataclasses import dataclass
 from pathlib import Path
-from pprint import pprint  # pylint: disable=unused-import
+from pprint import pformat, pprint  # pylint: disable=unused-import
 import shutil
 import sys  # pylint: disable=unused-import
 from typing import List, Union
@@ -19,11 +19,11 @@ from active_learning import utils
 from active_learning.active_learners import (
     valid_early_stop_modes,
     valid_first_batch_modes,
-    valid_query_strategies,
 )
 from active_learning.dataset_fetchers import valid_datasets
 from active_learning.estimators import valid_base_learners
 from active_learning.feature_extractors import valid_feature_reps
+from active_learning.query_strategies import valid_query_strategies
 
 
 class Params(Bunch):
@@ -153,13 +153,13 @@ class Params(Bunch):
         if self.early_stop_mode not in valid_early_stop_modes:
             raise ValueError(
                 f"Invalid early stop mode: {self.early_stop_mode}. "
-                f"Valid modes are: {valid_early_stop_modes}"
+                f"Valid modes are:\n{pformat(valid_early_stop_modes)}"
             )
 
         if self.first_batch_mode not in valid_first_batch_modes:
             raise ValueError(
                 f"Invalid first batch mode: {self.first_batch_mode}. "
-                f"Valid modes are: {valid_first_batch_modes}"
+                f"Valid modes are:\n{pformat(valid_first_batch_modes)}"
             )
 
         if self.batch_size <= 0 or (self.batch_size > 1 and isinstance(self.batch_size, float)):
@@ -171,24 +171,24 @@ class Params(Bunch):
         if self.query_strategy not in valid_query_strategies:
             raise ValueError(
                 f"Invalid query strategy: {self.query_strategy}. "
-                f"Valid strategies are: {valid_query_strategies}"
+                f"Valid strategies are:\n{pformat(valid_query_strategies)}"
             )
 
         if self.base_learner not in valid_base_learners:
             raise ValueError(
                 f"Invalid base learner: {self.base_learner}. "
-                f"Valid learners are: {valid_base_learners}"
+                f"Valid learners are:\n{pformat(valid_base_learners)}"
             )
 
         if self.feature_rep not in valid_feature_reps:
             raise ValueError(
                 f"Invalid feature rep: {self.feature_rep}. "
-                f"Valid feature reps: {valid_feature_reps}"
+                f"Valid feature reps:\n{pformat(valid_feature_reps)}"
             )
 
         if self.dataset not in valid_datasets:
             raise ValueError(
-                f"Invalid dataset: {self.dataset}. " f"Valid datsets: {valid_datasets}"
+                f"Invalid dataset: {self.dataset}. " f"Valid datsets:\n{pformat(valid_datasets)}"
             )
 
 

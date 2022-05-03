@@ -211,3 +211,22 @@ def iter_spmatrix(matrix: sparse.spmatrix):
 
     else:
         raise NotImplementedError("The iterator for this sparse matrix has not been implemented")
+
+
+def multi_argmin(values: np.ndarray, n_instances: int = 1) -> np.ndarray:
+    """
+    Selects the indices of the n_instances lowest values.
+
+    Args:
+        values: Contains the values to be selected from.
+        n_instances: Specifies how many indices to return.
+
+    Returns:
+        The indices of the n_instances smallest values.
+    """
+    assert (
+        n_instances <= values.shape[0]
+    ), "n_instances must be less or equal than the size of utility"
+
+    max_idx = np.argpartition(values, n_instances - 1, axis=0)[:n_instances]
+    return max_idx

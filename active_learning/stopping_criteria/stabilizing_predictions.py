@@ -157,7 +157,7 @@ class StabilizingPredictions(StoppingCriteria):
             stop_set_preds = np.array(stop_set_preds)
         if isinstance(initial_unlabeled_pool_preds, list):
             initial_unlabeled_pool_preds = np.array(initial_unlabeled_pool_preds)
-        
+
         # TODO: add support for sparse matrices instead of casting to dense
         if isinstance(stop_set_preds, sparse.csr_matrix):
             stop_set_preds = stop_set_preds.toarray()
