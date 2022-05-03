@@ -49,11 +49,11 @@ Users are advised to familiarize themselves with the engineering aspects of the 
 # Usage
 
 All source code for this repository resides in the active_learning package. The subpackages in the active_learning package are:
-- active_learners
+- al_pipeline
 - dataset_fetchers
 - feature_extractors
 
-We will discuss the usage of these modules in a logical order: dataset_fetchers, feature_extractors, and finally active_learners.
+We will discuss the usage of these modules in a logical order: dataset_fetchers, feature_extractors, and finally al_pipeline.
 
 ## Fetching datasets with dataset_fetchers
 
@@ -63,9 +63,9 @@ TODO
 
 TODO
 
-## Running active learning experiments with active_learners
+## Running active learning experiments with al_pipeline
 
-The active_learners package conducts active learning experiments and analyzes the results of the experiments. The modules in the active_learners package are
+The al_pipeline package conducts active learning experiments and analyzes the results of the experiments. The modules in the al_pipeline package are
 - average
 - evaluate
 - graph
@@ -117,64 +117,64 @@ When running locally, the run module has a command-line-interface with five bool
 Each flag refers to one of the modules with that flag's respective name. Providing the flag through the command line tells the run module to execute the respective module's processes using the experimental parameters in the `params_` dict. For example,
 
 ```console
-python active_learning/active_learners/run.py --learn
+python active_learning/al_pipeline/run.py --learn
 ```
 
 will run only the learn module, while
 
 ```console
-python active_learning/active_learners/run.py --evaluate
+python active_learning/al_pipeline/run.py --evaluate
 ```
 
 will run only the evaluate module. This second command will obviously throw an error if the correct files and directories do not exist to perform evaluation. In the fact, the first command is needed to proceed to second command for the second command to run properly. To avoid such confusions, both commands can be specified, like in
 
 
 ```console
-python active_learning/active_learners/run.py --learn --evaluate
+python active_learning/al_pipeline/run.py --learn --evaluate
 ```
 
 In general, the order does not matter, so the following is equivalent:
 
 ```console
-python active_learning/active_learners/run.py --evaluate --learn
+python active_learning/al_pipeline/run.py --evaluate --learn
 ```
 
 In fact, several processes can be specified at once, as in
 
 ```console
-python active_learning/active_learners/run.py --learn --evaluate --process --graph
+python active_learning/al_pipeline/run.py --learn --evaluate --process --graph
 ```
 
 However, the average module should not be executed until all experiments it intends to average have completed. For this readon, an error is thrown if the user tries to combine the --average flag with any other flag(s). For example, the below will throw and error
 
 ```console
-python active_learning/active_learners/run.py --learn --evaluate --process --graph --average
+python active_learning/al_pipeline/run.py --learn --evaluate --process --graph --average
 ```
 
 The correct way to do this would be to run
 ```console
-python active_learning/active_learners/run.py --learn --evaluate --process --graph
+python active_learning/al_pipeline/run.py --learn --evaluate --process --graph
 ```
 
 and wait for all experiments to finish. Then run
 
 ```console
-python active_learning/active_learners/run.py --average
+python active_learning/al_pipeline/run.py --average
 ```
 
 Finally, for instructions on how to use the run module from the command line, simply type
 ```console
-python active_learning/active_learners/run.py -h
+python active_learning/al_pipeline/run.py -h
 ```
 
 The run module is also executable as a SLURM script. Before executing as a SLURM script, first modify the lines at the top of the script to point to the correct locations. The interface as a slurm script is the exact same as the interface as a python script. Simply use the sbatch command instead of the python command. For example,
 ```console
-sbatch active_learning/active_learners/run.py --learn --evaluate --process --graph
+sbatch active_learning/al_pipeline/run.py --learn --evaluate --process --graph
 ```
 
 Using SLURM comes with a host of benefits. First of all, it allows for multiprocessing. When performing one-vs-rest classification with n_classes, n_classes classifiers are trained and ensembled to create a meta-classifier. This process can be efficiently parallelized by using n_classes threads. The codebase is already configured to perform multithreading if possible. However, by default, SLURM only allocates one cpu to a submitted job, which diminishes the potential for multithreading. We can ammend this situtation with SLURM's --cpus-per-task parameter. For example, suppose we are running an experiment with 20NewsGroups and support vector machines in a one-vs-rest configuration. Our submission to sbatch could look like
 ```console
-sbatch active_learning/active_learners/run.py --learn --cpus-per-task=20
+sbatch active_learning/al_pipeline/run.py --learn --cpus-per-task=20
 ```
 
 For more details on possible options to use with sbatch, see 
@@ -189,7 +189,7 @@ Please note that configurations specified at the top of the run script will over
 
 but you submit the script to SLURM using
 ```console
-sbatch active_learning/active_learners/run.py --learn --partition=long
+sbatch active_learning/al_pipeline/run.py --learn --partition=long
 ```
 
 your job will be submitted with the short partition, not the long one!
@@ -201,7 +201,7 @@ To run several experiments with a single command, we can use the mutltirun scrip
 To use the multirun program, first, edit the `root_path` variable to point to the location of the ActiveLearning directory.. Next, edit the `multi_params_` dict inside of it with the different experiments you would like to run. Then edit the `slurm_precepts` with any custom sbatch options you would like the job to be submited with. Then proceed with the command-line interface described for the run script. For example,
 
 ```console
-python active_learning/active_learners/multirun.py --learn --evaluate --process --graph
+python active_learning/al_pipeline/multirun.py --learn --evaluate --process --graph
 ```
 
 # Contributing
@@ -213,7 +213,7 @@ Using a uniform coding style across all team members can improve the readability
 - Limit the number of characters per line to 100 (suggest using an IDE extension to put vertical line at this position)
 
 Before committing changes, use black's auto formatter to enforce a uniform coding style
-- black --line-length 100 --exclude active_learning/active_learners/run.py active_learning
+- black --line-length 100 --exclude active_learning/al_pipeline/run.py active_learning
 
 Pylint can identify errors in your code and provide other useful feedback. Consider addressing some of pylint's suggestions
 - pylint myfile.py

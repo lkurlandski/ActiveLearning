@@ -1,12 +1,12 @@
 #!/path/to/ActiveLearning/env/bin/python -u
 
-# SBATCH --chdir=/path/to/ActiveLearning
-# SBATCH --output=/path/to/ActiveLearning/slurm/jobs/job.name.%A.out
-# SBATCH --constraint=skylake|broadwell
-# SBATCH --job-name=name
-# SBATCH --partition=long
-# SBATCH --cpus-per-task=1
-# SBATCH --ntasks=1
+#SBATCH --chdir=/path/to/ActiveLearning
+#SBATCH --output=/path/to/ActiveLearning/slurm/jobs/job.name.%A.out
+#SBATCH --constraint=skylake|broadwell
+#SBATCH --job-name=name
+#SBATCH --partition=long
+#SBATCH --cpus-per-task=1
+#SBATCH --ntasks=1
 
 """Interface to the features of this module that can be used with python or sbatch.
 
