@@ -11,6 +11,7 @@ from scipy import sparse
 from active_learning.feature_extractors.huggingface import HuggingFaceFeatureExtractor
 from active_learning.feature_extractors.preprocessed import PreprocessedFeatureExtractor
 from active_learning.feature_extractors.scikit_learn import ScikitLearnTextFeatureExtractor
+from active_learning.feature_extractors.gensim import GensimFeatureExtractor
 
 
 valid_scikit_learn_reps = {
@@ -29,8 +30,14 @@ valid_huggingface_reps = {
     "roberta-base",
 }
 
+valid_gensim_reps = {
+    "w2v",
+    "d2v",
+    "fasttext"
+}
 
-valid_feature_reps = {"none"}.union(valid_scikit_learn_reps, valid_huggingface_reps)
+
+valid_feature_reps = {"none"}.union(valid_scikit_learn_reps, valid_huggingface_reps, valid_gensim_reps)
 
 
 def get_features(
@@ -58,6 +65,8 @@ def get_features(
         feature_extractor = ScikitLearnTextFeatureExtractor(feature_rep)
     elif feature_rep in valid_huggingface_reps:
         feature_extractor = HuggingFaceFeatureExtractor(feature_rep)
+    elif feature_rep in valid_gensim_reps:
+        feature_extractor = GensimFeatureExtractor(feature_rep)
     else:
         raise ValueError(
             f"feature rep: {feature_rep} not recognized. "

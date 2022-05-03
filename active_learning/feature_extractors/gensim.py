@@ -63,7 +63,6 @@ class GensimFeatureExtractor(FeatureExtractor):
         X_test_tokens = self._tokenize(X_test)
         
         print(len(X_train_tokens))
-        print(len(X_train))
 
         w2v_model = Word2Vec(sentences=X_train_tokens, vector_size=500, min_count=1, window=15, epochs=20)
 
@@ -102,7 +101,7 @@ class GensimFeatureExtractor(FeatureExtractor):
         for doc_id in range(len(X_test_tokens)):
             X_test_vectors.append(d2v_model.infer_vector(X_test_tokens[doc_id]))
         
-        return np.asarray(X_train_vectors), np.asarray(X_test_vectors)
+        return np.array(X_train_vectors), np.array(X_test_vectors)
 
     def _vectorize(self, model, sentences):
         sentence_vectors = []
@@ -111,11 +110,12 @@ class GensimFeatureExtractor(FeatureExtractor):
         for sentence in sentences:
 
             for token in sentence:
-                if token in model.wv.key_to_index or isinstance(type(model), type(FastText)):
+                if token in model.wv.key_to_index:
                     sentence_vectors.append(model.wv[token])
                 else:
                     sentence_vectors.append(np.zeros(500))
 
+            print(len(sentence_vectors))
             mean_vectors.append(np.mean(np.array(sentence_vectors), axis=0))
             sentence_vectors.clear()
 

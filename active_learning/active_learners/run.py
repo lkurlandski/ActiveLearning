@@ -113,14 +113,14 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     params_ = Params(
-        output_root="outputs/garbage",
+        output_root="/home/hpc/elphicb1/ActiveLearning/ActiveLearning/new_output/cls",
         early_stop_mode="none",
         first_batch_mode="random",
-        batch_size=.6,
+        batch_size=.2,
         query_strategy="uncertainty_sampling",
         base_learner="SVC",
-        feature_rep="none",
-        dataset="Iris",
+        feature_rep="w2v",
+        dataset="Reuters",
         random_state=0,
     )
 
