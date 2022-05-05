@@ -61,7 +61,7 @@ def test_multilabel_classification_sparse_features(tmp_path):
     X, y = datasets.make_multilabel_classification(
         n_samples, n_classes=3, sparse=True, random_state=random_state
     )
-    MultiOutputToMultiLabelClassifier = estimators.get_MultiOutputToMultiLabelClassifier(
+    MultiOutputToMultiLabelClassifier = estimators.get_multioutput_to_multilabel_wrapper(
         RandomForestClassifier
     )
     estimator = MultiOutputToMultiLabelClassifier(random_state=random_state)
@@ -108,7 +108,7 @@ def test_with_all_pools(tmp_path):
     path.mkdir()
     test_set = Pool(X, y, path / "X.mtx", path / "y.mtx")
 
-    MultiOutputToMultiLabelClassifier = estimators.get_MultiOutputToMultiLabelClassifier(
+    MultiOutputToMultiLabelClassifier = estimators.get_multioutput_to_multilabel_wrapper(
         RandomForestClassifier
     )
     estimator = MultiOutputToMultiLabelClassifier(random_state=random_state)
