@@ -112,18 +112,18 @@ def get_modAL_query_strategy(
 
     if query_strategy == "uncertrainty_batch_sampling":
         return uncertainty_batch_sampling
-    elif query_strategy == "entropy_sampling":
+    if query_strategy == "entropy_sampling":
         return entropy_sampling
-    elif query_strategy == "margin_sampling":
+    if query_strategy == "margin_sampling":
         return margin_sampling
-    elif query_strategy == "uncertainty_sampling":
+    if query_strategy == "uncertainty_sampling":
         return uncertainty_sampling
-    elif query_strategy == "random_sampling":
+    if query_strategy == "random_sampling":
         return random_sampling
-    elif query_strategy == "closest_to_hyperplane":
+    if query_strategy == "closest_to_hyperplane":
         return closest_to_hyperplane
-    else:
-        raise ValueError(
-            f"query_strategy: {query_strategy} not recognized. "
-            f"Valid strategies are:\n{pformat(valid_query_strategies)}"
-        )
+
+    raise ValueError(
+        f"query_strategy: {query_strategy} not recognized. "
+        f"Valid strategies are:\n{pformat(valid_query_strategies)}"
+    )

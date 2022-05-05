@@ -26,8 +26,8 @@ from scipy import sparse
 from sklearn.datasets import load_files
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import MultiLabelBinarizer
+from sklearn.utils import shuffle
 
-from active_learning import stat_helper
 from active_learning.dataset_fetchers.base import DatasetFetcher
 from active_learning.dataset_fetchers.utils import paths_to_contents_generator
 
@@ -99,9 +99,7 @@ class PredefinedPreprocessedFileDatasetFetcher(PreprocessedFileDatasetFetcher):
         y_train = np.loadtxt(self.train_path / self.target, dtype=np.str_)
         X_test = np.loadtxt(self.test_path / self.features, delimiter=",")
         y_test = np.loadtxt(self.test_path / self.target, dtype=np.str_)
-        X_train, y_train = stat_helper.shuffle_corresponding_arrays(
-            X_train, y_train, self.random_state
-        )
+        X_train, y_train = shuffle(X_train, y_train, random_state=self.random_state)
 
         target_names = np.unique(np.concatenate((y_train, y_test)))
 

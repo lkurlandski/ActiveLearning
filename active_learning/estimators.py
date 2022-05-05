@@ -229,9 +229,6 @@ def get_estimator(
     KeyError
         If the learner is not recognized.
     """
-    if target_type not in {"multilabel-indicator", "multiclass", "binary"}:
-        raise ValueError(f"Estimators for this kind of target: {target_type} not supported")
-
     if learner == "DecisionTreeClassifier":
         DecisionTreeClassifier_ = get_multioutput_to_multilabel_wrapper(DecisionTreeClassifier)
         clf = DecisionTreeClassifier_(random_state=random_state)
@@ -278,3 +275,8 @@ def get_estimator(
         if learner in support_multilabel.union(support_multiclass_multioutput):
             return clf
         return OneVsRestClassifier(clf, n_jobs=-1)
+
+    raise ValueError(
+        f"Estimators for this kind of target: {target_type} not supported. "
+        f"Valid target types are:\n{pformat({'multilabel-indicator', 'multiclass', 'binary'})}"
+    )
