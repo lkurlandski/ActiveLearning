@@ -14,7 +14,7 @@ import pandas as pd
 from active_learning import stat_helper
 from active_learning.stopping_criteria.base import StoppingCriteria
 from active_learning.stopping_criteria import StabilizingPredictions
-from active_learning.active_learners.helpers import (
+from active_learning.al_pipeline.helpers import (
     IndividualOutputDataContainer,
     OutputHelper,
     Params,

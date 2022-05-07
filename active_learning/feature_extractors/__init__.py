@@ -24,7 +24,7 @@ valid_scikit_learn_reps = {
 valid_huggingface_reps = {
     "albert-base-v2",
     "bert-base-uncased",
-    "bert-cased",
+    "bert-base-cased",
     "distilbert-base-uncased",
     "distilroberta-base",
     "roberta-base",

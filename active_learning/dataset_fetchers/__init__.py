@@ -56,7 +56,7 @@ def get_mapper(random_state: int = 0) -> Callable[..., base.DatasetFetcher]:
     """
 
     mapper = {
-        "20NewsGroups": utils.init(
+        "20NewsGroups-multilabel": utils.init(
             disk.PredefinedTextFileDatasetFetcher,
             random_state=random_state,
             dataset="20NewsGroups",
@@ -153,7 +153,7 @@ def get_mapper(random_state: int = 0) -> Callable[..., base.DatasetFetcher]:
             random_state=random_state,
             dataset="Iris",
         ),
-        "20NewsGroups-multiclass": utils.init(
+        "20NewsGroups-singlelabel": utils.init(
             scikit_learn.ScikitLearnDatasetFetcher,
             random_state=random_state,
             dataset="20NewsGroups",

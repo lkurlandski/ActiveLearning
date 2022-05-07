@@ -95,7 +95,7 @@ def test_multilabel_classification3():
     )
     clf = estimators.get_estimator("RandomForestClassifier", type_of_target(y), random_state)
     assert isinstance(clf, RandomForestClassifier)
-    MultiOutputToMultiLabelClassifier = estimators.get_MultiOutputToMultiLabelClassifier(
+    MultiOutputToMultiLabelClassifier = estimators.get_multioutput_to_multilabel_wrapper(
         RandomForestClassifier
     )
     assert str(type(clf)) == str(MultiOutputToMultiLabelClassifier)

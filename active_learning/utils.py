@@ -154,7 +154,7 @@ def print_memory_stats(flush: bool = True, attrs: List[str] = None) -> str:
         s += f"\n\t{a}={data}"
     print(s, flush=flush)
 
-    # return s
+    return s
 
 
 def nbytes(a: Any) -> int:

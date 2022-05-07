@@ -13,7 +13,7 @@ from matplotlib.figure import Figure
 import matplotlib.pyplot as plt
 import pandas as pd
 
-from active_learning.active_learners.helpers import OutputHelper, OutputDataContainer, Params
+from active_learning.al_pipeline.helpers import OutputHelper, OutputDataContainer, Params
 from active_learning import stopping_criteria
 
 

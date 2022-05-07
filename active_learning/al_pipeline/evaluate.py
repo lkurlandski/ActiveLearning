@@ -13,8 +13,8 @@ from sklearn import metrics
 from sklearn.base import BaseEstimator
 
 from active_learning import stat_helper
-from active_learning.active_learners.learn import update
-from active_learning.active_learners.helpers import (
+from active_learning.al_pipeline.learn import update
+from active_learning.al_pipeline.helpers import (
     Params,
     Pool,
     IndividualOutputDataContainer,

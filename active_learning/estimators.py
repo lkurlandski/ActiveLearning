@@ -1,22 +1,10 @@
 """Acquire a scikit-learn estimator from a string code.
-
-TODO
-----
-- Determine the optimal svm to use from scikit-learn.
-- Implement multilabel classification.
-- Expand into a module with wrappers for tensorflow, pytorch, and huggingface models.
-- When doing the above, perform a big overhaul/refactor.
-
-FIXME
------
-- Address the problem where the calibrated classifier will fail if not enough examples from each
-    class exist.
 """
 
 
 from pprint import pformat, pprint  # pylint: disable=unused-import
 import sys  # pylint: disable=unused-import
-from typing import Any, Callable, Dict
+from typing import Callable
 import warnings
 
 import numpy as np
@@ -26,22 +14,32 @@ from sklearn.ensemble import (
     GradientBoostingClassifier,
     RandomForestClassifier,
 )
+from sklearn.linear_model import SGDClassifier
 from sklearn.multiclass import OneVsRestClassifier
+from sklearn.neighbors import KNeighborsClassifier, RadiusNeighborsClassifier
 from sklearn.neural_network import MLPClassifier
-from sklearn.svm import SVC
+from sklearn.svm import LinearSVC, SVC
+from sklearn.tree import DecisionTreeClassifier, ExtraTreeClassifier
 
-from active_learning import utils
 
-
+# Keeping this dictionary up to date can help with debugging and error messages.
 valid_base_learners = {
     "ExtraTreesClassifier",
     "GradientBoostingClassifier",
     "RandomForestClassifier",
+    "SGDClassifier",
+    "KNeighborsClassifier",
+    "RadiusNeighborsClassifier",
     "MLPClassifier",
+    "LinearSVC",
     "SVC",
+    "DecisionTreeClassifier",
+    "ExtraTreeClassifier",
 }
 
 
+# These learners are multiclass by nature and should not be wrapped in a
+# multiclass wrapper.
 inherintly_multiclass = {
     "BernoulliNB",
     "DecisionTreeClassifier",
@@ -65,12 +63,17 @@ inherintly_multiclass = {
 }
 
 
+# These learners are not inherintly multiclass, but support multiclass
+# classification using a one-versus-one protocol.
 multiclass_as_one_vs_one = {
     "NuSVC",
     "SVC",
     "GaussianProcessClassifier",  # (setting multi_class = “one_vs_one”)
 }
 
+
+# These learners are not inherintly multiclass, but support multiclass
+# classification using a one-versus-rest protocol.
 multiclass_as_one_vs_rest = {
     "GradientBoostingClassifier",
     "GaussianProcessClassifier",  # (setting multi_class = “one_vs_rest”)
@@ -83,6 +86,8 @@ multiclass_as_one_vs_rest = {
 }
 
 
+# These learners support multilabel classification and should not be wrapped in
+# a multiclass or multilabel wrapper.
 support_multilabel = {
     "DecisionTreeClassifier",
     "ExtraTreeClassifier",
@@ -96,17 +101,20 @@ support_multilabel = {
 }
 
 
+# These larners support multioutput classification and need their prediction
+# targets modified to be compatible with ModAL.
+# The MultiOutputToMultiLabelClassifier handles this.
 support_multiclass_multioutput = {
     "DecisionTreeClassifier",
     "ExtraTreeClassifier",
     "ExtraTreesClassifier",
+    "RandomForestClassifier",
     "KNeighborsClassifier",
     "RadiusNeighborsClassifier",
-    "RandomForestClassifier",
 }
 
 
-def get_MultiOutputToMultiLabelClassifier(
+def get_multioutput_to_multilabel_wrapper(
     base: Callable[..., BaseEstimator]
 ) -> Callable[..., BaseEstimator]:
     """Get a MultiOutputToMultiLabelClassifier to wrap multioutput scikit-learn base learners.
@@ -122,7 +130,7 @@ def get_MultiOutputToMultiLabelClassifier(
         A class that inherits from base that handles the conversion of predict_proba calls.
     """
 
-    if base.__name__ not in support_multiclass_multioutput:
+    if base.__name__ not in support_multiclass_multioutput and base.__name__ != "BaseEstimator":
         warnings.warn(
             f"WARNING: the {base.__name__} class is not inhertintly multiclass, so the"
             " MultiOutputToMultiLabelClassifier wrapper class should not be used."
@@ -195,51 +203,6 @@ def get_MultiOutputToMultiLabelClassifier(
     return MultiOutputToMultiLabelClassifier
 
 
-def get_mapper(random_state: int) -> Dict[str, Dict[str, Any]]:
-    """Return the mapping of keyword arguments to BaseLearner instances.
-
-    Parameters
-    ----------
-    random_state : int
-        Integer for reproducible results.
-
-    Returns
-    -------
-    Dict[str, BaseEstimator]
-        Mapping of keyword arguments to scikit-learn learners.
-    """
-
-    mapper = {
-        "ExtraTreesClassifier": {
-            "cls": ExtraTreesClassifier,
-            "args": [],
-            "kwargs": dict(random_state=random_state),
-        },
-        "GradientBoostingClassifier": {
-            "cls": GradientBoostingClassifier,
-            "args": [],
-            "kwargs": dict(random_state=random_state),
-        },
-        "RandomForestClassifier": {
-            "cls": RandomForestClassifier,
-            "args": [],
-            "kwargs": dict(random_state=random_state),
-        },
-        "MLPClassifier": {
-            "cls": MLPClassifier,
-            "args": [],
-            "kwargs": dict(random_state=random_state),
-        },
-        "SVC": {
-            "cls": SVC,
-            "args": [],
-            "kwargs": dict(kernel="linear", probability=True, random_state=random_state),
-        },
-    }
-
-    return mapper
-
-
 def get_estimator(
     learner: str,
     target_type: str,
@@ -266,20 +229,41 @@ def get_estimator(
     KeyError
         If the learner is not recognized.
     """
-
-    if target_type not in {"multilabel-indicator", "multiclass", "binary"}:
-        raise ValueError(f"Estimators for this kind of target: {target_type} not supported")
-
-    mapper = get_mapper(random_state)
-
-    if learner not in mapper:
-        raise KeyError(f"Learner not recognized: {learner}")
-
-    cls = mapper[learner]["cls"]
-    args = mapper[learner]["args"]
-    kwargs = mapper[learner]["kwargs"]
-
-    clf = utils.init(cls, *args, **kwargs)()
+    if learner == "DecisionTreeClassifier":
+        DecisionTreeClassifier_ = get_multioutput_to_multilabel_wrapper(DecisionTreeClassifier)
+        clf = DecisionTreeClassifier_(random_state=random_state)
+    elif learner == "ExtraTreeClassifier":
+        ExtraTreeClassifier_ = get_multioutput_to_multilabel_wrapper(ExtraTreeClassifier)
+        clf = ExtraTreeClassifier_(random_state=random_state)
+    elif learner == "ExtraTreesClassifier":
+        ExtraTreesClassifer_ = get_multioutput_to_multilabel_wrapper(ExtraTreesClassifier)
+        clf = ExtraTreesClassifer_(random_state=random_state)
+    elif learner == "RandomForestClassifier":
+        RandomForestClassifier_ = get_multioutput_to_multilabel_wrapper(RandomForestClassifier)
+        clf = RandomForestClassifier_(random_state=random_state)
+    elif learner == "KNeighborsClassifier":
+        KNeighborsClassifier_ = get_multioutput_to_multilabel_wrapper(KNeighborsClassifier)
+        clf = KNeighborsClassifier_(random_state=random_state)
+    elif learner == "RadiusNeighborsClassifier":
+        RadiusNeighborsClassifier_ = get_multioutput_to_multilabel_wrapper(
+            RadiusNeighborsClassifier
+        )
+        clf = RadiusNeighborsClassifier_(random_state=random_state)
+    elif learner == "GradientBoostingClassifier":
+        clf = GradientBoostingClassifier(random_state=random_state)
+    elif learner == "MLPClassifier":
+        clf = MLPClassifier(random_state=random_state)
+    elif learner == "LinearSVC":
+        clf = LinearSVC(random_state=random_state)
+    elif learner == "SVC":
+        clf = SVC(kernel="linear", probability=True, random_state=random_state)
+    elif learner == "SGDClassifier":
+        clf = SGDClassifier(random_state=random_state, n_jobs=-1)
+    else:
+        raise ValueError(
+            f"Learner not recognized: {learner}. "
+            f"Valid learners are: {pformat(valid_base_learners)}."
+        )
 
     if target_type == "binary":
         return clf
@@ -288,11 +272,11 @@ def get_estimator(
             return clf
         return OneVsRestClassifier(clf, n_jobs=-1)
     if target_type == "multilabel-indicator":
-        if learner in support_multiclass_multioutput:
-            MultiOutputToMultiLabelClassifier = get_MultiOutputToMultiLabelClassifier(cls)
-            return MultiOutputToMultiLabelClassifier(*args, **kwargs)
-        if learner in support_multilabel:
+        if learner in support_multilabel.union(support_multiclass_multioutput):
             return clf
         return OneVsRestClassifier(clf, n_jobs=-1)
 
-    raise Exception("Undefined behavior occurred associated with the type of target.")
+    raise ValueError(
+        f"Estimators for this kind of target: {target_type} not supported. "
+        f"Valid target types are:\n{pformat({'multilabel-indicator', 'multiclass', 'binary'})}"
+    )

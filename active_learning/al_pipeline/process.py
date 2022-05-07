@@ -12,7 +12,7 @@ from typing import Dict, List, Union
 
 import pandas as pd
 
-from active_learning.active_learners.helpers import (
+from active_learning.al_pipeline.helpers import (
     IndividualOutputDataContainer,
     OutputHelper,
     Params,
