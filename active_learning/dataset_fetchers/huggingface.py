@@ -64,11 +64,11 @@ class ClassificationFetcher(HuggingFaceDatasetFetcher):
         "emotion": "text",
         "imdb": "text",
         "rotten_tomatoes": "text",
+        "tweet_eval": "text",
     }
 
     def fetch(self) -> Tuple[List[str], List[str], np.ndarray, np.ndarray, np.ndarray]:
 
-        print(type(self))
         X_train, X_test, y_train, y_test, target_names = self.stream()
 
         return (

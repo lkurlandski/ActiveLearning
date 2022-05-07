@@ -1,4 +1,5 @@
 env
+env2
 config_files/*.json
 slurm/jobs/*
 slurm/scripts/*

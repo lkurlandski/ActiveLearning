@@ -35,6 +35,9 @@ valid_datasets = {
     "Covertype",
     "Iris",
     "20NewsGroups-singlelabel",
+    "rotten_tomatoes",
+    "imdb",
+    "tweet_eval",
 }
 
 
@@ -133,7 +136,13 @@ def get_mapper(random_state: int = 0) -> Callable[..., base.DatasetFetcher]:
             huggingface.PredefinedClassificationFetcher,
             random_state=random_state,
             path="rotten_tomatoes",
-        ), 
+        ),
+        "tweet_eval": utils.init(
+            huggingface.PredefinedClassificationFetcher,
+            random_state=random_state,
+            path="tweet_eval",
+            name="emotion",
+        ),
         "Covertype": utils.init(
             scikit_learn.ScikitLearnDatasetFetcher,
             random_state=random_state,

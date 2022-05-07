@@ -1,4 +1,4 @@
-#!/home/hpc/elphicb1/ActiveLearning/ActiveLearning/env/bin/python -u
+#!/home/hpc/elphicb1/ActiveLearning/ActiveLearning/env2/bin/python -u
 
 #SBATCH --chdir=/home/hpc/elphicb1/ActiveLearning/ActiveLearning
 #SBATCH --output=/home/hpc/elphicb1/ActiveLearning/ActiveLearning/slurm/jobs/job.%A.out
@@ -106,21 +106,21 @@ if __name__ == "__main__":
     parser.add_argument("--learn", action="store_true", help="Perform active learning.")
     parser.add_argument("--evaluate", action="store_true", help="Evaluate the learned models.")
     parser.add_argument("--process", action="store_true", help="Process evaluations into tables.")
-    parser.add_argument("--stopping", action="store_true", help="Analyze stopping criteria.")
     parser.add_argument("--graph", action="store_true", help="Create basic graphs for statistics.")
+    parser.add_argument("--stopping", action="store_true", help="Analyze stopping criteria.")
     parser.add_argument("--average", action="store_true", help="Average across multiple runs.")
 
     args = parser.parse_args()
 
     params_ = Params(
-        output_root="/home/hpc/elphicb1/ActiveLearning/ActiveLearning/new_output/cls",
+        output_root="/home/hpc/elphicb1/ActiveLearning/ActiveLearning/new_output/",
         early_stop_mode="none",
         first_batch_mode="random",
-        batch_size=.2,
+        batch_size=.02,
         query_strategy="uncertainty_sampling",
         base_learner="SVC",
-        feature_rep="w2v",
-        dataset="Reuters",
+        feature_rep="fasttext",
+        dataset="rotten_tomatoes",
         random_state=0,
     )
 

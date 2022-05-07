@@ -11,7 +11,7 @@ from scipy import sparse
 from active_learning.feature_extractors.huggingface import HuggingFaceFeatureExtractor
 from active_learning.feature_extractors.preprocessed import PreprocessedFeatureExtractor
 from active_learning.feature_extractors.scikit_learn import ScikitLearnTextFeatureExtractor
-from active_learning.feature_extractors.gensim import GensimFeatureExtractor
+from active_learning.feature_extractors._gensim import GensimFeatureExtractor
 
 
 valid_scikit_learn_reps = {
