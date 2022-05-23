@@ -1,4 +1,5 @@
 env
+env2
 config_files/*.json
 slurm/jobs/*
 slurm/scripts/*
@@ -7,6 +8,11 @@ output*/*
 .vscode/*
 **/__pycache__
 *.ipynb
+src/*.ipynb
+dataset_test.py
 active_learning.egg-info/
 build/
 dist/
+new_output/
+*.png
+*.pyc
