@@ -110,7 +110,7 @@ def get_modAL_query_strategy(
         If the query strategy is not recognized.
     """
 
-    if query_strategy == "uncertrainty_batch_sampling":
+    if query_strategy == "uncertainty_batch_sampling":
         return uncertainty_batch_sampling
     if query_strategy == "entropy_sampling":
         return entropy_sampling

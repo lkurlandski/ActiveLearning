@@ -1,7 +1,7 @@
-#!/home/hpc/elphicb1/ActiveLearning/ActiveLearning/env2/bin/python -u
+#!./env2/bin/python -u
 
-#SBATCH --chdir=/home/hpc/elphicb1/ActiveLearning/ActiveLearning
-#SBATCH --output=/home/hpc/elphicb1/ActiveLearning/ActiveLearning/slurm/jobs/job.%A.out
+#SBATCH --chdir=/home/hpc/kurlanl1/bloodgood/ActiveLearning
+#SBATCH --output=/home/hpc/kurlanl1/bloodgood/ActiveLearning/slurm/jobs/job.%A.out
 #SBATCH --constraint=skylake|broadwell
 #SBATCH --job-name=name
 #SBATCH --partition=long
@@ -114,14 +114,14 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     params_ = Params(
-        output_root="/home/hpc/elphicb1/ActiveLearning/ActiveLearning/new_output/",
+        output_root="./outputs/output",
         early_stop_mode="none",
         first_batch_mode="random",
-        batch_size=0.6,
-        query_strategy="uncertainty_sampling",
-        base_learner="SVC",
-        feature_rep="fasttext",
-        dataset="rotten_tomatoes",
+        batch_size=0.1,
+        query_strategy="closest_to_hyperplane",
+        base_learner="LinearSVC",
+        feature_rep="Doc2Vec",
+        dataset="emotion",
         random_state=0,
     )
 

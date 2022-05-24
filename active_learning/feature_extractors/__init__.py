@@ -11,7 +11,7 @@ from scipy import sparse
 from active_learning.feature_extractors.huggingface import HuggingFaceFeatureExtractor
 from active_learning.feature_extractors.preprocessed import PreprocessedFeatureExtractor
 from active_learning.feature_extractors.scikit_learn import ScikitLearnTextFeatureExtractor
-from active_learning.feature_extractors._gensim import GensimFeatureExtractor
+from active_learning.feature_extractors.gensim_ import GensimFeatureExtractor
 
 
 valid_scikit_learn_reps = {
@@ -31,13 +31,15 @@ valid_huggingface_reps = {
 }
 
 valid_gensim_reps = {
-    "w2v",
-    "d2v",
-    "fasttext"
+    "Word2Vec",
+    "Doc2Vec",
+    "FastText",
 }
 
 
-valid_feature_reps = {"none"}.union(valid_scikit_learn_reps, valid_huggingface_reps, valid_gensim_reps)
+valid_feature_reps = {"none"}.union(
+    valid_scikit_learn_reps, valid_huggingface_reps, valid_gensim_reps
+)
 
 
 def get_features(

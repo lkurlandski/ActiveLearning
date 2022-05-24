@@ -1,4 +1,3 @@
-
 """Stopping methods based upon changes in the model's confidence scores.
 
 Includes:
@@ -130,14 +129,14 @@ class ContradictoryInformation(StoppingCriteria):
 
         elif self.mode == "decreasing":
             prv_conf = self.conf_scores[-self.windows - 1]
-            for conf in self.conf_scores[-self.windows:]:
+            for conf in self.conf_scores[-self.windows :]:
                 if conf >= prv_conf:
                     return self
             self.has_stopped = True
 
         elif self.mode == "nonincreasing":
             prv_conf = self.conf_scores[-self.windows - 1]
-            for conf in self.conf_scores[-self.windows:]:
+            for conf in self.conf_scores[-self.windows :]:
                 if conf >= prv_conf:
                     return self
                 prv_conf = conf
