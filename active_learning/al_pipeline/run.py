@@ -120,7 +120,7 @@ if __name__ == "__main__":
         batch_size=0.1,
         query_strategy="closest_to_hyperplane",
         base_learner="LinearSVC",
-        feature_rep="Doc2Vec",
+        feature_rep="glove-wiki-gigaword-300",
         dataset="emotion",
         random_state=0,
     )

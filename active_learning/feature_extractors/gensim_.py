@@ -1,6 +1,4 @@
-"""Extract features from complex data objects, such as text documents.
-
-TODO: set the random seed for the feature extractors.
+"""Extract features from textual documents using gensim utilities.
 """
 
 import multiprocessing
@@ -8,10 +6,12 @@ from pathlib import Path
 from pprint import pprint  # pylint: disable=unused-import
 import sys  # pylint: disable=unused-import
 from tempfile import NamedTemporaryFile
-from typing import Iterable, List, Tuple, Union
+from typing import Generator, Iterable, List, Tuple
 
-from gensim.models.fasttext import FastText
+from gensim import downloader
 from gensim.models.doc2vec import Doc2Vec, TaggedLineDocument
+from gensim.models.fasttext import FastText
+from gensim.models.keyedvectors import KeyedVectors
 from gensim.models.word2vec import LineSentence, Word2Vec
 from gensim.utils import tokenize
 import numpy as np
@@ -26,35 +26,48 @@ empty_token = "<EMPTY>"
 
 
 class GensimFeatureExtractor(FeatureExtractor):
-    """Feature extraction methods for architectures provided by gensim."""
+    """Feature extraction methods for architectures provided by gensim.
 
-    def __init__(self, feature_rep: str, **kwargs):
+    Attributes
+    ----------
+    model : Union[Doc2Vec, Word2Vec, FastText, KeyedVectors]
+        The gensim model to perform word inference upon. If a pretrained model is used,
+            will be a KeyedVectors object. If a training a model from scratch, will be
+            one of the three gensim models.
+    """
+
+    def __init__(self, model: str, **kwargs):
         """Instantiate the feature extractor.
 
         Parameters
         ----------
-        feature_rep : str
-            Base model architecture to use. One of 'Doc2Vec', 'Word2Vec', or 'FastText'
+        model : str
+            Base model architecture to use. One of 'Doc2Vec', 'Word2Vec', or 'FastText' for
+                training base models or any of the pretrained models from the
+                gensim data repository
         **kwargs
             Keyword arguments passed to the constructor of the gensim base model
 
         Raises
         ------
         ValueError
-            If the feature_rep is not recongized.
+            If the model is not recongized.
         """
         workers = multiprocessing.cpu_count() - 1 or 1
 
-        if feature_rep == "Doc2Vec":
+        valid_models = {"Doc2Vec", "Word2Vec", "FastText"}.union(downloader.info()["models"].keys())
+        if model == "Doc2Vec":
             self.model = Doc2Vec(workers=workers, **kwargs)
-        elif feature_rep == "Word2Vec":
+        elif model == "Word2Vec":
             self.model = Word2Vec(workers=workers, **kwargs)
-        elif feature_rep == "FastText":
+        elif model == "FastText":
             self.model = FastText(workers=workers, **kwargs)
+        elif model in set(downloader.info()["models"].keys()):
+            self.model = downloader.load("glove-twitter-25")
         else:
             raise ValueError(
-                f"Unknown feature representation: {feature_rep}. "
-                f"Valid options are: 'Doc2Vec', 'Word2Vec', or 'FastText'."
+                f"Unknown feature representation/model type: {model}. "
+                f"Valid options are: {valid_models}."
             )
 
     def extract_features(
@@ -84,17 +97,36 @@ class GensimFeatureExtractor(FeatureExtractor):
         X_train = (x if x else [empty_token] for x in X_train)
         X_test = (x if x else [empty_token] for x in X_test)
 
-        # Create temporary files to support multi-pass streaming
-        f_train = NamedTemporaryFile(delete=False)
-        f_test = NamedTemporaryFile(delete=False)
+        # If the model is a KeyedVectors object, its pretrained and training is not needed
+        if not isinstance(self.model, KeyedVectors):
+            X_train = self.train(X_train)
 
-        # Try block cleans up temporary files in case of exception
+        # Vectorize the data using the learned model
+        X_train = self.vectorize(X_train)
+        X_test = self.vectorize(X_test)
+
+        # Return the vectorized data
+        return X_train, X_test
+
+    def train(self, X_train: Iterable[List[str]]) -> Generator[List[str], None, None]:
+        """Train the model if not using a pretrained model.
+
+        Parameters
+        ----------
+        X_train : Iterable[List[str]]
+            Tokenized and processed text data
+
+        Returns
+        -------
+        Generator[List[str], None, None]
+            The same tokenized and processed text data that was passed in as an argument
+        """
+
         try:
-            # Save data to temporary files
+            # Save data to temporary file to support multi-pass streaming
+            f_train = NamedTemporaryFile(delete=False)
             with open(f_train.name, "w", encoding="utf8") as f:
                 f.writelines((" ".join(x) + "\n" for x in X_train))
-            with open(f_test.name, "w", encoding="utf8") as f:
-                f.writelines((" ".join(x) + "\n" for x in X_test))
 
             # Prep data into gensim streaming objects (conceptually different from X_train)
             if isinstance(self.model, Doc2Vec):
@@ -108,25 +140,19 @@ class GensimFeatureExtractor(FeatureExtractor):
                 corpus, total_examples=self.model.corpus_count, epochs=self.model.epochs
             )
 
-            # Re-acquire the the training and test data from the files
+            # Re-acquire the the training and test data from the files to return new generator
             X_train = (line.split() for line in open(f_train.name, "r", encoding="utf8"))
-            X_test = (line.split() for line in open(f_test.name, "r", encoding="utf8"))
 
-            # Vectorize the data using the learned model
-            X_train = self.vectorize(X_train)
-            X_test = self.vectorize(X_test)
-
-        # Delete the temporary files before raising any potention exceptions
         except Exception as e:
-            p_train, p_test = Path(f_train.name), Path(f_test.name)
-            if p_train.exists():
-                p_train.unlink()
-            if p_test.exists():
-                p_test.unlink()
             raise e
 
-        # Return the vectorized data
-        return X_train, X_test
+        # Delete the temporary files
+        finally:
+            p_train = Path(f_train.name)
+            if p_train.exists():
+                p_train.unlink()
+
+        return X_train
 
     def vectorize(self, X: Iterable[List[str]]) -> np.ndarray:
         """Convert the input corpus into a vector representation by performing model inference.
@@ -144,12 +170,22 @@ class GensimFeatureExtractor(FeatureExtractor):
         if isinstance(self.model, Doc2Vec):
             return np.array([self.model.infer_vector(x) for x in X])
 
+        if isinstance(self.model, (Word2Vec, FastText)):
+            wv = self.model.wv
+        elif isinstance(self.model, KeyedVectors):
+            wv = self.model
+        else:
+            raise TypeError(
+                f"Unexpected type for self.model: {type(self.model)}. "
+                f"Expected types are Doc2Vec, Word2Vec, FastText, or KeyedVectors."
+            )
+
         X_ = []
         for x in X:
-            embeddings = [self.model.wv[w] for w in x if w in self.model.wv]
+            embeddings = [wv[w] for w in x if w in wv]
             if embeddings:
                 X_.append(np.mean(embeddings, axis=0))
             else:
-                X_.append(np.zeros(self.model.vector_size))
+                X_.append(np.zeros(wv.vector_size))
 
         return np.array(X_)

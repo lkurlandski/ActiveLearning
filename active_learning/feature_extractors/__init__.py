@@ -31,6 +31,18 @@ valid_huggingface_reps = {
 }
 
 valid_gensim_reps = {
+    "fasttext-wiki-news-subwords-300",
+    "conceptnet-numberbatch-17-06-300",
+    "word2vec-ruscorpora-300",
+    "word2vec-google-news-300",
+    "glove-wiki-gigaword-50",
+    "glove-wiki-gigaword-100",
+    "glove-wiki-gigaword-200",
+    "glove-wiki-gigaword-300",
+    "glove-twitter-25",
+    "glove-twitter-50",
+    "glove-twitter-100",
+    "glove-twitter-200",
     "Word2Vec",
     "Doc2Vec",
     "FastText",
@@ -67,6 +79,8 @@ def get_features(
         feature_extractor = ScikitLearnTextFeatureExtractor(feature_rep)
     elif feature_rep in valid_huggingface_reps:
         feature_extractor = HuggingFaceFeatureExtractor(feature_rep)
+    elif feature_rep in {"Word2Vec", "FastText", "Doc2Vec"}:
+        feature_extractor = GensimFeatureExtractor(feature_rep, vector_size=768, min_count=1)
     elif feature_rep in valid_gensim_reps:
         feature_extractor = GensimFeatureExtractor(feature_rep)
     else:
