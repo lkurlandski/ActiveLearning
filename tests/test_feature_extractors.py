@@ -4,47 +4,36 @@ Test the feature extraction procedures.
 
 import numpy as np
 from scipy import sparse
+from sklearn.datasets import fetch_20newsgroups
 
 from active_learning import feature_extractors
-from active_learning.feature_extractors import huggingface, preprocessed, scikit_learn
+from active_learning.feature_extractors import huggingface, preprocessed, scikit_learn, gensim_, valid_feature_reps
 
 
-tr_corpus = [
-    "This is the first document.",
-    "This is the second second document.",
-    "And the third one.",
-    "Is this the first document?",
-]
+tr_corpus = fetch_20newsgroups(subset="train", return_X_y=True, shuffle=False)[0][0:100]
 
-ts_corpus = [
-    "This is some random test data.",
-    "This data is for the test set.",
-    "***. ### ???.",
-]
+ts_corpus = fetch_20newsgroups(subset="test", return_X_y=True, shuffle=False)[0][0:75]
+
+def tr_corpus_gen():
+    return (x for x in tr_corpus)
+
+def ts_corpus_gen():
+    return (x for x in ts_corpus)
 
 
 class TestInterface:
-    def test_no_stream1(self):
+    def test_scikit_learn(self):
         tr, ts = feature_extractors.get_features(tr_corpus, ts_corpus, "CountVectorizer")
         assert sparse.isspmatrix_csr(tr)
         assert sparse.isspmatrix_csr(ts)
 
-    def test_no_stream2(self):
+    def test_huggingface(self):
         tr, ts = feature_extractors.get_features(tr_corpus, ts_corpus, "bert-base-uncased")
         assert isinstance(tr, np.ndarray)
         assert isinstance(ts, np.ndarray)
 
-    def test_stream1(self):
-        tr, ts = feature_extractors.get_features(
-            (i for i in tr_corpus), (i for i in ts_corpus), "CountVectorizer"
-        )
-        assert sparse.isspmatrix_csr(tr)
-        assert sparse.isspmatrix_csr(ts)
-
-    def test_stream2(self):
-        tr, ts = feature_extractors.get_features(
-            (i for i in tr_corpus), (i for i in ts_corpus), "bert-base-uncased"
-        )
+    def test_gensim(self):
+        tr, ts = feature_extractors.get_features(tr_corpus, ts_corpus, "Word2Vec")
         assert isinstance(tr, np.ndarray)
         assert isinstance(ts, np.ndarray)
 
@@ -86,20 +75,20 @@ class TestScikitLearnTextFeatureExtractor:
 class TestScikitLearnTextFeatureExtractorStreaming:
     def test1(self):
         vectorizer = scikit_learn.ScikitLearnTextFeatureExtractor("CountVectorizer")
-        tr, ts = vectorizer.extract_features((x for x in tr_corpus), (x for x in ts_corpus))
+        tr, ts = vectorizer.extract_features(tr_corpus_gen(), ts_corpus_gen())
         assert sparse.isspmatrix_csr(tr)
         assert sparse.isspmatrix_csr(ts)
 
     def test2(self):
         vectorizer = scikit_learn.ScikitLearnTextFeatureExtractor("HashingVectorizer")
-        tr, ts = vectorizer.extract_features((x for x in tr_corpus), (x for x in ts_corpus))
+        tr, ts = vectorizer.extract_features(tr_corpus_gen(), ts_corpus_gen())
         assert sparse.isspmatrix_csr(tr)
         assert sparse.isspmatrix_csr(ts)
 
     def test3(self):
         vectorizer = scikit_learn.ScikitLearnTextFeatureExtractor("TfidfVectorizer")
         tr, ts = vectorizer.extract_features(
-            iter((x for x in tr_corpus)), iter((x for x in ts_corpus))
+            iter(tr_corpus_gen()), iter(ts_corpus_gen())
         )
         assert sparse.isspmatrix_csr(tr)
         assert sparse.isspmatrix_csr(ts)
@@ -109,25 +98,53 @@ class TestHuggingFaceFeatureExtractor:
     def test1(self):
         vectorizer = huggingface.HuggingFaceFeatureExtractor("bert-base-uncased")
         tr, ts = vectorizer.extract_features(tr_corpus, ts_corpus)
-        assert tr.shape == (4, 768)
-        assert ts.shape == (3, 768)
+        assert tr.shape == (len(tr_corpus), 768)
+        assert ts.shape == (len(ts_corpus), 768)
 
     def test2(self):
         vectorizer = huggingface.HuggingFaceFeatureExtractor("roberta-base")
         tr, ts = vectorizer.extract_features(tr_corpus, ts_corpus)
-        assert tr.shape == (4, 768)
-        assert ts.shape == (3, 768)
+        assert tr.shape == (len(tr_corpus), 768)
+        assert ts.shape == (len(ts_corpus), 768)
 
 
 class TestHuggingFaceFeatureExtractorStreaming:
     def test1(self):
         vectorizer = huggingface.HuggingFaceFeatureExtractor("bert-base-uncased")
-        tr, ts = vectorizer.extract_features((x for x in tr_corpus), (x for x in ts_corpus))
-        assert tr.shape == (4, 768)
-        assert ts.shape == (3, 768)
+        tr, ts = vectorizer.extract_features(tr_corpus_gen(), ts_corpus_gen())
+        assert tr.shape == (len(tr_corpus), 768)
+        assert ts.shape == (len(ts_corpus), 768)
 
     def test2(self):
         vectorizer = huggingface.HuggingFaceFeatureExtractor("roberta-base")
-        tr, ts = vectorizer.extract_features((x for x in tr_corpus), (x for x in ts_corpus))
-        assert tr.shape == (4, 768)
-        assert ts.shape == (3, 768)
+        tr, ts = vectorizer.extract_features(tr_corpus_gen(), ts_corpus_gen())
+        assert tr.shape == (len(tr_corpus), 768)
+        assert ts.shape == (len(ts_corpus), 768)
+
+
+class TestGensimFeatureExtractor:
+    def test1(self):
+        vectorizer = gensim_.GensimFeatureExtractor("FastText", vector_size=50)
+        tr, ts = vectorizer.extract_features(tr_corpus, ts_corpus)
+        assert tr.shape == (len(tr_corpus), 50)
+        assert ts.shape == (len(ts_corpus), 50)
+
+    def test2(self):
+        vectorizer = gensim_.GensimFeatureExtractor("Doc2Vec", vector_size=50)
+        tr, ts = vectorizer.extract_features(tr_corpus, ts_corpus)
+        assert tr.shape == (len(tr_corpus), 50)
+        assert ts.shape == (len(ts_corpus), 50)
+
+
+class TestGensimFeatureExtractorStreaming:
+    def test1(self):
+        vectorizer = gensim_.GensimFeatureExtractor("FastText", vector_size=50)
+        tr, ts = vectorizer.extract_features(tr_corpus_gen(), ts_corpus_gen())
+        assert tr.shape == (len(tr_corpus), 50)
+        assert ts.shape == (len(ts_corpus), 50)
+
+    def test2(self):
+        vectorizer = gensim_.GensimFeatureExtractor("Doc2Vec", vector_size=50)
+        tr, ts = vectorizer.extract_features(tr_corpus_gen(), ts_corpus_gen())
+        assert tr.shape == (len(tr_corpus), 50)
+        assert ts.shape == (len(ts_corpus), 50)

@@ -11,6 +11,7 @@ from scipy import sparse
 from active_learning.feature_extractors.huggingface import HuggingFaceFeatureExtractor
 from active_learning.feature_extractors.preprocessed import PreprocessedFeatureExtractor
 from active_learning.feature_extractors.scikit_learn import ScikitLearnTextFeatureExtractor
+from active_learning.feature_extractors.gensim_ import GensimFeatureExtractor
 
 
 valid_scikit_learn_reps = {
@@ -29,8 +30,28 @@ valid_huggingface_reps = {
     "roberta-base",
 }
 
+valid_gensim_reps = {
+    "fasttext-wiki-news-subwords-300",
+    "conceptnet-numberbatch-17-06-300",
+    "word2vec-ruscorpora-300",
+    "word2vec-google-news-300",
+    "glove-wiki-gigaword-50",
+    "glove-wiki-gigaword-100",
+    "glove-wiki-gigaword-200",
+    "glove-wiki-gigaword-300",
+    "glove-twitter-25",
+    "glove-twitter-50",
+    "glove-twitter-100",
+    "glove-twitter-200",
+    "Word2Vec",
+    "Doc2Vec",
+    "FastText",
+}
 
-valid_feature_reps = {"none"}.union(valid_scikit_learn_reps, valid_huggingface_reps)
+
+valid_feature_reps = {"none"}.union(
+    valid_scikit_learn_reps, valid_huggingface_reps, valid_gensim_reps
+)
 
 
 def get_features(
@@ -58,6 +79,10 @@ def get_features(
         feature_extractor = ScikitLearnTextFeatureExtractor(feature_rep)
     elif feature_rep in valid_huggingface_reps:
         feature_extractor = HuggingFaceFeatureExtractor(feature_rep)
+    elif feature_rep in {"Word2Vec", "FastText", "Doc2Vec"}:
+        feature_extractor = GensimFeatureExtractor(feature_rep, vector_size=768, min_count=1)
+    elif feature_rep in valid_gensim_reps:
+        feature_extractor = GensimFeatureExtractor(feature_rep)
     else:
         raise ValueError(
             f"feature rep: {feature_rep} not recognized. "

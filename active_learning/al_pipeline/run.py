@@ -1,11 +1,11 @@
-#!/path/to/ActiveLearning/env/bin/python -u
+#!./env2/bin/python -u
 
-#SBATCH --chdir=/path/to/ActiveLearning
-#SBATCH --output=/path/to/ActiveLearning/slurm/jobs/job.name.%A.out
+#SBATCH --chdir=/home/hpc/kurlanl1/bloodgood/ActiveLearning
+#SBATCH --output=/home/hpc/kurlanl1/bloodgood/ActiveLearning/slurm/jobs/job.%A.out
 #SBATCH --constraint=skylake|broadwell
 #SBATCH --job-name=name
 #SBATCH --partition=long
-#SBATCH --cpus-per-task=1
+#SBATCH --cpus-per-task=6
 #SBATCH --ntasks=1
 
 """Interface to the features of this module that can be used with python or sbatch.
@@ -107,21 +107,21 @@ if __name__ == "__main__":
     parser.add_argument("--learn", action="store_true", help="Perform active learning.")
     parser.add_argument("--evaluate", action="store_true", help="Evaluate the learned models.")
     parser.add_argument("--process", action="store_true", help="Process evaluations into tables.")
-    parser.add_argument("--stopping", action="store_true", help="Analyze stopping criteria.")
     parser.add_argument("--graph", action="store_true", help="Create basic graphs for statistics.")
+    parser.add_argument("--stopping", action="store_true", help="Analyze stopping criteria.")
     parser.add_argument("--average", action="store_true", help="Average across multiple runs.")
 
     args = parser.parse_args()
 
     params_ = Params(
-        output_root="outputs/garbage",
+        output_root="./outputs/output",
         early_stop_mode="none",
         first_batch_mode="random",
-        batch_size=0.6,
-        query_strategy="uncertainty_sampling",
-        base_learner="SVC",
-        feature_rep="none",
-        dataset="Iris",
+        batch_size=0.1,
+        query_strategy="closest_to_hyperplane",
+        base_learner="LinearSVC",
+        feature_rep="glove-wiki-gigaword-300",
+        dataset="emotion",
         random_state=0,
     )
 
