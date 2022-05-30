@@ -94,14 +94,18 @@ def test_multilabel_classification3():
         n_samples, n_classes=n_classes, sparse=True, random_state=random_state
     )
     clf = estimators.get_estimator("RandomForestClassifier", type_of_target(y), random_state)
-    assert isinstance(clf, RandomForestClassifier)
-    MultiOutputToMultiLabelClassifier = estimators.get_multioutput_to_multilabel_wrapper(
-        RandomForestClassifier
-    )
-    assert str(type(clf)) == str(MultiOutputToMultiLabelClassifier)
+    assert isinstance(clf, estimators.MultiOutputToMultiLabelClassifier)
     assert not isinstance(clf, OneVsRestClassifier)
 
     clf.fit(X, y)
     probas = clf.predict_proba(X)
     assert isinstance(probas, np.ndarray)
     assert probas.shape == (n_samples, n_classes)
+
+    X, y = datasets.make_classification(
+        n_samples, n_classes=3, n_informative=4, random_state=random_state
+    )
+    clf = estimators.get_estimator("RandomForestClassifier", type_of_target(y), random_state)
+    assert not isinstance(clf, estimators.MultiOutputToMultiLabelClassifier)
+    assert not isinstance(clf, OneVsRestClassifier)
+    assert isinstance(clf, RandomForestClassifier)

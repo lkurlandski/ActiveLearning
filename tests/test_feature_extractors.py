@@ -7,15 +7,23 @@ from scipy import sparse
 from sklearn.datasets import fetch_20newsgroups
 
 from active_learning import feature_extractors
-from active_learning.feature_extractors import huggingface, preprocessed, scikit_learn, gensim_, valid_feature_reps
+from active_learning.feature_extractors import (
+    huggingface,
+    preprocessed,
+    scikit_learn,
+    gensim_,
+    valid_feature_reps,
+)
 
 
 tr_corpus = fetch_20newsgroups(subset="train", return_X_y=True, shuffle=False)[0][0:100]
 
 ts_corpus = fetch_20newsgroups(subset="test", return_X_y=True, shuffle=False)[0][0:75]
 
+
 def tr_corpus_gen():
     return (x for x in tr_corpus)
+
 
 def ts_corpus_gen():
     return (x for x in ts_corpus)
@@ -87,9 +95,7 @@ class TestScikitLearnTextFeatureExtractorStreaming:
 
     def test3(self):
         vectorizer = scikit_learn.ScikitLearnTextFeatureExtractor("TfidfVectorizer")
-        tr, ts = vectorizer.extract_features(
-            iter(tr_corpus_gen()), iter(ts_corpus_gen())
-        )
+        tr, ts = vectorizer.extract_features(iter(tr_corpus_gen()), iter(ts_corpus_gen()))
         assert sparse.isspmatrix_csr(tr)
         assert sparse.isspmatrix_csr(ts)
 
