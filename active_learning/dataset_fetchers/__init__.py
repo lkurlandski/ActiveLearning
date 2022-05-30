@@ -1,15 +1,4 @@
 """Get training and test data.
-
-TODO
-----
-- Once random_state is configured as a global variable, expose the mapper outside of its function
-    to support vertification from outside this module.
-- Determine the version of 20NewsGroups used by scikit-learn. Download and process it to promote
-    streaming this dataset from disk.
-
-FIXME
------
--
 """
 
 from pprint import pprint  # pylint: disable=unused-import
@@ -22,145 +11,38 @@ from active_learning.dataset_fetchers import base, disk, scikit_learn, huggingfa
 from active_learning import utils
 
 
-valid_datasets = {
+valid_disk_datasets = {
     "20NewsGroups-multilabel",
     "Avila",
     "RCV1_v2",
     "Reuters",
     "WebKB",
-    "glue",
+}
+
+
+valid_huggingface_datasets = {
     "ag_news",
     "amazon_polarity",
     "emotion",
-    "Covertype",
-    "Iris",
-    "20NewsGroups-singlelabel",
-    "rotten_tomatoes",
+    "glue",
     "imdb",
+    "rotten_tomatoes",
     "tweet_eval",
 }
 
 
-def get_mapper(random_state: int = 0) -> Callable[..., base.DatasetFetcher]:
-    """Get the mapper to assist with instantiating the correct DatasetFetcher.
+valid_scikit_learn_datasets = {
+    "20NewsGroups-singlelabel",
+    "Covertype",
+    "Iris",
+}
 
-    Parameters
-    ----------
-    random_state : int, optional
-        Random state for reporducible results, by default 0.
 
-    Returns
-    -------
-    Callable[..., base.DatasetFetcher]
-        A lambda function to instantiate the DatasetFetcher instance.
-    """
-
-    mapper = {
-        "20NewsGroups-multilabel": utils.init(
-            disk.PredefinedTextFileDatasetFetcher,
-            random_state=random_state,
-            dataset="20NewsGroups",
-        ),
-        "Avila": utils.init(
-            disk.PredefinedPreprocessedFileDatasetFetcher,
-            random_state=random_state,
-            dataset="Avila",
-        ),
-        "RCV1_v2": utils.init(
-            disk.RandomizedTextFileDatasetFetcher,
-            random_state=random_state,
-            dataset="RCV1_v2/train",
-            categories=[
-                "CCAT",
-                "GCAT",
-                "MCAT",
-                "C15",
-                "ECAT",
-                "M14",
-                "C151",
-                "C152",
-                "GPOL",
-                "M13",
-            ],
-        ),
-        "Reuters": utils.init(
-            disk.PredefinedTextFileDatasetFetcher,
-            random_state=random_state,
-            dataset="Reuters",
-            categories=[
-                "acq",
-                "corn",
-                "crude",
-                "earn",
-                "grain",
-                "interest",
-                "money-fx",
-                "ship",
-                "trade",
-                "wheat",
-            ],
-        ),
-        "WebKB": utils.init(
-            disk.RandomizedTextFileDatasetFetcher,
-            random_state=random_state,
-            dataset="WebKB",
-            categories=["student", "faculty", "course", "project"],
-        ),
-        "glue": utils.init(
-            huggingface.RandomizedClassificationFetcher,
-            random_state=random_state,
-            path="glue",
-            name="sst2",
-        ),
-        "ag_news": utils.init(
-            huggingface.PredefinedClassificationFetcher,
-            random_state=random_state,
-            path="ag_news",
-        ),
-        "amazon_polarity": utils.init(
-            huggingface.PredefinedClassificationFetcher,
-            random_state=random_state,
-            path="amazon_polarity",
-        ),
-        "emotion": utils.init(
-            huggingface.PredefinedClassificationFetcher,
-            random_state=random_state,
-            path="emotion",
-        ),
-        "imdb": utils.init(
-            huggingface.PredefinedClassificationFetcher,
-            random_state=random_state,
-            path="imdb",
-        ),
-        "rotten_tomatoes": utils.init(
-            huggingface.PredefinedClassificationFetcher,
-            random_state=random_state,
-            path="rotten_tomatoes",
-        ),
-        "tweet_eval": utils.init(
-            huggingface.PredefinedClassificationFetcher,
-            random_state=random_state,
-            path="tweet_eval",
-            name="emotion",
-        ),
-        "Covertype": utils.init(
-            scikit_learn.ScikitLearnDatasetFetcher,
-            random_state=random_state,
-            dataset="Covertype",
-        ),
-        "Iris": utils.init(
-            scikit_learn.ScikitLearnDatasetFetcher,
-            random_state=random_state,
-            dataset="Iris",
-        ),
-        "20NewsGroups-singlelabel": utils.init(
-            scikit_learn.ScikitLearnDatasetFetcher,
-            random_state=random_state,
-            dataset="20NewsGroups",
-        ),
-    }
-
-    return mapper
+valid_datasets = set().union(
+    valid_disk_datasets,
+    valid_huggingface_datasets,
+    valid_scikit_learn_datasets
+)
 
 
 def get_dataset(
@@ -187,13 +69,110 @@ def get_dataset(
     KeyError
         If the dataset code is not recognized.
     """
-
-    mapper = get_mapper(random_state)
-
-    if dataset not in mapper:
-        raise KeyError(f"Dataset not recognized: {dataset}")
-
-    fetcher: base.DatasetFetcher = mapper[dataset]()
+    # Datasets extracted from disk
+    if dataset == "20NewsGroups-multilabel":
+        fetcher = disk.PredefinedTextFileDatasetFetcher(
+            random_state=random_state, dataset="20NewsGroups"
+        )
+    if dataset == "Avila":
+        fetcher = disk.PredefinedPreprocessedFileDatasetFetcher(
+            random_state=random_state,
+            dataset="Avila",
+        )
+    if dataset == "RCV1_v2":
+        fetcher = disk.RandomizedTextFileDatasetFetcher(
+            random_state=random_state,
+            dataset="RCV1_v2/train",
+            categories=[
+                "CCAT",
+                "GCAT",
+                "MCAT",
+                "C15",
+                "ECAT",
+                "M14",
+                "C151",
+                "C152",
+                "GPOL",
+                "M13",
+            ],
+        )
+    if dataset == "Reuters":
+        fetcher = disk.PredefinedTextFileDatasetFetcher(
+            random_state=random_state,
+            dataset="Reuters",
+            categories=[
+                "acq",
+                "corn",
+                "crude",
+                "earn",
+                "grain",
+                "interest",
+                "money-fx",
+                "ship",
+                "trade",
+                "wheat",
+            ],
+        )
+    if dataset == "WebKB":
+        fetcher = disk.RandomizedTextFileDatasetFetcher(
+            random_state=random_state,
+            dataset="WebKB",
+            categories=["student", "faculty", "course", "project"],
+        )
+    # Datasets acquired from huggingface
+    if dataset == "ag_news":
+        fetcher = huggingface.PredefinedClassificationFetcher(
+            random_state=random_state,
+            path="ag_news",
+        )
+    if dataset == "amazon_polarity":
+        fetcher = huggingface.PredefinedClassificationFetcher(
+            random_state=random_state,
+            path="amazon_polarity",
+        )
+    if dataset == "emotion":
+        fetcher = huggingface.PredefinedClassificationFetcher(
+            random_state=random_state,
+            path="emotion",
+        )
+    if dataset == "glue":
+        fetcher = huggingface.RandomizedClassificationFetcher(
+            random_state=random_state,
+            path="glue",
+            name="sst2",
+        )
+    if dataset == "imdb":
+        fetcher = huggingface.PredefinedClassificationFetcher(
+            random_state=random_state,
+            path="imdb",
+        )
+    if dataset == "rotten_tomatoes":
+        fetcher = huggingface.PredefinedClassificationFetcher(
+            random_state=random_state,
+            path="rotten_tomatoes",
+        )
+    if dataset == "tweet_eval":
+        fetcher = huggingface.PredefinedClassificationFetcher(
+            random_state=random_state,
+            path="tweet_eval",
+            name="emotion",
+        )
+    # Datasets acquired from scikit-learn
+    if dataset == "20NewsGroups-singlelabel":
+        fetcher = scikit_learn.ScikitLearnDatasetFetcher(
+            random_state=random_state,
+            dataset="20NewsGroups",
+        )
+    if dataset == "Covertype":
+        fetcher = scikit_learn.ScikitLearnDatasetFetcher(
+            random_state=random_state,
+            dataset="Covertype",
+        )
+    if dataset == "Iris":
+        fetcher = scikit_learn.ScikitLearnDatasetFetcher(
+            random_state=random_state,
+            dataset="Iris",
+        )
 
     if stream:
         X_train, X_test, y_train, y_test, target_names = fetcher.stream()

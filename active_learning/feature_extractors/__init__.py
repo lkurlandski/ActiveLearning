@@ -14,22 +14,6 @@ from active_learning.feature_extractors.scikit_learn import ScikitLearnTextFeatu
 from active_learning.feature_extractors.gensim_ import GensimFeatureExtractor
 
 
-valid_scikit_learn_reps = {
-    "CountVectorizer",
-    "HashingVectorizer",
-    "TfidfVectorizer",
-}
-
-
-valid_huggingface_reps = {
-    "albert-base-v2",
-    "bert-base-uncased",
-    "bert-base-cased",
-    "distilbert-base-uncased",
-    "distilroberta-base",
-    "roberta-base",
-}
-
 valid_gensim_reps = {
     "fasttext-wiki-news-subwords-300",
     "conceptnet-numberbatch-17-06-300",
@@ -46,6 +30,23 @@ valid_gensim_reps = {
     "Word2Vec",
     "Doc2Vec",
     "FastText",
+}
+
+
+valid_huggingface_reps = {
+    "albert-base-v2",
+    "bert-base-uncased",
+    "bert-base-cased",
+    "distilbert-base-uncased",
+    "distilroberta-base",
+    "roberta-base",
+}
+
+
+valid_scikit_learn_reps = {
+    "CountVectorizer",
+    "HashingVectorizer",
+    "TfidfVectorizer",
 }
 
 
