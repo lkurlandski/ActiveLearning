@@ -61,10 +61,9 @@ def test_multilabel_classification_sparse_features(tmp_path):
     X, y = datasets.make_multilabel_classification(
         n_samples, n_classes=3, sparse=True, random_state=random_state
     )
-    MultiOutputToMultiLabelClassifier = estimators.get_multioutput_to_multilabel_wrapper(
-        RandomForestClassifier
+    estimator = estimators.MultiOutputToMultiLabelClassifier(
+        RandomForestClassifier(random_state=random_state)
     )
-    estimator = MultiOutputToMultiLabelClassifier(random_state=random_state)
     unlabeled_pool = Pool(X, y, tmp_path / "X.mtx", tmp_path / "y.mtx")
     learn.learn(estimator, query_strategy, batch_size, unlabeled_pool)
 
@@ -108,10 +107,9 @@ def test_with_all_pools(tmp_path):
     path.mkdir()
     test_set = Pool(X, y, path / "X.mtx", path / "y.mtx")
 
-    MultiOutputToMultiLabelClassifier = estimators.get_multioutput_to_multilabel_wrapper(
-        RandomForestClassifier
+    estimator = estimators.MultiOutputToMultiLabelClassifier(
+        RandomForestClassifier(random_state=random_state)
     )
-    estimator = MultiOutputToMultiLabelClassifier(random_state=random_state)
     learn.learn(
         estimator,
         query_strategy,
@@ -152,6 +150,7 @@ def test_get_first_batch_random():
     )
     idx = learn.get_first_batch(y, protocol, 10)
     assert len(idx) == 10
+
 
 def test_get_first_batch_k_per_class():
     protocol = "k_per_class"
@@ -196,6 +195,7 @@ def test_early_stop_modes_exponential(tmp_path):
         estimator, query_strategy, batch_size, unlabeled_pool, early_stop_mode="exponential"
     )
 
+
 def test_early_stop_modes_finish(tmp_path):
 
     X, y = datasets.make_classification(
@@ -203,6 +203,4 @@ def test_early_stop_modes_finish(tmp_path):
     )
     estimator = DecisionTreeClassifier(random_state=random_state)
     unlabeled_pool = Pool(X, y, tmp_path / "X.mtx", tmp_path / "y.npy")
-    learn.learn(
-        estimator, query_strategy, batch_size, unlabeled_pool, early_stop_mode="finish"
-    )
+    learn.learn(estimator, query_strategy, batch_size, unlabeled_pool, early_stop_mode="finish")

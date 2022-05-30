@@ -4,10 +4,10 @@
 
 from pprint import pformat, pprint  # pylint: disable=unused-import
 import sys  # pylint: disable=unused-import
-from typing import Callable
-import warnings
+from typing import Union
 
 import numpy as np
+from scipy import sparse
 from sklearn.base import BaseEstimator
 from sklearn.ensemble import (
     ExtraTreesClassifier,
@@ -101,7 +101,7 @@ support_multilabel = {
 }
 
 
-# These larners support multioutput classification and need their prediction
+# These learners support multioutput classification and need their prediction
 # targets modified to be compatible with ModAL.
 # The MultiOutputToMultiLabelClassifier handles this.
 support_multiclass_multioutput = {
@@ -114,93 +114,128 @@ support_multiclass_multioutput = {
 }
 
 
-def get_multioutput_to_multilabel_wrapper(
-    base: Callable[..., BaseEstimator]
-) -> Callable[..., BaseEstimator]:
-    """Get a MultiOutputToMultiLabelClassifier to wrap multioutput scikit-learn base learners.
+# Some scikit-learn estimators do not support sparse target vectors and must be
+# converted to dense.
+sparse_multilabel_indicator_not_supported = {"RandomForestClassifier"}
+
+
+class MultiOutputToMultiLabelClassifier:
+    """Change the shape of the predictions of a multi-output classifier."""
+
+    def __init__(self, clf: BaseEstimator) -> None:
+        """Instantiate the wrapper around a scikit-learn classifier.
+
+        Parameters
+        ----------
+        clf : BaseEstimator
+            The classifier to wrap.
+        """
+        self.clf = clf
+
+    def __repr__(self):
+        return "MultiOutputToMultiLabelClassifier(" + self.clf.__repr__() + ")"
+
+    def __str__(self):
+        return "MultiOutputToMultiLabelClassifier(" + self.clf.__repr__() + ")"
+
+    def predict_proba(self, X: Union[np.ndarray, sparse.csr_matrix]) -> np.ndarray:
+        """Predict class probabilities for X.
+
+        Parameters
+        ----------
+        X : Union[np.ndarray, sparse.csr_matrix]
+            The input samples.
+
+        Returns
+        -------
+        np.ndarray
+            The class probabilities of the input samples.
+
+        Raises
+        ------
+        ValueError
+            If the target shape of predict_proba is not (n_classes, n_samples, 2).
+        """
+        probas = self.clf.predict_proba(X)
+        if not all(p.shape == (X.shape[0], 2) for p in probas):
+            raise ValueError(
+                f"Expected every individual probability to have shape {(X.shape[0], 2)},"
+                f" but predict_proba() returned shape {np.array(probas).shape}. "
+                "This likely indicates that MultiOutputToMultiLabelClassifier should not be used."
+            )
+        probas = [p[:, 1] for p in probas]
+        probas = np.vstack(probas).T
+        return probas
+
+    def predict(self, X: Union[np.ndarray, sparse.csr_matrix]) -> np.ndarray:
+        """Predict classes for X.
+
+        Parameters
+        ----------
+        X : Union[np.ndarray, sparse.csr_matrix]
+            The input samples.
+
+        Returns
+        -------
+        np.ndarray
+            The predicted classes.
+        """
+        return self.clf.predict(X)
+
+    def fit(
+        self, X: Union[np.ndarray, sparse.csr_matrix], y: Union[np.ndarray, sparse.csr_matrix]
+    ) -> BaseEstimator:
+        """Fit the classifier on training data.
+
+        Parameters
+        ----------
+        X : Union[np.ndarray, sparse.csr_matrix]
+            The input samples.
+        y : Union[np.ndarray, sparse.csr_matrix]
+            The corresponding target values.
+
+        Returns
+        -------
+        BaseEstimator
+            A fitted instance of self.
+        """
+        self.clf.fit(X, y)
+        return self
+
+
+# TODO: there is no support for determining this information a priori, so we
+# should continually update this method as needed to account for bugs we find.
+def convert_to_valid_X_y(
+    learner: Union[str, BaseEstimator, MultiOutputToMultiLabelClassifier],
+    X: Union[np.ndarray, sparse.csr_matrix],  # pylint: disable=unused-argument
+    y: Union[np.ndarray, sparse.csr_matrix],
+) -> Union[np.ndarray, sparse.csr_matrix]:
+    """Convert training data into valid data structures for scikit-learn learners.
 
     Parameters
     ----------
-    base : Callable[..., BaseEstimator]
-        A scikit-learn classifier class that is inherintly multioutput.
+    learner : Union[str, BaseEstimator, MultiOutputToMultiLabelClassifier]
+        The learner to use.
+    X : Union[np.ndarray, sparse.csr_matrix]
+        Input samples.
+    y : Union[np.ndarray, sparse.csr_matrix]
+        The corresponding target values.
 
     Returns
     -------
-    Callable[..., BaseEstimator]
-        A class that inherits from base that handles the conversion of predict_proba calls.
+    Union[np.ndarray, sparse.csr_matrix]
+        Input samples and corresponding target values in a possibly different
+        data structure.
     """
+    if isinstance(learner, MultiOutputToMultiLabelClassifier):
+        learner = learner.clf.__class__.__name__
+    if isinstance(learner, BaseEstimator):
+        learner = learner.__class__.__name__
 
-    if base.__name__ not in support_multiclass_multioutput and base.__name__ != "BaseEstimator":
-        warnings.warn(
-            f"WARNING: the {base.__name__} class is not inhertintly multiclass, so the"
-            " MultiOutputToMultiLabelClassifier wrapper class should not be used."
-        )
+    if learner in sparse_multilabel_indicator_not_supported and sparse.issparse(y):
+        y = y.toarray()
 
-    class MultiOutputToMultiLabelClassifier(base):
-        """Have a multioutput classifier emulate the behavior of a multilabel classifier."""
-
-        def __init__(self, **kwargs):
-            """Instantiate a scikit-learn base learner.
-
-            Parameters
-            ----------
-            **kwargs
-                Keyword arguments passed to the super classes's __init__ method.
-            """
-
-            super().__init__(**kwargs)
-            self.predict_proba = self._predict_proba
-
-        def __repr__(self):
-            return "MultiOutputToMultiLabelClassifier(" + super().__repr__() + ")"
-
-        def __str__(self):
-            return "MultiOutputToMultiLabelClassifier(" + super().__repr__() + ")"
-
-        def _predict_proba(self, X) -> np.ndarray:
-            """Get prediction probabilities that are casted into a multilabel format.
-
-            Parameters
-            ----------
-            X
-                Features to make predictions upon.
-
-            Returns
-            -------
-            np.ndarray
-                An (n_samples, n_classes) ndarray indicating class probabilities.
-            """
-
-            probas = super().predict_proba(X)
-            if not all(p.shape == (X.shape[0], 2) for p in probas):
-                raise ValueError(
-                    f"Expected every individual probability to have shape {(X.shape[0], 2)},"
-                    f" but predict_proba() returned shape {np.array(probas).shape}."
-                )
-            probas = [p[:, 1] for p in probas]
-            probas = np.vstack(probas).T
-            return probas
-
-        def predict(self, X) -> np.ndarray:
-            """Get predictions.
-
-            Parameters
-            ----------
-            X
-                Features to make predictions upon.
-
-            Returns
-            -------
-            np.ndarray
-                An (n_samples,) ndarray indicating class predictions.
-            """
-
-            self.predict_proba = super().predict_proba
-            preds = super().predict(X)
-            self.predict_proba = self._predict_proba
-            return preds
-
-    return MultiOutputToMultiLabelClassifier
+    return X, y
 
 
 def get_estimator(
@@ -229,26 +264,19 @@ def get_estimator(
     KeyError
         If the learner is not recognized.
     """
+    # Create the base classification object
     if learner == "DecisionTreeClassifier":
-        DecisionTreeClassifier_ = get_multioutput_to_multilabel_wrapper(DecisionTreeClassifier)
-        clf = DecisionTreeClassifier_(random_state=random_state)
+        clf = DecisionTreeClassifier(random_state=random_state)
     elif learner == "ExtraTreeClassifier":
-        ExtraTreeClassifier_ = get_multioutput_to_multilabel_wrapper(ExtraTreeClassifier)
-        clf = ExtraTreeClassifier_(random_state=random_state)
+        clf = ExtraTreeClassifier(random_state=random_state)
     elif learner == "ExtraTreesClassifier":
-        ExtraTreesClassifer_ = get_multioutput_to_multilabel_wrapper(ExtraTreesClassifier)
-        clf = ExtraTreesClassifer_(random_state=random_state)
+        clf = ExtraTreesClassifier(random_state=random_state)
     elif learner == "RandomForestClassifier":
-        RandomForestClassifier_ = get_multioutput_to_multilabel_wrapper(RandomForestClassifier)
-        clf = RandomForestClassifier_(random_state=random_state)
+        clf = RandomForestClassifier(random_state=random_state)
     elif learner == "KNeighborsClassifier":
-        KNeighborsClassifier_ = get_multioutput_to_multilabel_wrapper(KNeighborsClassifier)
-        clf = KNeighborsClassifier_(random_state=random_state)
+        clf = KNeighborsClassifier()
     elif learner == "RadiusNeighborsClassifier":
-        RadiusNeighborsClassifier_ = get_multioutput_to_multilabel_wrapper(
-            RadiusNeighborsClassifier
-        )
-        clf = RadiusNeighborsClassifier_(random_state=random_state)
+        clf = RadiusNeighborsClassifier(random_state=random_state)
     elif learner == "GradientBoostingClassifier":
         clf = GradientBoostingClassifier(random_state=random_state)
     elif learner == "MLPClassifier":
@@ -265,6 +293,7 @@ def get_estimator(
             f"Valid learners are: {pformat(valid_base_learners)}."
         )
 
+    # Applies a multiclass or multilabel wrapper, if nessecary
     if target_type == "binary":
         return clf
     if target_type == "multiclass":
@@ -272,7 +301,9 @@ def get_estimator(
             return clf
         return OneVsRestClassifier(clf, n_jobs=-1)
     if target_type == "multilabel-indicator":
-        if learner in support_multilabel.union(support_multiclass_multioutput):
+        if learner in support_multiclass_multioutput:
+            return MultiOutputToMultiLabelClassifier(clf)
+        if learner in support_multilabel:
             return clf
         return OneVsRestClassifier(clf, n_jobs=-1)
 

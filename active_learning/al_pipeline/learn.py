@@ -346,6 +346,10 @@ def main(params: Params) -> None:
     X_unlabeled_pool, X_test = feature_extractors.get_features(
         X_unlabeled_pool, X_test, params.feature_rep
     )
+    X_unlabeled_pool, y_unlabeled_pool = estimators.convert_to_valid_X_y(
+        params.base_learner, X_unlabeled_pool, y_unlabeled_pool
+    )
+    X_test, y_test = estimators.convert_to_valid_X_y(params.base_learner, X_test, y_test)
     unlabeled_init_size = y_unlabeled_pool.shape[0]
 
     # Get the batch size (handle proportions and absolute values)

@@ -5,7 +5,7 @@
 #SBATCH --constraint=skylake|broadwell
 #SBATCH --job-name=name
 #SBATCH --partition=long
-#SBATCH --cpus-per-task=6
+#SBATCH --cpus-per-task=1
 #SBATCH --ntasks=1
 
 """Interface to the features of this module that can be used with python or sbatch.
@@ -114,14 +114,14 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     params_ = Params(
-        output_root="./outputs/output",
+        output_root="./outputs/garbage",
         early_stop_mode="none",
         first_batch_mode="random",
-        batch_size=0.1,
-        query_strategy="closest_to_hyperplane",
-        base_learner="LinearSVC",
-        feature_rep="glove-wiki-gigaword-300",
-        dataset="emotion",
+        batch_size=0.4,
+        query_strategy="uncertainty_sampling",
+        base_learner="RandomForestClassifier",
+        feature_rep="CountVectorizer",
+        dataset="20NewsGroups-multilabel",
         random_state=0,
     )
 
