@@ -1,9 +1,9 @@
-#!./env2/bin/python -u
+#!./env/bin/python -u
 
-#SBATCH --chdir=/home/hpc/kurlanl1/bloodgood/ActiveLearning
-#SBATCH --output=/home/hpc/kurlanl1/bloodgood/ActiveLearning/slurm/jobs/job.%A.out
+#SBATCH --chdir=/home/hpc/userId/path/to/ActiveLearning
+#SBATCH --output=/home/hpc/userId/path/to//ActiveLearning/slurm/jobs/job.%A.out
 #SBATCH --constraint=skylake|broadwell
-#SBATCH --job-name=name
+#SBATCH --job-name=some_name
 #SBATCH --partition=long
 #SBATCH --cpus-per-task=1
 #SBATCH --ntasks=1
@@ -11,6 +11,7 @@
 """Interface to the features of this module that can be used with python or sbatch.
 
 To interface properly with SLURM, the top of the file should contain the SLURM instructions.
+To use this file as an sbatch script, the information in the top of the file must be correct.
 """
 
 import argparse
@@ -114,14 +115,14 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     params_ = Params(
-        output_root="./outputs/garbage",
+        output_root="./output",
         early_stop_mode="none",
         first_batch_mode="random",
-        batch_size=0.4,
-        query_strategy="uncertainty_sampling",
-        base_learner="RandomForestClassifier",
-        feature_rep="CountVectorizer",
-        dataset="20NewsGroups-multilabel",
+        batch_size=0.01,
+        query_strategy="closest_to_hyperplane",
+        base_learner="LinearSVC",
+        feature_rep="TfidfVectorizer",
+        dataset="20newsgroups-singlelabel",
         random_state=0,
     )
 

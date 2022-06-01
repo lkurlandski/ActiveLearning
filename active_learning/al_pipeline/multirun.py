@@ -65,7 +65,7 @@ def main(
 
     print(f"multirun -- params:\n{pformat(multi_params)}")
 
-    if average and any(learn, evaluate, process, stopping, graph):
+    if average and any((learn, evaluate, process, stopping, graph)):
         raise Exception("The averaging program should be run after all runs of pipeline finish.")
     if any(isinstance(multi_params[k], list) for k in ["output_root", "dataset"]):
         raise TypeError("Only one option for 'output_root', 'task', and 'dataset' is permitted.")
@@ -147,15 +147,15 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     multi_params_ = {
-        "output_root": "outputs/garbage",
+        "output_root": "./output",
         "early_stop_mode": ["none"],
         "first_batch_mode": ["random"],
-        "batch_size": [0.4, 0.5],
-        "query_strategy": ["uncertainty_sampling"],
-        "base_learner": ["SVC"],
+        "batch_size": [0.01],
+        "query_strategy": ["closest_to_hyperplane"],
+        "base_learner": ["LinearSVC"],
         "feature_rep": ["TfidfVectorizer"],
-        "dataset": "20NewsGroups-singlelabel",
-        "random_state": [0, 1],
+        "dataset": "20newsgroups-singlelabel",
+        "random_state": [0],
     }
 
     main(

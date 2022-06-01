@@ -3,86 +3,37 @@
 
 from pprint import pprint  # pylint: disable=unused-import
 import sys  # pylint: disable=unused-import
-from typing import Any, Callable, Iterable, Tuple
+from typing import Any, Iterable, Optional, Tuple
 
 import numpy as np
 
-from active_learning.dataset_fetchers import base, disk, scikit_learn, huggingface
-from active_learning import utils
-
-
-valid_disk_datasets = {
-    "20NewsGroups-multilabel",
-    "Avila",
-    "RCV1_v2",
-    "Reuters",
-    "WebKB",
-}
-
-
-valid_huggingface_datasets = {
-    "ag_news",
-    "amazon_polarity",
-    "emotion",
-    "glue",
-    "imdb",
-    "rotten_tomatoes",
-    "tweet_eval",
-}
-
-
-valid_scikit_learn_datasets = {
-    "20NewsGroups-singlelabel",
-    "Covertype",
-    "Iris",
-}
+from active_learning.dataset_fetchers import disk, scikit_learn, huggingface
 
 
 valid_datasets = set().union(
-    valid_disk_datasets,
-    valid_huggingface_datasets,
-    valid_scikit_learn_datasets
+    disk.valid_disk_datasets,
+    huggingface.valid_huggingface_datasets,
+    scikit_learn.valid_scikit_learn_datasets,
 )
 
 
 def get_dataset(
-    dataset: str, stream: bool, random_state: int
+    dataset: str, streaming: bool, *, random_state: Optional[int] = None
 ) -> Tuple[Iterable[Any], Iterable[Any], np.ndarray, np.ndarray, np.ndarray]:
-    """Return any implemented dataset.
 
-    Parameters
-    ----------
-    dataset : str
-        Code to refer to a particular dataset.
-    stream : bool
-        Controls whether data is streamed or returned in full.
-    random_state : int, optional
-        Integer used for reproducible randomization.
-
-    Returns
-    -------
-    Tuple[Iterable[Any], Iterable[Any], np.ndarray, np.ndarray, np.ndarray]
-        The arrays for X_train, X_test, y_train, and y_test, along with the set of categories.
-
-    Raises
-    ------
-    KeyError
-        If the dataset code is not recognized.
-    """
     # Datasets extracted from disk
-    if dataset == "20NewsGroups-multilabel":
-        fetcher = disk.PredefinedTextFileDatasetFetcher(
-            random_state=random_state, dataset="20NewsGroups"
+    if dataset == "20newsgroups-multilabel":
+        X_train, X_test, y_train, y_test, target_names = disk.get_dataset(
+            "20newsgroups-multilabel", streaming, random_state=random_state
         )
-    if dataset == "Avila":
-        fetcher = disk.PredefinedPreprocessedFileDatasetFetcher(
-            random_state=random_state,
-            dataset="Avila",
+    elif dataset == "avila":
+        X_train, X_test, y_train, y_test, target_names = disk.get_dataset(
+            "avila", streaming, random_state=random_state
         )
-    if dataset == "RCV1_v2":
-        fetcher = disk.RandomizedTextFileDatasetFetcher(
-            random_state=random_state,
-            dataset="RCV1_v2/train",
+    elif dataset == "rcv1_v2":
+        X_train, X_test, y_train, y_test, target_names = disk.get_dataset(
+            "rcv1_v2",
+            streaming,
             categories=[
                 "CCAT",
                 "GCAT",
@@ -95,11 +46,12 @@ def get_dataset(
                 "GPOL",
                 "M13",
             ],
-        )
-    if dataset == "Reuters":
-        fetcher = disk.PredefinedTextFileDatasetFetcher(
             random_state=random_state,
-            dataset="Reuters",
+        )
+    elif dataset == "reuters":
+        X_train, X_test, y_train, y_test, target_names = disk.get_dataset(
+            "reuters",
+            streaming,
             categories=[
                 "acq",
                 "corn",
@@ -112,71 +64,51 @@ def get_dataset(
                 "trade",
                 "wheat",
             ],
-        )
-    if dataset == "WebKB":
-        fetcher = disk.RandomizedTextFileDatasetFetcher(
             random_state=random_state,
-            dataset="WebKB",
+        )
+    elif dataset == "web_kb":
+        X_train, X_test, y_train, y_test, target_names = disk.get_dataset(
+            dataset,
+            streaming,
+            test_size=0.2,
             categories=["student", "faculty", "course", "project"],
-        )
-    # Datasets acquired from huggingface
-    if dataset == "ag_news":
-        fetcher = huggingface.PredefinedClassificationFetcher(
             random_state=random_state,
-            path="ag_news",
-        )
-    if dataset == "amazon_polarity":
-        fetcher = huggingface.PredefinedClassificationFetcher(
-            random_state=random_state,
-            path="amazon_polarity",
-        )
-    if dataset == "emotion":
-        fetcher = huggingface.PredefinedClassificationFetcher(
-            random_state=random_state,
-            path="emotion",
-        )
-    if dataset == "glue":
-        fetcher = huggingface.RandomizedClassificationFetcher(
-            random_state=random_state,
-            path="glue",
-            name="sst2",
-        )
-    if dataset == "imdb":
-        fetcher = huggingface.PredefinedClassificationFetcher(
-            random_state=random_state,
-            path="imdb",
-        )
-    if dataset == "rotten_tomatoes":
-        fetcher = huggingface.PredefinedClassificationFetcher(
-            random_state=random_state,
-            path="rotten_tomatoes",
-        )
-    if dataset == "tweet_eval":
-        fetcher = huggingface.PredefinedClassificationFetcher(
-            random_state=random_state,
-            path="tweet_eval",
-            name="emotion",
-        )
-    # Datasets acquired from scikit-learn
-    if dataset == "20NewsGroups-singlelabel":
-        fetcher = scikit_learn.ScikitLearnDatasetFetcher(
-            random_state=random_state,
-            dataset="20NewsGroups",
-        )
-    if dataset == "Covertype":
-        fetcher = scikit_learn.ScikitLearnDatasetFetcher(
-            random_state=random_state,
-            dataset="Covertype",
-        )
-    if dataset == "Iris":
-        fetcher = scikit_learn.ScikitLearnDatasetFetcher(
-            random_state=random_state,
-            dataset="Iris",
         )
 
-    if stream:
-        X_train, X_test, y_train, y_test, target_names = fetcher.stream()
-    else:
-        X_train, X_test, y_train, y_test, target_names = fetcher.fetch()
+    # Datasets acquired from huggingface.
+    elif dataset in {"ag_news", "amazon_polarity", "emotion", "imdb", "rotten_tomatoes"}:
+        X_train, X_test, y_train, y_test, target_names = huggingface.get_dataset(
+            dataset, streaming, random_state=random_state
+        )
+    elif dataset == "glue-sst2":
+        X_train, X_test, y_train, y_test, target_names = huggingface.get_dataset(
+            "glue", streaming, random_state=random_state, test_size=0.2, name="sst2"
+        )
+    elif dataset == "tweet_eval":
+        X_train, X_test, y_train, y_test, target_names = huggingface.get_dataset(
+            dataset, streaming, random_state=random_state, name="emotion"
+        )
+
+    # Datasets acquired from scikit-learn.
+    elif dataset == "20newsgroups-singlelabel":
+        X_train, X_test, y_train, y_test, target_names = scikit_learn.get_dataset(
+            "20newsgroups-singlelabel", streaming, random_state=random_state
+        )
+    elif dataset == "20newsgroups-singlelabel-vectorized":
+        X_train, X_test, y_train, y_test, target_names = scikit_learn.get_dataset(
+            "20newsgroups-singlelabel", streaming, random_state=random_state
+        )
+    elif dataset == "covertype":
+        X_train, X_test, y_train, y_test, target_names = scikit_learn.get_dataset(
+            "covertype", streaming, random_state=random_state, test_size=0.2
+        )
+    elif dataset == "iris":
+        X_train, X_test, y_train, y_test, target_names = scikit_learn.get_dataset(
+            "iris", streaming, random_state=random_state, test_size=0.2
+        )
+    elif dataset == "rcv1_v2-vectorized":
+        X_train, X_test, y_train, y_test, target_names = scikit_learn.get_dataset(
+            "iris", streaming, random_state=random_state
+        )
 
     return X_train, X_test, y_train, y_test, target_names

@@ -1,12 +1,4 @@
 """Base classes for fetching datasets from several different sources.
-
-TODO
-----
--
-
-FIXME
------
--
 """
 
 from abc import ABC, abstractmethod

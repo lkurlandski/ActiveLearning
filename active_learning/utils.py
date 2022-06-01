@@ -1,12 +1,4 @@
 """Random useful things unrelated to active learning, machine learning, or even mathematics.
-
-TODO
-----
-- Create a module for utils, which includes the stat_helper.
-
-FIXME
------
--
 """
 
 import inspect
@@ -20,6 +12,7 @@ from typing import Any, Callable, Generator, Iterator, Iterable, List, Tuple, Un
 import numpy as np
 import psutil
 from scipy import sparse
+from scipy.io import mmread
 
 
 def tree(
@@ -209,30 +202,6 @@ def grouper(
     return zip_longest(*args, fillvalue=fill_value)
 
 
-def init(cls: type, *args, **kwargs) -> Callable[..., Any]:
-    """Return a lambda function that constructs an instance of cls with the args and kwargs.
-
-    Parameters
-    ----------
-    cls : type
-        A class to construct and instance of
-
-    Other Parameters
-    ----------------
-    *args : Any
-        Positional arguments to pass to the __init__ method of cls
-    **kwargs : Any
-        Keyword arguments to pass to the __init__ method of cls
-
-    Returns
-    -------
-    Callable[..., Any]
-        A lambda function that initializes the instance
-    """
-
-    return lambda: cls(*args, **kwargs)
-
-
 def get_array_file_ext(a: Union[sparse.csr_matrix, np.ndarray]) -> str:
     """Get the correct file extension for saving an array.
 
@@ -251,10 +220,72 @@ def get_array_file_ext(a: Union[sparse.csr_matrix, np.ndarray]) -> str:
     ValueError
         If the number of dimensions is not 1 or 2.
     """
-
     if a.ndim == 1:
         return ".npy"
     if a.ndim == 2:
         return ".mtx"
 
     raise ValueError(f"Expected a one or two dimensional matrix, not {a.ndim} dimensional.")
+
+
+def read_array_file(file: Union[str, Path], **kwargs) -> Union[np.ndarray, sparse.csr_matrix]:
+    """Read a sparse/dense ndimensional array file.
+
+    Parameters
+    ----------
+    file : Union[str, Path]
+        _description_
+
+    Returns
+    -------
+    Union[np.ndarray, sparse.csr_matrix]
+        The array read from the file.
+
+    Raises
+    ------
+    ValueError
+        If an extension other than '.mtx', '.npy', and '.npz' is supplied.
+    """
+    file = Path(file)
+    if file.suffix == ".mtx":
+        return mmread(file, **kwargs)
+    if file.suffix in (".npy", ".npz"):
+        return np.load(file, **kwargs)
+    raise ValueError(
+        f"Unrecognized file extension: '{file.suffix}'. "
+        f"Supported extensions are: '.mtx', '.npy', and '.npz'."
+    )
+
+
+def read_array_file_unknown_extension(
+    file_without_extension: Union[str, Path], **kwargs
+) -> Union[np.ndarray, sparse.csr_matrix]:
+    """Read an array from disk given the name of the file without the extension.
+
+    Parameters
+    ----------
+    file_without_extension : Union[str, Path]
+        A file name without the extension, e.g.,
+        `path/to/some/array`, but not `path/to/some/array.mtx`. Capable of reading ".mtx", ".npy",
+        and ".npz" files.
+
+    Returns
+    -------
+    Union[np.ndarray, sparse.csr_matrix]
+        The array read from disk.
+
+    Raises
+    ------
+    FileNotFoundError
+        If the file cannot be found.
+    """
+    file = Path(file_without_extension)
+    for ext in (".mtx", ".npy", ".npz"):
+        try:
+            return read_array_file(file.with_suffix(ext), **kwargs)
+        except FileNotFoundError:
+            pass
+
+    raise FileNotFoundError(
+        f"Cannot find {file} with any of the extensions: '.mtx', '.npy', and '.npz'."
+    )
