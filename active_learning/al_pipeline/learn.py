@@ -1,9 +1,4 @@
 """Run the active learning process.
-
-TODO
-----
-- Implement a label-encoding strategy for the target array.
-- Introduce checks to ensure the base learner can accept sparse arrays and such.
 """
 
 from pprint import pprint  # pylint: disable=unused-import
@@ -13,7 +8,7 @@ import datetime
 from pathlib import Path
 import random
 import time
-from typing import Callable, Union
+from typing import Callable, Optional, Union
 import warnings
 
 import joblib
@@ -75,7 +70,9 @@ def update(
     )
 
 
-def get_first_batch(y: Union[np.ndarray, sparse.csr_matrix], protocol: str, k: int) -> np.ndarray:
+def get_first_batch(
+    y: Union[np.ndarray, sparse.csr_matrix], protocol: str, *, r: int = 1, k: int = 2
+) -> np.ndarray:
     """Get indices for the first batch of AL.
 
     Parameters
@@ -84,10 +81,11 @@ def get_first_batch(y: Union[np.ndarray, sparse.csr_matrix], protocol: str, k: i
         The target vector for the examples which are available for selection.
     protocol : str
         String describing how to select examples. One of {"random", "k_per_class"}.
+    r : int
+        If protocol is "random", r random examples will be chosen. Defaults to 1.
     k : int
-        Determines how many examples are selected. If protocol is "random", k is the absolute number
-            of elements selected. If protocol is "k_per_class", k is the number of instances
-            belonging to each class that are selected.
+        If protocol is "k_per_class", k instances belonging to each class that are selected.
+        Defaults to 2.
 
     Returns
     -------
@@ -103,7 +101,7 @@ def get_first_batch(y: Union[np.ndarray, sparse.csr_matrix], protocol: str, k: i
     """
 
     if protocol == "random":
-        idx = np.array(random.sample(list(range(y.shape[0])), k))
+        idx = np.array(random.sample(list(range(y.shape[0])), r))
         return idx
 
     if protocol == "k_per_class":
@@ -114,7 +112,7 @@ def get_first_batch(y: Union[np.ndarray, sparse.csr_matrix], protocol: str, k: i
                 positive_classes = [int(label)]
             elif isinstance(y, np.ndarray) and y.ndim == 2:
                 positive_classes = np.where(label == 1)[0].tolist()
-            elif sparse.isspmatrix_csr(label):
+            elif sparse.isspmatrix_csr(y):
                 positive_classes = label.indices.tolist()
             else:
                 raise TypeError(
@@ -207,7 +205,7 @@ def adjust_first_batch_if_nessecary(
         warnings.warn("Implementing a solution for a bug from scikit-learn.")
 
         while len(set(y_unlabeled_pool[idx])) == 1:
-            idx = get_first_batch(y_unlabeled_pool, protocol=first_batch_mode, k=max(batch_size, 2))
+            idx = get_first_batch(y_unlabeled_pool, first_batch_mode, r=max(batch_size, 2))
 
     return idx
 
@@ -218,9 +216,9 @@ def learn(
     batch_size: int,
     unlabeled_pool: Pool,
     *,
-    model_path: Path = None,
-    batch_path: Path = None,
-    test_set: Pool = None,
+    model_path: Optional[Path] = None,
+    batch_path: Optional[Path] = None,
+    test_set: Optional[Pool] = None,
     first_batch_mode: str = "random",
     early_stop_mode: str = "none",
 ):
@@ -236,17 +234,17 @@ def learn(
         The number of examples to select for labeling at each iteration.
     unlabeled_pool : Pool
         The initial unlabeled pool of training data.
-    model_path : Path, optional
+    model_path : Optional[Path]
         A location to save trained models to, by default None, which means no models are saved.
-    batch_path : Path, optional
+    batch_path : Optional[Path]
         A location to save the examples queried for labeling to, by default None, which means no
             batch files are saved.
-    test_set : Pool, optional
+    test_set : Optional[Pool]
         A test set, which will be saved in a compressed format, by default None, which means no
             test set is saved.
-    first_batch_mode : str, optional
+    first_batch_mode : str
         Determines how the first batch is selected, by default "random".
-    early_stop_mode : str, optional
+    early_stop_mode : str
         Determines how the batch size is adjusted, by default "none".
     """
     print("-" * 80, flush=True)
@@ -271,7 +269,7 @@ def learn(
         initial_unlabeled_pool = unlabeled_pool.X.copy()
 
     # Perform the 0th iteration of active learning
-    idx = get_first_batch(unlabeled_pool.y, protocol=first_batch_mode, k=batch_size)
+    idx = get_first_batch(unlabeled_pool.y, protocol=first_batch_mode, r=batch_size)
     idx = adjust_first_batch_if_nessecary(
         idx, estimator, unlabeled_pool.y, batch_size, first_batch_mode
     )
@@ -341,8 +339,10 @@ def main(params: Params) -> None:
         X_test,
         y_unlabeled_pool,
         y_test,
-        _,
-    ) = dataset_fetchers.get_dataset(params.dataset, stream=True, random_state=params.random_state)
+        target_names,
+    ) = dataset_fetchers.get_dataset(
+        params.dataset, streaming=True, random_state=params.random_state
+    )
     X_unlabeled_pool, X_test = feature_extractors.get_features(
         X_unlabeled_pool, X_test, params.feature_rep
     )
@@ -375,10 +375,19 @@ def main(params: Params) -> None:
     unlabeled_pool = Pool(
         X_unlabeled_pool,
         y_unlabeled_pool,
+        target_names,
         oh.container.X_unlabeled_pool_file,
         oh.container.y_unlabeled_pool_file,
+        oh.container.target_names_file,
     )
-    test_set = Pool(X_test, y_test, oh.container.X_test_set_file, oh.container.y_test_set_file)
+    test_set = Pool(
+        X_test,
+        y_test,
+        target_names,
+        oh.container.X_test_set_file,
+        oh.container.y_test_set_file,
+        oh.container.target_names_file,
+    )
 
     learn(
         estimator,

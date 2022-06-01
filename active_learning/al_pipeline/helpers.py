@@ -4,11 +4,12 @@
 
 from __future__ import annotations
 from dataclasses import dataclass
+import json
 from pathlib import Path
 from pprint import pformat, pprint  # pylint: disable=unused-import
 import shutil
 import sys  # pylint: disable=unused-import
-from typing import List, Union
+from typing import Dict, List, Optional, Union
 
 import numpy as np
 from scipy import sparse
@@ -16,7 +17,7 @@ from scipy.io import mmwrite, mmread
 from sklearn.utils import Bunch
 
 from active_learning import utils
-from active_learning.al_pipeline import (
+from active_learning.al_pipeline.attrs import (
     valid_early_stop_modes,
     valid_first_batch_modes,
 )
@@ -222,22 +223,29 @@ class Pool:
 
     Attributes
     ----------
-    X : Union[np.ndarray, sparse.csr_matrix]
+    X : Optional[Union[np.ndarray, sparse.csr_matrix]]
         The features of the data, defaults to None.
-    y: Union[np.ndarray, sparse.csr_matrix]
+    y: Optional[Union[np.ndarray, sparse.csr_matrix]]
         The labels of the data, defaults to None.
-    X_path: Path
+    target_names: Optional[Dict[str]]
+        A dictionary mapping class names to integers where each integer represents a class.
+    X_path: Optional[Path]
         A path associated with the features, defaults to None. Supported file extensions are
             .mtx and .npy.
-    y_path: Path
+    y_path: Optional[Path]
         A path associated with the labels, defaults to None. Supported file extensions are
             .mtx and .npy.
+    target_names_path: Optional[Path] = None
+        A path associated with the target names, defaults to None. Supported file extensions are
+            .json.
     """
 
-    X: Union[np.ndarray, sparse.csr_matrix] = None
-    y: Union[np.ndarray, sparse.csr_matrix] = None
-    X_path: Path = None
-    y_path: Path = None
+    X: Optional[Union[np.ndarray, sparse.csr_matrix]] = None
+    y: Optional[Union[np.ndarray, sparse.csr_matrix]] = None
+    target_names: Optional[Dict[str]] = None
+    X_path: Optional[Path] = None
+    y_path: Optional[Path] = None
+    target_names_path: Optional[Path] = None
 
     def save(self) -> None:
         """Save the data to file.
@@ -266,6 +274,12 @@ class Pool:
             np.save(self.y_path, self.y)
         else:
             raise Exception(f"Extension {self.y_path.name} incompatible with ndim {self.y.ndim}.")
+
+        if self.target_names is not None:
+            if self.target_names_path is None:
+                raise Exception("target_names_path is None, but target_names is not.")
+            with open(self.target_names_path, "w", encoding="utf8") as f:
+                json.dump(self.target_names, f, sort_keys=True, indent=4, separators=(",", ": "))
 
     def load(self) -> Pool:
         """Load the data from a file.
@@ -306,6 +320,10 @@ class Pool:
         else:
             raise Exception(f"Extension {self.y_path.name} incompatible with known read methods.")
 
+        if self.target_names_path is not None:
+            with open(self.target_names_path, "r", encoding="utf8") as f:
+                self.target_names = json.load(f)
+
         return self
 
 
@@ -324,6 +342,8 @@ class OutputDataContainer:
         The root directory of the output data.
     training_data_file : Path
         The file containing the training data at each iteration.
+    target_names_file : Path
+        The file containing the mapping between class names and integers.
     stopping_results_file : Path
         The file containing the stopping results.
     processed_path : Path
@@ -345,6 +365,7 @@ class OutputDataContainer:
     subsets = (test_set_str, train_set_str)
     root: Path
     training_data_file: Path
+    target_names_file: Path
     stopping_results_file: Path
     processed_path: Path
     processed_test_set_path: Path
@@ -363,14 +384,15 @@ class OutputDataContainer:
         """
         self.root = Path(root)
 
-        self.training_data_file = self.root / Path("training_data.csv")
-        self.stopping_results_file = self.root / Path("stopping_results.csv")
+        self.training_data_file = self.root / "training_data.csv"
+        self.target_names_file = self.root / "target_names.json"
+        self.stopping_results_file = self.root / "stopping_results.csv"
 
-        self.processed_path = self.root / Path("processed")
+        self.processed_path = self.root / "processed"
         self.processed_test_set_path = self.processed_path / self.test_set_str
         self.processed_train_set_path = self.processed_path / self.train_set_str
 
-        self.graphs_path = self.root / Path("graphs")
+        self.graphs_path = self.root / "graphs"
         self.graphs_test_set_path = self.graphs_path / self.test_set_str
         self.graphs_train_set_path = self.graphs_path / self.train_set_str
 

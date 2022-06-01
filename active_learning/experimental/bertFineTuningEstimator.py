@@ -1,28 +1,28 @@
 #!/home/hpc/schmij12/fineTune/ActiveLearning/env/bin/python -u
 
-#SBATCH --chdir=/home/hpc/schmij12/fineTune/ActiveLearning
-#SBATCH --output=/home/hpc/schmij12/fineTune/ActiveLearning/slurm/jobs/job.name.%A.out
-#SBATCH --constraint=skylake|broadwell
-#SBATCH --job-name=finetune
-#SBATCH --partition=gpu
-#SBATCH --cpus-per-task=1
-#SBATCH --mem=32G
+# SBATCH --chdir=/home/hpc/schmij12/fineTune/ActiveLearning
+# SBATCH --output=/home/hpc/schmij12/fineTune/ActiveLearning/slurm/jobs/job.name.%A.out
+# SBATCH --constraint=skylake|broadwell
+# SBATCH --job-name=finetune
+# SBATCH --partition=gpu
+# SBATCH --cpus-per-task=1
+# SBATCH --mem=32G
 
-#sbatch script up top
-#change directories to your own to run as sbatch script
+# sbatch script up top
+# change directories to your own to run as sbatch script
 
-#This file is to try and implement a BERT fine-tuning custom estimator (scikit-learn) that can be used with modAL. This would be used as the estimator for the learner.
-#An estimator must implement .fit, .predict_proba, and .predict methods.
-#More documentation on scikit-learn custom estimators at https://scikit-learn.org/stable/developers/develop.html
-#This currently has .fit working with the yelp dataset from huggingface
-#I followed guides for bert fine-tuning from huggingface and implemented that in .fit
-#predict and predict_proba need work
-#https://github.com/charles9n/bert-sklearn is an example of someone else's implementation
-#usually predict and predict_proba for fine-tuning implement the softmax function
-#needs to be tested more and with more datasets, to eventually be used in the codebase as an option for the estimator
+# This file is to try and implement a BERT fine-tuning custom estimator (scikit-learn) that can be used with modAL. This would be used as the estimator for the learner.
+# An estimator must implement .fit, .predict_proba, and .predict methods.
+# More documentation on scikit-learn custom estimators at https://scikit-learn.org/stable/developers/develop.html
+# This currently has .fit working with the yelp dataset from huggingface
+# I followed guides for bert fine-tuning from huggingface and implemented that in .fit
+# predict and predict_proba need work
+# https://github.com/charles9n/bert-sklearn is an example of someone else's implementation
+# usually predict and predict_proba for fine-tuning implement the softmax function
+# needs to be tested more and with more datasets, to eventually be used in the codebase as an option for the estimator
 
 
-#import dependencies
+# import dependencies
 import numpy as np
 import sys
 import torch
@@ -47,7 +47,7 @@ class sturcc_to_holder:
     def __init__(self, list_files):
         self.list_of_files = list_files
 
-    #with tensors
+    # with tensors
     def __getitem__(self, idx):
         aa = torch.load(self.list_of_files[idx])
         return aa[0], aa[1], aa[2]
@@ -55,7 +55,7 @@ class sturcc_to_holder:
     def __len__(self):
         return len(self.list_of_files)
 
-    #without toensors
+    # without toensors
     def __getitemnumpy__(self, idx):
         aa = np.load(self.list_of_files[idx], allow_pickle=True)
         cc = aa.data.obj.tolist()
@@ -63,6 +63,7 @@ class sturcc_to_holder:
         c2 = cc.attention_mask
         c3 = cc.label
         return torch.tensor(c1), torch.tensor(c2), c3
+
 
 def unpack_text_pairs(X):
     """
@@ -82,14 +83,15 @@ def to_numpy(X):
     """
     Convert input to numpy ndarray
     """
-    if hasattr(X, 'iloc'):              # pandas
+    if hasattr(X, "iloc"):  # pandas
         return X.values
-    elif isinstance(X, list):           # list
+    elif isinstance(X, list):  # list
         return np.array(X)
-    elif isinstance(X, np.ndarray):     # ndarray
+    elif isinstance(X, np.ndarray):  # ndarray
         return X
     else:
-        raise ValueError("Unable to handle input type %s"%str(type(X)))
+        raise ValueError("Unable to handle input type %s" % str(type(X)))
+
 
 def unpack_data(X, y=None):
     """
@@ -105,6 +107,7 @@ def unpack_data(X, y=None):
     else:
         return texts_a, texts_b
 
+
 def tokenize_function(examples):
 
     return bert_tokenizer(examples["text"], padding="max_length", truncation=True)
@@ -112,15 +115,15 @@ def tokenize_function(examples):
 
 # the actual bert fine tuning custom estimator
 class BertClassifer(BaseEstimator):
-    
-    #constructor takes in a bert model and bert tokenizer
+
+    # constructor takes in a bert model and bert tokenizer
     def __init__(self, bert_model, bert_tokenizer):
         self.bert_model = bert_model
         self.bert_tokenizer = bert_tokenizer
 
-    #takes in a dataset composed of features and labels currently, should be changed to X and Y (maybe as an option
-    #) most likely or a differnt way to handle
-    def fit(self, X): 
+    # takes in a dataset composed of features and labels currently, should be changed to X and Y (maybe as an option
+    # ) most likely or a differnt way to handle
+    def fit(self, X):
 
         # Check that X and y have correct shape (see scikit-learn documentation)
         # X, y = check_X_y(X, y)
@@ -134,12 +137,15 @@ class BertClassifer(BaseEstimator):
         num_training_steps = num_epochs * len(train_dataloader)
 
         lr_scheduler = get_scheduler(
-        name="linear", optimizer=optimizer, num_warmup_steps=0, num_training_steps=num_training_steps
+            name="linear",
+            optimizer=optimizer,
+            num_warmup_steps=0,
+            num_training_steps=num_training_steps,
         )
 
         device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
-        
-        #for debugging, ideally can get it to work with the gpu
+
+        # for debugging, ideally can get it to work with the gpu
         print(device)
 
         bert_model.to(device)
@@ -172,13 +178,13 @@ class BertClassifer(BaseEstimator):
         # Return the classifier
         return self
 
-    def predict(self, X) -> np.ndarray: #needs to be implelemented correctly
+    def predict(self, X) -> np.ndarray:  # needs to be implelemented correctly
 
         y_pred = np.argmax(self.predict_proba(X), axis=1)
         y_pred = np.array([self.id2label[y] for y in y_pred])
         return y_pred
 
-    def predict_proba(self, X) -> np.ndarray: #needs to be implemented correctly
+    def predict_proba(self, X) -> np.ndarray:  # needs to be implemented correctly
 
         """probas = self.predict_proba(X)
         if not all(p.shape == (X.shape[0], 2) for p in probas):
@@ -188,7 +194,7 @@ class BertClassifer(BaseEstimator):
             )"""
         texts_a, texts_b = unpack_data(X)
 
-        list_of_files= []
+        list_of_files = []
         your_data = sturcc_to_holder(list_files=list_of_files)
 
         dss = DataLoader([texts_a, texts_b], batch_size=16, shuffle=True)
@@ -209,18 +215,17 @@ class BertClassifer(BaseEstimator):
         return np.vstack(tuple(probs))
 
 
-
-#initalize model and tokenizer from pretrained huggingface
+# initalize model and tokenizer from pretrained huggingface
 bert_model = BertForSequenceClassification.from_pretrained("bert-base-uncased", num_labels=5)
-bert_tokenizer = BertTokenizerFast.from_pretrained('bert-base-uncased')
+bert_tokenizer = BertTokenizerFast.from_pretrained("bert-base-uncased")
 
-#initalize model
+# initalize model
 model = BertClassifer(bert_model, bert_tokenizer)
 
-#load dataset from huggingface
+# load dataset from huggingface
 dataset = load_dataset("yelp_review_full")
 
-#get dataset in correct format, based on hugginface fine tuning documentation. Should be expanded to work with any type of dataset
+# get dataset in correct format, based on hugginface fine tuning documentation. Should be expanded to work with any type of dataset
 tokenized_datasets = dataset.map(tokenize_function, batched=True)
 tokenized_datasets = tokenized_datasets.remove_columns(["text"])
 tokenized_datasets = tokenized_datasets.rename_column("label", "labels")
@@ -229,12 +234,11 @@ small_train_dataset = tokenized_datasets["train"].shuffle(seed=42).select(range(
 small_eval_dataset = tokenized_datasets["test"].shuffle(seed=42).select(range(1000))
 
 
-#Where i was testing the methods of the estimator
+# Where i was testing the methods of the estimator
 
-model.fit(small_train_dataset) 
+model.fit(small_train_dataset)
 
 model.predict_proba(small_eval_dataset)
 
-#eventually test inside active learning codebase, particulary with the learn method
-#learn(model, uncertainty_batch_sampling, batch_size=batch_size, unlabeled_pool=Pool(x_train, y_train), test_set = Pool(x_test, y_test))
-
+# eventually test inside active learning codebase, particulary with the learn method
+# learn(model, uncertainty_batch_sampling, batch_size=batch_size, unlabeled_pool=Pool(x_train, y_train), test_set = Pool(x_test, y_test))

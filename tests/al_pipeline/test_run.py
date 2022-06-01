@@ -14,7 +14,7 @@ def test_pipeline_iris(tmp_path):
         query_strategy="uncertainty_sampling",
         base_learner="SVC",
         feature_rep="none",
-        dataset="Iris",
+        dataset="iris",
         random_state=0,
     )
 
@@ -30,7 +30,7 @@ def test_pipeline_20newsgroups(tmp_path):
         query_strategy="closest_to_hyperplane",
         base_learner="SGDClassifier",
         feature_rep="CountVectorizer",
-        dataset="20NewsGroups-singlelabel",
+        dataset="20newsgroups-singlelabel",
         random_state=0,
     )
 
@@ -46,7 +46,7 @@ def test_pipeline_reuters(tmp_path):
         query_strategy="closest_to_hyperplane",
         base_learner="LinearSVC",
         feature_rep="CountVectorizer",
-        dataset="Reuters",
+        dataset="reuters",
         random_state=0,
     )
 
@@ -62,7 +62,7 @@ def test_full_pipeline(tmp_path):
         query_strategy="uncertainty_sampling",
         base_learner="SVC",
         feature_rep="none",
-        dataset="Iris",
+        dataset="iris",
         random_state=0,
     )
 

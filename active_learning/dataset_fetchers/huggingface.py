@@ -1,124 +1,99 @@
 """Fetch datasets using the huggingface API.
-
-TODO
-----
--
-
-FIXME
------
--
 """
 
 from pprint import pprint  # pylint: disable=unused-import
 import sys  # pylint: disable=unused-import
-from typing import Any, Generator, List, Tuple, Union
-import warnings
+from typing import Dict, Generator, Iterable, List, Optional, Tuple, Union
 
-from datasets import load_dataset
+from datasets import DatasetDict, load_dataset
 import numpy as np
 
-from active_learning.dataset_fetchers.base import DatasetFetcher
+
+# Contains the name of the feature to use as data from each dataset
+feature_keys = {
+    "ag_news": "text",
+    "amazon_polarity": "content",
+    "emotion": "text",
+    "glue": "sentence",
+    "imdb": "text",
+    "rotten_tomatoes": "text",
+    "tweet_eval": "text",
+}
 
 
-class HuggingFaceDatasetFetcher(DatasetFetcher):
-    """Fetch datasets from huggingface."""
-
-    def __init__(self, random_state: int, path: str, **kwargs) -> None:
-        """Instantiate the fetcher.
-
-        Parameters
-        ----------
-        random_state : int
-            Random state to use for reproducibility.
-        path : str
-            Name of the dataset, recognized by huggingface.
-
-        Other Parameters
-        ----------------
-        name : str
-            Many hugging face datasets actually are collections of datasets. The name parameter
-                selects a particular sub-dataset from a dataset collection.
-
-        Raises
-        ------
-        ValueError
-            System is not designed for the user to load individual train or test splits
-        """
-
-        if "split" in kwargs:
-            raise ValueError(f"Loading an individual split is not supported: {kwargs['split']}.")
-
-        super().__init__(random_state)
-        self.path = path
-        self.dataset = load_dataset(path, **kwargs)
+valid_huggingface_datasets = set(feature_keys.keys())
+valid_huggingface_datasets.remove("glue")
+valid_huggingface_datasets.add("glue-sst2")
 
 
-class ClassificationFetcher(HuggingFaceDatasetFetcher):
-    """Fetch hugging face datasets in classification format."""
+def stream(
+    path: str,
+    *,
+    test_size: Optional[Union[int, float]] = None,
+    random_state: Optional[int] = None,
+    **kwargs,
+) -> Tuple[
+    Generator[str, None, None], Generator[str, None, None], np.ndarray, np.ndarray, Dict[str, int]
+]:
 
-    # Contains the name of the feature to use as data
-    feature_keys = {
-        "glue": "sentence",
-        "ag_news": "text",
-        "amazon_polarity": "content",  # Also contains a "title" field, which may be useful
-        "emotion": "text",
-        "imdb": "text",
-        "rotten_tomatoes": "text",
-        "tweet_eval": "text",
-    }
+    # By disallowing an individual train/test/validation split, we simplify the return types
+    if "split" in kwargs:
+        raise ValueError(f"Loading an individual split is not supported: {kwargs['split']}.")
 
-    def fetch(self) -> Tuple[List[str], List[str], np.ndarray, np.ndarray, np.ndarray]:
+    dataset: DatasetDict = load_dataset(path, **kwargs)
 
-        X_train, X_test, y_train, y_test, target_names = self.stream()
-
-        return (
-            list(X_train),
-            list(X_test),
-            np.array(list(y_train)),
-            np.array(list(y_test)),
-            target_names,
+    if "test" not in dataset and test_size is None:
+        raise ValueError(
+            f"No test set found in dataset {path}. "
+            "You need to specify a test_size to split the dataset."
         )
 
-    def stream(
-        self,
-    ) -> Tuple[
-        Generator[Any, None, None],
-        Generator[Any, None, None],
-        np.ndarray,
-        np.ndarray,
-        np.ndarray,
-    ]:
+    if test_size is not None:
+        print(f"No default test split found. Using {test_size} of train split as test split.")
+        dataset = dataset["train"].train_test_split(test_size=test_size, seed=random_state)
 
-        warnings.warn("Performing pseudo-streaming for the target vector.")
+    train_dataset = dataset["train"]
+    test_dataset = dataset["test"]
 
-        X_train = (x[self.feature_keys[self.path]] for x in self.dataset["train"])
-        X_test = (x[self.feature_keys[self.path]] for x in self.dataset["test"])
+    X_train = (x[feature_keys[path]] for x in train_dataset)
+    X_test = (x[feature_keys[path]] for x in test_dataset)
 
-        y_train = np.array([x["label"] for x in self.dataset["train"]])
-        y_test = np.array([x["label"] for x in self.dataset["test"]])
+    y_train = np.array([x["label"] for x in train_dataset])
+    y_test = np.array([x["label"] for x in test_dataset])
 
-        target_names = np.sort(np.unique(np.concatenate((y_train, y_test))))
+    target_names = {t: i for i, t in enumerate(train_dataset.info.features["label"].names)}
 
-        return X_train, X_test, y_train, y_test, target_names
+    return X_train, X_test, y_train, y_test, target_names
 
 
-class PredefinedClassificationFetcher(ClassificationFetcher):
-    """Fetcher for datasets with a predefined train/test split."""
+def fetch(
+    path: str,
+    *,
+    test_size: Optional[Union[int, float]] = None,
+    random_state: Optional[int] = None,
+    **kwargs,
+) -> Tuple[List[str], List[str], np.ndarray, np.ndarray, Dict[str, int]]:
+    X_train, X_test, y_train, y_test, target_names = stream(
+        path, test_size=test_size, random_state=random_state, **kwargs
+    )
 
-    ...
+    return (
+        list(X_train),
+        list(X_test),
+        np.array(list(y_train)),
+        np.array(list(y_test)),
+        target_names,
+    )
 
 
-class RandomizedClassificationFetcher(ClassificationFetcher):
-    """Fetcher for datasets with no predefined train/test splits."""
-
-    def __init__(
-        self,
-        random_state: int,
-        path: str,
-        test_size: Union[int, float] = None,
-        **kwargs,
-    ) -> None:
-        super().__init__(random_state, path, **kwargs)
-        self.dataset = self.dataset["train"].train_test_split(
-            test_size=test_size, seed=self.random_state
-        )
+def get_dataset(
+    path: str,
+    streaming: bool,
+    *,
+    test_size: Optional[Union[int, float]] = None,
+    random_state: Optional[int] = None,
+    **kwargs,
+) -> Tuple[Iterable[str], Iterable[str], np.ndarray, np.ndarray, Dict[str, int]]:
+    if streaming:
+        return stream(path, test_size=test_size, random_state=random_state, **kwargs)
+    return fetch(path, test_size=test_size, random_state=random_state, **kwargs)
