@@ -1,10 +1,11 @@
 """Stopping methods based upon stabilizing predictions.
 
-A Method for Stopping Active Learning Based on Stabilizing Predictions and the Need for User-Adjustable Stopping
-Bloodgood, Michael and Vijay-Shanker, K.
-Proceedings of the Thirteenth Conference on Computational Natural Language Learning (CoNLL-2009)
-2009
-https://aclanthology.org/W09-1107
+"Stabilizing Predictions" from
+    A Method for Stopping Active Learning Based on Stabilizing Predictions and the Need for User-Adjustable Stopping
+    Bloodgood, Michael and Vijay-Shanker, K.
+    Proceedings of the Thirteenth Conference on Computational Natural Language Learning (CoNLL-2009)
+    2009
+    https://aclanthology.org/W09-1107
 """
 
 from __future__ import annotations
